@@ -3,6 +3,8 @@ package printing_test
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/torbenschinke/eventprint/printing"
@@ -215,6 +217,32 @@ func TestLpArgsPassesLaminate(t *testing.T) {
 
 	if !hasOption(args, "StpLaminate=Matte") {
 		t.Errorf("StpLaminate=Matte fehlt in %v", args)
+	}
+}
+
+func TestCustomFilterRequiresExecutableFile(t *testing.T) {
+	filter := filepath.Join(t.TempDir(), "rastertocz01")
+	if err := os.WriteFile(filter, []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	p := printing.CUPSPrinter{Queue: "CZ01", CustomFilter: filter}
+	if got := p.CustomFilterForTest(); got != "" {
+		t.Fatalf("nicht ausführbarer Filter wurde gewählt: %q", got)
+	}
+
+	if err := os.Chmod(filter, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.CustomFilterForTest(); got != filter {
+		t.Fatalf("CustomFilterForTest() = %q, erwartet %q", got, filter)
+	}
+}
+
+func TestCustomFilterCanForceSystemDriver(t *testing.T) {
+	p := printing.CUPSPrinter{Queue: "CZ01", CustomFilter: "-"}
+	if got := p.CustomFilterForTest(); got != "" {
+		t.Fatalf("erzwungener Systemtreiber wählte %q", got)
 	}
 }
 

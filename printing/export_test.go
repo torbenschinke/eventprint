@@ -8,3 +8,8 @@ package printing
 func (p CUPSPrinter) LpArgsForTest(file, title string) []string {
 	return p.lpArgs(file, title)
 }
+
+// CustomFilterForTest legt die automatische Filtererkennung für Tests offen.
+func (p CUPSPrinter) CustomFilterForTest() string {
+	return p.customFilter()
+}

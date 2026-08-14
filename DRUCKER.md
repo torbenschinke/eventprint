@@ -85,25 +85,15 @@ Weitere Formate des CZ-01: `w288h288` (4x4"), `w288h216` (4x3"),
 
 ## Drucken
 
-### Script
-
-`print.sh` im selben Ordner:
+### Korrigierten 4x6-Filter installieren
 
 ```bash
-./print.sh                # druckt DSC02301.jpg (hardkodierter Default)
-./print.sh anderes.jpg    # druckt eine andere Datei
+./scripts/install-gutenprint-cz01.sh
 ```
 
-### Was das Script macht
-
-1. Ermittelt die Ausrichtung des Bildes (`magick identify`) und wählt
-   1200x1800 px (Hochformat) bzw. 1800x1200 px (Querformat) @ 300 dpi.
-2. `-auto-orient` → EXIF-Rotation anwenden.
-3. `-resize <ziel>^` → formatfüllend skalieren (kleinere Seite passt exakt,
-   größere überlappt).
-4. `-gravity center -extent <ziel>` → mittig auf exaktes 4x6-Format beschneiden
-   (**Auto-Crop**).
-5. `lp -d CZ01 -o PageSize=w288h432 -o StpImageType=Photo`
+Der Filter wird isoliert unter `/opt/eventprint/gutenprint` installiert. Die
+Fotobox verwendet ihn automatisch und fällt mit einer Warnung im Log auf den
+Systemtreiber zurück, falls er nicht verfügbar ist.
 
 ### Warum der Crop nötig ist
 

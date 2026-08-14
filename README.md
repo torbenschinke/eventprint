@@ -169,6 +169,26 @@ Einige Entwurfsentscheidungen, die beim Lesen sonst überraschen:
 
 ## Druckqualität
 
+### CZ-01-Treiber installieren
+
+Gutenprint vergrößert die 1224 Pixel breite 4x6-Bildfläche standardmäßig per
+Point-Sampling auf 1266 Pixel. Das erzeugt sichtbare Treppen an diagonalen
+Kanten. Der isolierte Custom-Build korrigiert nur diese Geometrie und ersetzt
+keine Paketdateien:
+
+```bash
+./scripts/install-gutenprint-cz01.sh
+```
+
+Die Anwendung bevorzugt danach automatisch
+`/opt/eventprint/gutenprint/bin/rastertocz01`. Fehlt der Filter, protokolliert
+sie eine Warnung und verwendet weiterhin den normalen Gutenprint-Treiber der
+CUPS-Warteschlange.
+
+Die am Gerät gemessene Tonwertkurve wird bereits beim Rendern angewendet und
+gilt für beide Wege. Beim Custom-Weg wird der fertige Druckstrom raw an CUPS
+übergeben, sodass keine zweite Farb- oder Geometrieverarbeitung stattfindet.
+
 **Auflösung.** Der CZ-01 beherrscht ausschließlich 300x300 dpi; eine höhere
 Stufe gibt es nicht. Das ist keine Einschränkung des Treibers: Gutenprint
 bietet für die verwandten Modelle CW-02, CX-02 und DNP DS620 sehr wohl

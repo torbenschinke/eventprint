@@ -8,7 +8,17 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+)
+
+const customCZ01Filter = "/opt/eventprint/gutenprint/bin/rastertocz01"
+
+var (
+	systemDriverWarnings sync.Map
+	lpExecutable         = "lp"
+	cupsfilterExecutable = "cupsfilter"
+	cupsPPDDirectory     = "/etc/cups/ppd"
 )
 
 // Result ist die Quittung der Übergabe an den Drucker.
@@ -74,6 +84,11 @@ type CUPSPrinter struct {
 	// diesem Gerät den Unterschied zwischen satten und verwaschenen Farben
 	// ausmacht.
 	PrintSpeed string
+
+	// CustomFilter überschreibt den automatisch erkannten CZ-01-Filter.
+	// Leer verwendet den von scripts/install-gutenprint-cz01.sh installierten
+	// Filter. Der Wert "-" erzwingt den Systemtreiber, insbesondere in Tests.
+	CustomFilter string
 }
 
 func (p CUPSPrinter) Name() string { return p.Queue }
@@ -84,16 +99,6 @@ func (p CUPSPrinter) Name() string { return p.Queue }
 // prüfen lässt, welche Treiberoptionen tatsächlich gesetzt werden – ohne
 // dafür Papier zu verbrauchen.
 func (p CUPSPrinter) lpArgs(file, title string) []string {
-	pageSize := p.PageSize
-	if pageSize == "" {
-		pageSize = CupsPageSize
-	}
-
-	speed := p.PrintSpeed
-	if speed == "" {
-		speed = SpeedLow
-	}
-
 	// StpImageType=Photo aktiviert im Gutenprint-Treiber die Farbaufbereitung
 	// für Fotos statt der Vorgabe TextGraphics. fit-to-page bleibt als
 	// Sicherheitsnetz gesetzt, greift aber nicht: Das Bild liegt bereits in
@@ -101,14 +106,9 @@ func (p CUPSPrinter) lpArgs(file, title string) []string {
 	args := []string{
 		"-d", p.Queue,
 		"-t", title,
-		"-o", "PageSize=" + pageSize,
-		"-o", "StpImageType=Photo",
-		"-o", "StpPrintSpeed=" + speed,
-		"-o", "fit-to-page",
 	}
-
-	if p.Laminate != "" {
-		args = append(args, "-o", "StpLaminate="+p.Laminate)
+	for _, option := range p.driverOptions() {
+		args = append(args, "-o", option)
 	}
 
 	return append(args, file)
@@ -141,7 +141,13 @@ func (p CUPSPrinter) Print(ctx context.Context, jpg []byte, name string) (Result
 		title = "eventprint"
 	}
 
-	cmd := exec.CommandContext(ctx, "lp", p.lpArgs(tmp, title)...)
+	filter := p.customFilter()
+	if filter != "" {
+		return p.printCustom(ctx, tmp, title, filter)
+	}
+
+	p.warnSystemDriver()
+	cmd := exec.CommandContext(ctx, lpExecutable, p.lpArgs(tmp, title)...)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -151,6 +157,118 @@ func (p CUPSPrinter) Print(ctx context.Context, jpg []byte, name string) (Result
 	message := strings.TrimSpace(string(out))
 
 	return Result{JobID: ParseRequestID(message, p.Queue), Message: message}, nil
+}
+
+func (p CUPSPrinter) customFilter() string {
+	filter := p.CustomFilter
+	if filter == "-" {
+		return ""
+	}
+	if filter == "" {
+		filter = customCZ01Filter
+	}
+
+	info, err := os.Stat(filter)
+	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
+		return ""
+	}
+
+	return filter
+}
+
+func (p CUPSPrinter) warnSystemDriver() {
+	key := p.Queue + "\x00" + p.CustomFilter
+	if _, loaded := systemDriverWarnings.LoadOrStore(key, struct{}{}); loaded {
+		return
+	}
+
+	slog.Warn("custom CZ-01 Gutenprint filter unavailable; using system driver",
+		"queue", p.Queue,
+		"expected", customCZ01Filter,
+	)
+}
+
+func (p CUPSPrinter) printCustom(ctx context.Context, jpegFile, title, filter string) (Result, error) {
+	raster, err := os.CreateTemp("", "eventprint-*.raster")
+	if err != nil {
+		return Result{}, fmt.Errorf("cannot create raster file: %w", err)
+	}
+	defer func() { _ = os.Remove(raster.Name()) }()
+
+	ppd := filepath.Join(cupsPPDDirectory, filepath.Base(p.Queue)+".ppd")
+	if filepath.Base(p.Queue) != p.Queue {
+		_ = raster.Close()
+		return Result{}, fmt.Errorf("invalid CUPS queue name %q", p.Queue)
+	}
+
+	options := p.driverOptions()
+	cupsArgs := []string{"-p", ppd, "-i", "image/jpeg", "-m", "application/vnd.cups-raster"}
+	for _, option := range options {
+		cupsArgs = append(cupsArgs, "-o", option)
+	}
+	cupsArgs = append(cupsArgs, jpegFile)
+
+	var stderr strings.Builder
+	cmd := exec.CommandContext(ctx, cupsfilterExecutable, cupsArgs...)
+	cmd.Stdout = raster
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		_ = raster.Close()
+		return Result{}, fmt.Errorf("cupsfilter failed: %w: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	if err := raster.Close(); err != nil {
+		return Result{}, fmt.Errorf("cannot close raster file: %w", err)
+	}
+
+	stream, err := os.CreateTemp("", "eventprint-*.prn")
+	if err != nil {
+		return Result{}, fmt.Errorf("cannot create print stream: %w", err)
+	}
+	defer func() { _ = os.Remove(stream.Name()) }()
+
+	stderr.Reset()
+	filterArgs := []string{"1", "eventprint", title, "1", strings.Join(options, " "), raster.Name()}
+	cmd = exec.CommandContext(ctx, filter, filterArgs...)
+	cmd.Env = append(os.Environ(), "PPD="+ppd)
+	cmd.Stdout = stream
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		_ = stream.Close()
+		return Result{}, fmt.Errorf("custom Gutenprint filter failed: %w: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	if err := stream.Close(); err != nil {
+		return Result{}, fmt.Errorf("cannot close print stream: %w", err)
+	}
+
+	out, err := exec.CommandContext(ctx, lpExecutable, "-d", p.Queue, "-t", title, "-o", "raw", stream.Name()).CombinedOutput()
+	if err != nil {
+		return Result{}, fmt.Errorf("lp failed: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+
+	message := strings.TrimSpace(string(out))
+	return Result{JobID: ParseRequestID(message, p.Queue), Message: message}, nil
+}
+
+func (p CUPSPrinter) driverOptions() []string {
+	pageSize := p.PageSize
+	if pageSize == "" {
+		pageSize = CupsPageSize
+	}
+	speed := p.PrintSpeed
+	if speed == "" {
+		speed = SpeedLow
+	}
+
+	options := []string{
+		"PageSize=" + pageSize,
+		"StpImageType=Photo",
+		"StpPrintSpeed=" + speed,
+		"fit-to-page",
+	}
+	if p.Laminate != "" {
+		options = append(options, "StpLaminate="+p.Laminate)
+	}
+	return options
 }
 
 // ParseRequestID liest die Auftragskennung aus der Bestätigung von lp.

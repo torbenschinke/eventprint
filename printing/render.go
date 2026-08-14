@@ -97,7 +97,10 @@ func Render(src io.Reader, tpl TemplateID, raster Raster) ([]byte, error) {
 }
 
 // applyCalibration legt die am Gerät ausgemessene Kennlinie des
-// Herstellertreibers auf die fertige Seite.
+// Herstellertreibers auf die fertige Seite. Sie ist Teil des Renderings und
+// gilt damit sowohl für den bevorzugten Custom-Filter als auch für den
+// Systemtreiber-Fallback. Der Custom-Pfad reicht den danach erzeugten
+// Druckstrom raw an CUPS weiter; die Kurve wird dort nicht erneut angewendet.
 //
 // Gutenprint reicht die Werte für den CZ-01 unverändert durch, der
 // Herstellertreiber nicht. Ohne diesen Ausgleich trägt der Drucker in dunklen
