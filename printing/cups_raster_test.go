@@ -201,6 +201,67 @@ func TestTemplatesUseVisibleMediaPixels(t *testing.T) {
 	assertTransition(t, polaroid, 105, 90, 1161, 1554)
 }
 
+func TestBorderChoosesBestOrientationAndCentersEntireImage(t *testing.T) {
+	tests := []struct {
+		name      string
+		width     int
+		height    int
+		landscape bool
+	}{
+		{name: "panorama", width: 2400, height: 400, landscape: true},
+		{name: "portrait", width: 400, height: 2400, landscape: false},
+		{name: "square", width: 1000, height: 1000, landscape: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := renderTemplate(solidImage(tt.width, tt.height, color.Black), TemplateBorder, NativeRaster4x6)
+			bounds := img.Bounds()
+			if got := bounds.Dx() > bounds.Dy(); got != tt.landscape {
+				t.Fatalf("Papier quer = %v, erwartet %v (%dx%d)", got, tt.landscape, bounds.Dx(), bounds.Dy())
+			}
+
+			motif := nonWhiteBounds(img)
+			if motif.Empty() {
+				t.Fatal("Motiv fehlt")
+			}
+			left, right := motif.Min.X-bounds.Min.X, bounds.Max.X-motif.Max.X
+			top, bottom := motif.Min.Y-bounds.Min.Y, bounds.Max.Y-motif.Max.Y
+			if abs(left-right) > 1 || abs(top-bottom) > 1 {
+				t.Errorf("Motiv nicht zentriert: links=%d rechts=%d oben=%d unten=%d", left, right, top, bottom)
+			}
+
+			gotRatio := float64(motif.Dx()) / float64(motif.Dy())
+			wantRatio := float64(tt.width) / float64(tt.height)
+			if difference := gotRatio/wantRatio - 1; difference < -0.01 || difference > 0.01 {
+				t.Errorf("Motivseitenverhältnis %.4f, erwartet %.4f; Bild wurde beschnitten", gotRatio, wantRatio)
+			}
+		})
+	}
+}
+
+func nonWhiteBounds(img image.Image) image.Rectangle {
+	b := img.Bounds()
+	minX, minY, maxX, maxY := b.Max.X, b.Max.Y, b.Min.X, b.Min.Y
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if color.RGBAModel.Convert(img.At(x, y)).(color.RGBA) == (color.RGBA{255, 255, 255, 255}) {
+				continue
+			}
+			minX, minY = min(minX, x), min(minY, y)
+			maxX, maxY = max(maxX, x+1), max(maxY, y+1)
+		}
+	}
+	return image.Rect(minX, minY, maxX, maxY)
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
 func assertTransition(t *testing.T, img image.Image, left, top, right, bottom int) {
 	t.Helper()
 	centerX := (left + right) / 2

@@ -230,7 +230,9 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster) *image.RGBA 
 	// Hochformat-Geometrie. Würde die Seite bei einem Querformatmotiv gedreht,
 	// läge der breite Steg an einer langen statt an derselben kurzen Kante, die
 	// auch die Vorschau zeigt.
-	if tpl != TemplatePolaroid && bounds.Dx() >= bounds.Dy() {
+	if tpl == TemplateBorder && borderFitsBetter(bounds, raster.Long(), raster.Short()) {
+		pageW, pageH = raster.Long(), raster.Short()
+	} else if tpl != TemplatePolaroid && tpl != TemplateBorder && bounds.Dx() >= bounds.Dy() {
 		pageW, pageH = raster.Long(), raster.Short()
 	}
 
@@ -269,6 +271,26 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster) *image.RGBA 
 	}
 
 	return canvas
+}
+
+// borderFitsBetter vergleicht die tatsächlich nutzbare Motivgröße in beiden
+// Papierorientierungen. Das ist robuster als nur Hoch- und Querformat des
+// Originals zu vergleichen und garantiert auch für Quadrat-, Panorama- und
+// andere Seitenverhältnisse die größtmögliche vollständige Abbildung.
+func borderFitsBetter(src image.Rectangle, pageW, pageH int) bool {
+	landscape := borderContainScale(src, pageW, pageH)
+	portrait := borderContainScale(src, pageH, pageW)
+	return landscape > portrait
+}
+
+func borderContainScale(src image.Rectangle, pageW, pageH int) float64 {
+	visibleW, visibleH := VisibleMedia4x6.Short(), VisibleMedia4x6.Long()
+	if pageW > pageH {
+		visibleW, visibleH = visibleH, visibleW
+	}
+	margin := min(visibleW, visibleH) * 5 / 100
+	usableW, usableH := visibleW-2*margin, visibleH-2*margin
+	return min(float64(usableW)/float64(src.Dx()), float64(usableH)/float64(src.Dy()))
 }
 
 // drawCover skaliert das Motiv formatfüllend in area und beschneidet mittig,
