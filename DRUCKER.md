@@ -85,15 +85,9 @@ Weitere Formate des CZ-01: `w288h288` (4x4"), `w288h216` (4x3"),
 
 ## Drucken
 
-### Korrigierten 4x6-Filter installieren
-
-```bash
-./scripts/install-gutenprint-cz01.sh
-```
-
-Der Filter wird isoliert unter `/opt/eventprint/gutenprint` installiert. Die
-Fotobox verwendet ihn automatisch und fällt mit einer Warnung im Log auf den
-Systemtreiber zurück, falls er nicht verfügbar ist.
+Die Fotobox verwendet den normalen Systemtreiber. Sie erzeugt davor ein exakt
+`1266x1836` Pixel großes CUPS-Raster und prüft zusätzlich den resultierenden
+`1408x1836`-Druckerstrom. Abweichende Größen werden vor dem Spooling abgelehnt.
 
 ### Warum der Crop nötig ist
 

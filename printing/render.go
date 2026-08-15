@@ -38,24 +38,22 @@ type Raster struct {
 func (r Raster) Short() int { return min(r.Width, r.Height) }
 func (r Raster) Long() int  { return max(r.Width, r.Height) }
 
-// Valid meldet, ob die Angabe brauchbar ist.
-func (r Raster) Valid() bool { return r.Width > 0 && r.Height > 0 }
+// Matches akzeptiert Hoch- und Querformat derselben Rastergröße.
+func (r Raster) Matches(width, height int) bool {
+	return (width == r.Width && height == r.Height) ||
+		(width == r.Height && height == r.Width)
+}
 
-// NativeRaster4x6 ist die Rastergröße, die der CZ-01 für 10x15 cm erwartet.
+// NativeRaster4x6 ist die Bildfläche, die Gutenprint für 4x6 auf dem CZ-01
+// über seine PPD deklariert.
 //
-// Der Wert ist bewusst nicht 1200x1800 (also 4x6 Zoll mal 300 dpi), sondern
-// etwas größer: Dye-Sublimation-Drucker drucken randlos und benötigen dafür
-// einen Überstand. Der Treiber verlangt exakt 1224x1836 Pixel, was 4,08 x
-// 6,12 Zoll entspricht; das Seitenverhältnis von 2:3 bleibt dabei erhalten.
-//
-// Wird in einer anderen Größe gerendert, skaliert die CUPS-Filterkette das
-// Bild auf diesen Wert hoch und weicht es dabei auf. Der richtige Wert für
-// eine andere Papiersorte oder ein anderes Modell lässt sich ablesen mit
-//
-//	cupsctl --debug-logging
-//	# einmal drucken, dann:
-//	grep -a "cupsWidth\|cupsHeight" /var/log/cups/error_log
-var NativeRaster4x6 = Raster{Width: 1224, Height: 1836}
+// 1266x1836 enthält den randlosen Überstand um das sichtbare 1200x1800-Papier.
+// Andere Größen werden vor dem Spooling abgelehnt, damit Gutenprint niemals
+// selbst per Point-Sampling skaliert.
+var NativeRaster4x6 = Raster{Width: 1266, Height: 1836}
+
+// VisibleMedia4x6 ist die physisch sichtbare 4x6-Fläche bei 300 dpi.
+var VisibleMedia4x6 = Raster{Width: 1200, Height: 1800}
 
 // jpegQuality ist bewusst hoch gewählt: das Bild wird nur einmal, direkt vor
 // dem Druck, neu komprimiert.
@@ -67,8 +65,13 @@ const jpegQuality = 95
 // Die Ausrichtung (Hoch- oder Querformat) wird aus dem Quellbild übernommen,
 // sodass ein hochkant fotografiertes Motiv auch hochkant gedruckt wird.
 //
-// Ist raster ungültig, wird [NativeRaster4x6] verwendet.
+// Ausschließlich [NativeRaster4x6] ist zulässig. Dadurch kann kein Aufrufer
+// versehentlich eine Größe erzeugen, die Gutenprint später skaliert.
 func Render(src io.Reader, tpl TemplateID, raster Raster) ([]byte, error) {
+	if raster != NativeRaster4x6 {
+		return nil, fmt.Errorf("unsupported print raster %dx%d: expected %dx%d",
+			raster.Width, raster.Height, NativeRaster4x6.Width, NativeRaster4x6.Height)
+	}
 	raw, err := io.ReadAll(src)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read source image: %w", err)
@@ -97,10 +100,8 @@ func Render(src io.Reader, tpl TemplateID, raster Raster) ([]byte, error) {
 }
 
 // applyCalibration legt die am Gerät ausgemessene Kennlinie des
-// Herstellertreibers auf die fertige Seite. Sie ist Teil des Renderings und
-// gilt damit sowohl für den bevorzugten Custom-Filter als auch für den
-// Systemtreiber-Fallback. Der Custom-Pfad reicht den danach erzeugten
-// Druckstrom raw an CUPS weiter; die Kurve wird dort nicht erneut angewendet.
+// Herstellertreibers auf die fertige Seite. Die nachfolgende Rasterpipeline
+// reicht diese Werte unverändert an Gutenprint weiter.
 //
 // Gutenprint reicht die Werte für den CZ-01 unverändert durch, der
 // Herstellertreiber nicht. Ohne diesen Ausgleich trägt der Drucker in dunklen
@@ -222,10 +223,6 @@ func withJFIFHeader(jpg []byte) []byte {
 
 // renderTemplate legt das Motiv gemäß Layout auf eine weiße Seite.
 func renderTemplate(img image.Image, tpl TemplateID, raster Raster) *image.RGBA {
-	if !raster.Valid() {
-		raster = NativeRaster4x6
-	}
-
 	bounds := img.Bounds()
 
 	pageW, pageH := raster.Short(), raster.Long()
@@ -236,20 +233,31 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster) *image.RGBA 
 	canvas := image.NewRGBA(image.Rect(0, 0, pageW, pageH))
 	draw.Draw(canvas, canvas.Bounds(), image.NewUniform(color.White), image.Point{}, draw.Src)
 
+	visibleW, visibleH := VisibleMedia4x6.Short(), VisibleMedia4x6.Long()
+	if pageW > pageH {
+		visibleW, visibleH = visibleH, visibleW
+	}
+	visible := image.Rect(
+		(pageW-visibleW)/2,
+		(pageH-visibleH)/2,
+		(pageW-visibleW)/2+visibleW,
+		(pageH-visibleH)/2+visibleH,
+	)
+
 	switch tpl {
 	case TemplateBorder:
 		// gleichmäßiger Rand von 5 % der kurzen Seite, das Motiv wird
 		// vollständig eingepasst (contain).
-		margin := min(pageW, pageH) * 5 / 100
-		area := image.Rect(margin, margin, pageW-margin, pageH-margin)
+		margin := min(visibleW, visibleH) * 5 / 100
+		area := image.Rect(visible.Min.X+margin, visible.Min.Y+margin, visible.Max.X-margin, visible.Max.Y-margin)
 		drawContain(canvas, area, img)
 
 	case TemplatePolaroid:
 		// klassische Sofortbild-Proportionen: schmaler Rand oben/seitlich,
 		// breiter Steg unten zum Beschriften.
-		side := min(pageW, pageH) * 6 / 100
-		bottom := min(pageW, pageH) * 22 / 100
-		area := image.Rect(side, side, pageW-side, pageH-bottom)
+		side := min(visibleW, visibleH) * 6 / 100
+		bottom := min(visibleW, visibleH) * 22 / 100
+		area := image.Rect(visible.Min.X+side, visible.Min.Y+side, visible.Max.X-side, visible.Max.Y-bottom)
 		drawCover(canvas, area, img)
 
 	default: // TemplateFull

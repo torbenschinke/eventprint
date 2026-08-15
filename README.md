@@ -169,25 +169,19 @@ Einige Entwurfsentscheidungen, die beim Lesen sonst überraschen:
 
 ## Druckqualität
 
-### CZ-01-Treiber installieren
+### Exakter CZ-01-Rastervertrag
 
-Gutenprint vergrößert die 1224 Pixel breite 4x6-Bildfläche standardmäßig per
-Point-Sampling auf 1266 Pixel. Das erzeugt sichtbare Treppen an diagonalen
-Kanten. Der isolierte Custom-Build korrigiert nur diese Geometrie und ersetzt
-keine Paketdateien:
+Gutenprints PPD deklariert für 4x6 eine Bildfläche von **1266x1836 Pixeln bei
+300 dpi**. Sie enthält den randlosen Überstand um das sichtbare
+1200x1800-Pixel-Papier. Die Anwendung erzeugt dieses CUPS-Raster selbst,
+validiert JPEG, PPD, Rasterheader, Dateilänge und abschließend alle drei
+1408x1836-Druckerebenen. Erst danach wird der fertige Strom raw an CUPS
+übergeben. Eine falsche Größe erreicht den Drucker nicht.
 
-```bash
-./scripts/install-gutenprint-cz01.sh
-```
-
-Die Anwendung bevorzugt danach automatisch
-`/opt/eventprint/gutenprint/bin/rastertocz01`. Fehlt der Filter, protokolliert
-sie eine Warnung und verwendet weiterhin den normalen Gutenprint-Treiber der
-CUPS-Warteschlange.
-
-Die am Gerät gemessene Tonwertkurve wird bereits beim Rendern angewendet und
-gilt für beide Wege. Beim Custom-Weg wird der fertige Druckstrom raw an CUPS
-übergeben, sodass keine zweite Farb- oder Geometrieverarbeitung stattfindet.
+Rahmen und Polaroid-Layout werden auf der sichtbaren 1200x1800-Fläche
+berechnet; Full-Bleed belegt einschließlich Überstand die gesamte
+1266x1836-Fläche. Die gemessene Tonwertkurve wird vor der Rastererzeugung
+angewendet und genau einmal an Gutenprint übergeben.
 
 **Auflösung.** Der CZ-01 beherrscht ausschließlich 300x300 dpi; eine höhere
 Stufe gibt es nicht. Das ist keine Einschränkung des Treibers: Gutenprint
@@ -198,39 +192,15 @@ zusätzlich 300x600 dpi an, für den CZ-01 dagegen nur einen einzigen Eintrag.
 /usr/lib/cups/driver/gutenprint.5.3 cat gutenprint.5.3://citizen-cz-01/expert | grep "^\*Resolution "
 ```
 
-**Rastergröße – hier lag Qualität brach.** Der Drucker erwartet für 10x15 cm
-nicht die rechnerischen 1200x1800 Pixel (4x6 Zoll mal 300 dpi), sondern
-**1224x1836**: Randloses Drucken braucht einen Überstand von gut zwei Prozent.
-Wurde in 1200x1800 gerendert, skalierte die CUPS-Filterkette das Bild hoch und
-weichte es dabei auf. Da beide Größen dasselbe Seitenverhältnis von 2:3 haben,
-fällt das ohne direkten Vergleich nicht auf – der Ausdruck ist nur unnötig
-weich. Die Anwendung rendert deshalb direkt in der nativen Rastergröße, es
-findet keine Skalierung mehr statt.
-
-Für ein anderes Modell oder Papierformat lässt sich der richtige Wert ablesen:
-
-```bash
-sudo cupsctl --debug-logging
-lp -d CZ01 -o PageSize=w288h432 bild.jpg
-grep -a "cupsWidth\|cupsHeight" /var/log/cups/error_log
-# cupsWidth = 1224
-# cupsHeight = 1836
-sudo cupsctl --no-debug-logging
-```
-
-Danach in **Einstellungen → Fotodrucker → Rasterbreite/Rasterhöhe** eintragen.
-
 **Was sonst noch geprüft wurde:**
 
 * `StpImageType=Photo` – gesetzt, aktiviert die Farbaufbereitung für Fotos
   statt der Vorgabe `TextGraphics`.
 * `StpColorPrecision=Best` – **wirkungslos, Ursache geklärt.** Das PPD setzt
   für *beide* Stufen `cupsBitsPerColor 8`; bei `Best` kommt lediglich der
-  Hinweis `cupsPreferredBitsPerColor 16` hinzu. Die Filterkette lautet hier
-  `imagetoraster → rastertogutenprint` – ohne PDF-Umweg –, und
-  `imagetoraster` wertet nur `cupsBitsPerColor` aus. Im Protokoll blieb es
-  entsprechend bei `cupsBitsPerColor = 8`. Da die Vorlagen ohnehin 8-Bit-JPEGs
-  von Kameras und Smartphones sind, wäre auch nichts zu gewinnen.
+  Hinweis `cupsPreferredBitsPerColor 16` hinzu. Die kontrollierte
+  Rasterpipeline liefert RGB mit 8 Bit pro Kanal; da die Vorlagen ohnehin
+  8-Bit-JPEGs von Kameras und Smartphones sind, wäre nichts zu gewinnen.
 * `StpPrintSpeed` – **standardmäßig `LowSpeed`**. Bei normaler
   Geschwindigkeit verweilt der Thermokopf kürzer auf jeder Zeile und überträgt
   weniger Farbe; die Ausdrucke wirken dann verwaschen. Für eine Fotobox zählt

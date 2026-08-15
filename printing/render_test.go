@@ -324,33 +324,17 @@ func jpegWithOrientation(t *testing.T, w, h, orientation int) []byte {
 	return out
 }
 
-// TestRenderUsesNativeRasterSize hält die Messung fest, die zu dieser Größe
-// geführt hat.
-//
-// Der CZ-01 erwartet für 10x15 cm nicht die rechnerischen 1200x1800 Pixel
-// (4x6 Zoll mal 300 dpi), sondern 1224x1836 – randloses Drucken braucht einen
-// Überstand. Nachweisbar im Protokoll der Filterkette:
-//
-//	cupsctl --debug-logging
-//	lp -d CZ01 -o PageSize=w288h432 bild.jpg
-//	grep -a "cupsWidth\|cupsHeight" /var/log/cups/error_log
-//	# cupsWidth = 1224
-//	# cupsHeight = 1836
-//
-// Wird kleiner gerendert, skaliert CUPS hoch und weicht das Bild auf. Da
-// beide Größen dasselbe Seitenverhältnis von 2:3 haben, fällt das ohne
-// direkten Vergleich nicht auf – der Ausdruck ist nur unnötig weich.
+// TestRenderUsesNativeRasterSize hält den von Gutenprints PPD deklarierten
+// Vertrag fest. Die Transportfläche enthält den randlosen Überstand und ist
+// deshalb bewusst nicht 2:3; nur die sichtbare Medienfläche ist 1200x1800.
 func TestRenderUsesNativeRasterSize(t *testing.T) {
-	if printing.NativeRaster4x6.Width != 1224 || printing.NativeRaster4x6.Height != 1836 {
-		t.Fatalf("NativeRaster4x6 = %dx%d, gemessen wurde 1224x1836",
+	if printing.NativeRaster4x6.Width != 1266 || printing.NativeRaster4x6.Height != 1836 {
+		t.Fatalf("NativeRaster4x6 = %dx%d, PPD deklariert 1266x1836",
 			printing.NativeRaster4x6.Width, printing.NativeRaster4x6.Height)
 	}
-
-	// Das Seitenverhältnis muss exakt dem des Papiers entsprechen, sonst
-	// entstünden Balken oder ein zusätzlicher Beschnitt.
-	if printing.NativeRaster4x6.Width*3 != printing.NativeRaster4x6.Height*2 {
-		t.Errorf("Seitenverhältnis ist nicht 2:3: %dx%d",
-			printing.NativeRaster4x6.Width, printing.NativeRaster4x6.Height)
+	if printing.VisibleMedia4x6.Width != 1200 || printing.VisibleMedia4x6.Height != 1800 {
+		t.Fatalf("VisibleMedia4x6 = %dx%d, erwartet 1200x1800",
+			printing.VisibleMedia4x6.Width, printing.VisibleMedia4x6.Height)
 	}
 
 	out, err := printing.Render(bytes.NewReader(loadSample(t)), printing.TemplateFull, printing.NativeRaster4x6)
@@ -363,52 +347,21 @@ func TestRenderUsesNativeRasterSize(t *testing.T) {
 		t.Fatalf("Ergebnis ist kein gültiges JPEG: %v", err)
 	}
 
-	if b := img.Bounds(); b.Dx() != 1224 || b.Dy() != 1836 {
-		t.Errorf("Abmessungen = %dx%d, erwartet 1224x1836", b.Dx(), b.Dy())
+	if b := img.Bounds(); b.Dx() != 1266 || b.Dy() != 1836 {
+		t.Errorf("Abmessungen = %dx%d, erwartet 1266x1836", b.Dx(), b.Dy())
 	}
 }
 
-// TestRenderFallsBackToNativeRaster schützt vor einer unvollständig
-// gepflegten Einstellung: Eine Null darf niemals ein leeres Bild erzeugen.
-func TestRenderFallsBackToNativeRaster(t *testing.T) {
+func TestRenderRejectsNonNativeRaster(t *testing.T) {
 	for _, raster := range []printing.Raster{
 		{},
-		{Width: 1224},
+		{Width: 1266},
 		{Height: 1836},
 		{Width: -1, Height: -1},
+		{Width: 1224, Height: 1836},
 	} {
-		out, err := printing.Render(bytes.NewReader(loadSample(t)), printing.TemplateFull, raster)
-		if err != nil {
-			t.Fatalf("Render(%v): %v", raster, err)
+		if _, err := printing.Render(bytes.NewReader(loadSample(t)), printing.TemplateFull, raster); err == nil {
+			t.Errorf("Render(%v) akzeptierte einen falschen Raster", raster)
 		}
-
-		img, err := jpeg.Decode(bytes.NewReader(out))
-		if err != nil {
-			t.Fatalf("Ergebnis ist kein gültiges JPEG: %v", err)
-		}
-
-		if b := img.Bounds(); b.Dx() != 1224 || b.Dy() != 1836 {
-			t.Errorf("Render(%v) = %dx%d, erwartet den Rückfall 1224x1836", raster, b.Dx(), b.Dy())
-		}
-	}
-}
-
-// TestRenderHonoursCustomRaster deckt ein anderes Modell oder Papierformat ab.
-func TestRenderHonoursCustomRaster(t *testing.T) {
-	// 13x18 cm bei 300 dpi mit demselben Überstandsverhältnis.
-	custom := printing.Raster{Width: 1548, Height: 2140}
-
-	out, err := printing.Render(bytes.NewReader(loadSample(t)), printing.TemplateFull, custom)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
-
-	img, err := jpeg.Decode(bytes.NewReader(out))
-	if err != nil {
-		t.Fatalf("Ergebnis ist kein gültiges JPEG: %v", err)
-	}
-
-	if b := img.Bounds(); b.Dx() != custom.Width || b.Dy() != custom.Height {
-		t.Errorf("Abmessungen = %dx%d, erwartet %dx%d", b.Dx(), b.Dy(), custom.Width, custom.Height)
 	}
 }
