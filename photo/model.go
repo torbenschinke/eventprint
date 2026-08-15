@@ -35,6 +35,9 @@ const (
 
 	// SourceUpload markiert Fotos, die ein Gast per Smartphone hochgeladen hat.
 	SourceUpload Source = "upload"
+
+	// SourceRelay markiert einen Internet-Upload über photoupld.
+	SourceRelay Source = "relay"
 )
 
 func (s Source) String() string {
@@ -43,6 +46,8 @@ func (s Source) String() string {
 		return "Kamera"
 	case SourceUpload:
 		return "Gast-Upload"
+	case SourceRelay:
+		return "Internet-Upload"
 	default:
 		return string(s)
 	}

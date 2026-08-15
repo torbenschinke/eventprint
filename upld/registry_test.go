@@ -1,0 +1,75 @@
+package upld
+
+import (
+	"testing"
+	"time"
+
+	"go.wdy.de/nago/application/image"
+)
+
+func TestOpenRotatesIdentityAndPurgesImages(t *testing.T) {
+	purged := make(chan image.ID, 1)
+	r := NewRegistry(func(id image.ID) { purged <- id })
+	first, err := r.Open("box")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Track(first, "img"); err != nil {
+		t.Fatal(err)
+	}
+	second, err := r.Open("box")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == second || r.Valid(first) || !r.Valid(second) {
+		t.Fatal("opening a session did not rotate its identity")
+	}
+	select {
+	case id := <-purged:
+		if id != "img" {
+			t.Fatalf("purged %q, want img", id)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("old image was not purged")
+	}
+}
+
+func TestTokenCannotReadOtherQueue(t *testing.T) {
+	r := NewRegistry(nil)
+	id, _ := r.Open("box-a")
+	jobID, _ := NewJobID()
+	if err := r.Enqueue(id, Job{ID: jobID, Image: "img"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Pending("box-b"); err == nil {
+		t.Fatal("foreign token can read queue")
+	}
+	if _, ok := r.Find("box-b", jobID); ok {
+		t.Fatal("foreign token can read image")
+	}
+}
+
+func TestPurgeExpiresSession(t *testing.T) {
+	r := NewRegistry(nil)
+	id, _ := r.Open("box")
+	r.PurgeOlderThan(time.Now().Add(time.Second))
+	if r.Valid(id) {
+		t.Fatal("expired session remains valid")
+	}
+}
+
+func TestTrackPurgesImageWhenSessionExpired(t *testing.T) {
+	purged := make(chan image.ID, 1)
+	r := NewRegistry(func(id image.ID) { purged <- id })
+	if err := r.Track("missing", "orphan"); err != ErrExpired {
+		t.Fatalf("Track returned %v, want ErrExpired", err)
+	}
+	select {
+	case id := <-purged:
+		if id != "orphan" {
+			t.Fatalf("purged %q, want orphan", id)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("orphan was not purged")
+	}
+}

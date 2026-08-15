@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	"go.wdy.de/nago/application/image"
-	httpimage "go.wdy.de/nago/application/image/http"
 	"go.wdy.de/nago/presentation/core"
 	"go.wdy.de/nago/presentation/ui"
 	"go.wdy.de/nago/presentation/ui/alert"
 
 	"github.com/torbenschinke/eventprint/photo"
 	"github.com/torbenschinke/eventprint/printing"
+	preview "github.com/torbenschinke/eventprint/ui/preview"
 )
 
 // printDialog kapselt die Layout-Auswahl, die vor jedem Druck erscheint.
@@ -87,117 +87,13 @@ func (d printDialog) View() core.View {
 }
 
 func (d printDialog) body() core.View {
-	var cards []core.View
-	for _, tpl := range printing.Templates() {
-		cards = append(cards, d.templateCard(tpl))
-	}
-
 	return ui.VStack(
-		// Wrap, damit auf dem Smartphone eines Gastes untereinander
-		// dargestellt wird, was auf dem Fotobox-Display nebeneinander passt.
-		ui.HStack(cards...).Gap(ui.L16).Alignment(ui.Top).Wrap(true),
+		preview.Selector(d.previewImage(), d.template),
 		ui.Text("Der Ausdruck erscheint innerhalb einer Minute am Drucker.").Font(ui.BodySmall),
 	).Gap(ui.L24).Alignment(ui.Center)
 }
 
-// templateCard zeigt ein Layout mit einer Vorschau des tatsächlich gewählten
-// Fotos. Das ist verbindlicher als ein abstraktes Schema: Ein Gast sieht
-// sofort, welcher Teil seines Motivs beim formatfüllenden Druck wegfällt.
-func (d printDialog) templateCard(tpl printing.Template) core.View {
-	borderColor := ui.M5
-	if d.template.Get() == tpl.ID {
-		borderColor = ui.A0
-	}
-
-	return ui.VStack(
-		d.templatePreview(tpl.ID),
-		ui.Text(tpl.Name).Font(ui.LabelLarge),
-		ui.Text(tpl.Description).Font(ui.BodySmall).
-			TextAlignment(ui.TextAlignCenter),
-	).
-		Gap(ui.L8).
-		Alignment(ui.Center).
-		Action(func() {
-			d.template.Set(tpl.ID)
-		}).
-		WithPadding(ui.Padding{}.All(ui.L16)).
-		Border(ui.Border{}.Radius(ui.L12).Width(ui.L2).Color(borderColor)).
-		Frame(ui.Frame{Width: ui.L200})
-}
-
-// paperWhite ist die einzige fest verdrahtete Farbe der Oberfläche.
-//
-// Sie ist keine Design-Entscheidung, sondern bildet einen physischen
-// Gegenstand ab: Das Papier im Drucker ist weiß, auch wenn die Anwendung im
-// dunklen Farbschema läuft. Alles andere überlässt die Oberfläche dem Theme.
-const paperWhite ui.Color = "#FFFFFF"
-
-// Abmessungen der Papier-Miniatur im Verhältnis 2:3, passend zu 10x15 cm.
-const (
-	previewPaperWidth  = ui.L96
-	previewPaperHeight = ui.Length("9rem")
-
-	// Rand bzw. Steg der Miniatur, maßstäblich zum echten Ausdruck.
-	previewBorderInset  = ui.Length("0.45rem")
-	previewPolaroidSide = ui.Length("0.55rem")
-	previewPolaroidFoot = ui.Length("2rem")
-)
-
-// templatePreview zeichnet das Papier als Miniatur und legt das gewählte Foto
-// gemäß Layout darauf.
-func (d printDialog) templatePreview(tpl printing.TemplateID) core.View {
-	preview := ui.VStack(d.previewMotif(tpl)).
-		Alignment(ui.Center).
-		BackgroundColor(paperWhite).
-		Border(ui.Border{}.Radius(ui.L4).Width(ui.L1).Color(ui.M5)).
-		Frame(ui.Frame{Width: previewPaperWidth, Height: previewPaperHeight})
-
-	return preview
-}
-
-// previewMotif liefert das Foto in der Fläche, die das jeweilige Layout ihm
-// auf dem Papier zugesteht.
-func (d printDialog) previewMotif(tpl printing.TemplateID) core.View {
-	uri := d.previewURI()
-	if uri == "" {
-		return nil
-	}
-
-	switch tpl {
-	case printing.TemplateBorder:
-		// vollständiges Motiv, ringsum gleichmäßig Papier
-		return ui.Image().
-			URI(uri).
-			ObjectFit(ui.FitContain).
-			Frame(ui.Frame{}.Size(ui.Full, ui.Full)).
-			Padding(ui.Padding{}.All(previewBorderInset))
-
-	case printing.TemplatePolaroid:
-		// schmaler Rand oben und seitlich, breiter Steg unten
-		return ui.Image().
-			URI(uri).
-			ObjectFit(ui.FitCover).
-			Frame(ui.Frame{}.Size(ui.Full, ui.Full)).
-			Padding(ui.Padding{
-				Top:    previewPolaroidSide,
-				Left:   previewPolaroidSide,
-				Right:  previewPolaroidSide,
-				Bottom: previewPolaroidFoot,
-			})
-
-	default: // TemplateFull
-		// Motiv füllt das Papier, der Überstand wird beschnitten
-		return ui.Image().
-			URI(uri).
-			ObjectFit(ui.FitCover).
-			Frame(ui.Frame{}.Size(ui.Full, ui.Full))
-	}
-}
-
-// previewURI liefert die Adresse einer kleinen Variante des gewählten Fotos.
-// Es wird bewusst eine Miniatur angefordert – für 96 Pixel Breite muss nicht
-// das mehrere Megabyte große Original über die Leitung.
-func (d printDialog) previewURI() core.URI {
+func (d printDialog) previewImage() image.ID {
 	id := d.selected.Get()
 	if id == "" {
 		return ""
@@ -208,8 +104,5 @@ func (d printDialog) previewURI() core.URI {
 		return ""
 	}
 
-	return httpimage.URI(optPhoto.Unwrap().Image, image.FitNone, previewPx, previewPx)
+	return optPhoto.Unwrap().Image
 }
-
-// previewPx ist die angeforderte Kantenlänge der Miniatur im Dialog.
-const previewPx = 256

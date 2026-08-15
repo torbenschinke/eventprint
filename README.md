@@ -76,6 +76,8 @@ steht. Danach hat die Oberfläche Vorrang.
 | `EVENTPRINT_CAMERA_DIR` | Tethering-Verzeichnis der Kamera. Leer = deaktiviert |
 | `EVENTPRINT_CAMERA_AUTOPRINT` | `true` druckt jede Aufnahme sofort |
 | `EVENTPRINT_CAMERA_DELETE` | `true` löscht die Datei nach der Übernahme |
+| `EVENTPRINT_UPLD_URL` | Basis-URL des öffentlichen `photoupld`, z. B. `https://upload.example.de` |
+| `EVENTPRINT_UPLD_TOKEN` | Bearer-Token aus `photoupld` mit der Rolle `Fotobox-Relay` |
 | `HOST` | Bind-Adresse. Für Gäste im WLAN `0.0.0.0` |
 | `NAGO_COOKIES_INSECURE` | `true`, solange ohne HTTPS betrieben |
 
@@ -91,6 +93,37 @@ zugewiesen. Das ist notwendig, weil Nago diesem Konto absichtlich nur
 `nago.*`-Berechtigungen gibt: Ohne die Zuweisung zeigte die Anwendung nach dem
 Anmelden auf jeder Seite „Zugriff verweigert". Weitere Betreuer bekommen die
 Rolle über die Nutzerverwaltung.
+
+## Uploads aus dem Internet
+
+`photoupld` ist eine zweite Nago-Anwendung für Installationen, bei denen die
+Fotobox hinter NAT in einem privaten Gastnetz steht. Nur `photoupld` muss aus
+dem Internet erreichbar sein; die Fotobox baut ausschließlich ausgehende
+HTTPS-Verbindungen auf.
+
+1. `go run ./cmd/photoupld` auf dem öffentlichen Server starten.
+2. Als `admin@localhost` anmelden und unter **Einstellungen → Foto-Upload** die
+   öffentliche Basis-URL eintragen.
+3. Im Admin-Center einen Access Token ohne Impersonation erstellen und ihm die
+   Rolle **Fotobox-Relay** zuweisen. Den Klartext-Token sofort sicher ablegen.
+4. Die Fotobox mit `EVENTPRINT_UPLD_URL` und `EVENTPRINT_UPLD_TOKEN` starten.
+
+```bash
+EVENTPRINT_UPLD_URL=https://upload.example.de \
+EVENTPRINT_UPLD_TOKEN='token-aus-dem-admin-center' \
+go run ./cmd/photobox
+```
+
+Die Fotobox fordert beim Start eine zufällige Upload-ID an und setzt den
+QR-Code automatisch auf die zurückgelieferte URL. Sie fragt alle zehn Sekunden
+nach neuen Aufträgen. Nach einem Neustart einer der Anwendungen wird eine neue
+ID erzeugt; alte Links zeigen Gästen ausdrücklich, dass sie den QR-Code erneut
+scannen müssen.
+
+Upload-IDs und Warteschlangen existieren nur im Arbeitsspeicher. Bilder liegen
+für Vorschau und Abholung kurzfristig im Nago-Image-Store: nach erfolgreicher
+Übernahme werden Original und Bildpyramide gelöscht, unabgeholte Daten nach 30
+Minuten. Beim Neustart entfernt `photoupld` verbliebene Relay-Bilder.
 
 ## Kamera anschließen
 
@@ -117,9 +150,13 @@ Paketen, ein Anwendungsfall je Datei, Verdrahtung an genau einer Stelle.
 photo/       Domäne der Fotos (Import, Historie, Originaldaten)
 printing/    Layouts, Rendering, Druckaufträge, CUPS-Anbindung
 camera/      Übernahme der Kamerabilder aus dem Tethering-Verzeichnis
+remote/      Ausgehender photoupld-Client und Polling
+upld/        Transiente Sessions und Upload-Warteschlangen
+photoupld/   Öffentliche Nago-Anwendung, REST-API und Upload-UI
 ui/          Oberfläche (Fotobox, Upload, Galerie, Druckstatus)
 cfg/         Enable() – verdrahtet alles mit dem Nago-Configurator
 cmd/photobox Startpunkt inkl. Scaffold-Menü
+cmd/photoupld Startpunkt des öffentlichen Upload-Relays
 ```
 
 Einige Entwurfsentscheidungen, die beim Lesen sonst überraschen:
