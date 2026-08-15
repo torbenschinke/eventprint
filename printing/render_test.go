@@ -127,6 +127,31 @@ func TestRenderPolaroidHasWideBottomBar(t *testing.T) {
 	}
 }
 
+// TestRenderLandscapePolaroidKeepsPortraitPaper sichert ab, dass ein
+// Querformatmotiv nicht das Polaroid selbst dreht. Der breite Steg bleibt so
+// an derselben kurzen Papierkante wie in der Vorschau.
+func TestRenderLandscapePolaroidKeepsPortraitPaper(t *testing.T) {
+	raw := jpegWithOrientation(t, 900, 600, 0)
+	out, err := printing.Render(bytes.NewReader(raw), printing.TemplatePolaroid, printing.NativeRaster4x6)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	img, err := jpeg.Decode(bytes.NewReader(out))
+	if err != nil {
+		t.Fatalf("Ergebnis ist kein gültiges JPEG: %v", err)
+	}
+	b := img.Bounds()
+	if b.Dx() != printing.NativeRaster4x6.Short() || b.Dy() != printing.NativeRaster4x6.Long() {
+		t.Fatalf("Polaroid-Abmessungen = %dx%d, erwartet Hochformat %dx%d", b.Dx(), b.Dy(), printing.NativeRaster4x6.Short(), printing.NativeRaster4x6.Long())
+	}
+
+	x := b.Dx() / 2
+	if top, bottom := whiteRunFromTop(img, x), whiteRunFromBottom(img, x); top <= bottom*2 {
+		t.Errorf("Steg (%d px oben in den Druckdaten) ist nicht deutlich breiter als der Rand (%d px)", top, bottom)
+	}
+}
+
 // TestRenderRejectsGarbage stellt sicher, dass eine kaputte Datei einen
 // Fehler und keinen leeren Ausdruck erzeugt – Papier ist teuer.
 func TestRenderRejectsGarbage(t *testing.T) {

@@ -226,7 +226,11 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster) *image.RGBA 
 	bounds := img.Bounds()
 
 	pageW, pageH := raster.Short(), raster.Long()
-	if bounds.Dx() >= bounds.Dy() {
+	// Ein Polaroid hat unabhängig von der Motivausrichtung eine feste
+	// Hochformat-Geometrie. Würde die Seite bei einem Querformatmotiv gedreht,
+	// läge der breite Steg an einer langen statt an derselben kurzen Kante, die
+	// auch die Vorschau zeigt.
+	if tpl != TemplatePolaroid && bounds.Dx() >= bounds.Dy() {
 		pageW, pageH = raster.Long(), raster.Short()
 	}
 
