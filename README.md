@@ -76,8 +76,6 @@ steht. Danach hat die Oberfläche Vorrang.
 | `EVENTPRINT_CAMERA_DIR` | Tethering-Verzeichnis der Kamera. Leer = deaktiviert |
 | `EVENTPRINT_CAMERA_AUTOPRINT` | `true` druckt jede Aufnahme sofort |
 | `EVENTPRINT_CAMERA_DELETE` | `true` löscht die Datei nach der Übernahme |
-| `EVENTPRINT_UPLD_URL` | Basis-URL des öffentlichen `photoupld`, z. B. `https://upload.example.de` |
-| `EVENTPRINT_UPLD_TOKEN` | Bearer-Token aus `photoupld` mit der Rolle `Fotobox-Relay` |
 | `HOST` | Bind-Adresse. Für Gäste im WLAN `0.0.0.0` |
 | `NAGO_COOKIES_INSECURE` | `true`, solange ohne HTTPS betrieben |
 
@@ -106,13 +104,10 @@ HTTPS-Verbindungen auf.
    öffentliche Basis-URL eintragen.
 3. Im Admin-Center einen Access Token ohne Impersonation erstellen und ihm die
    Rolle **Fotobox-Relay** zuweisen. Den Klartext-Token sofort sicher ablegen.
-4. Die Fotobox mit `EVENTPRINT_UPLD_URL` und `EVENTPRINT_UPLD_TOKEN` starten.
-
-```bash
-EVENTPRINT_UPLD_URL=https://upload.example.de \
-EVENTPRINT_UPLD_TOKEN='token-aus-dem-admin-center' \
-go run ./cmd/photobox
-```
+4. In der Fotobox unter **Einstellungen → Fotobox** die Felder
+   **Upload-Service** und **Upload-Token** ausfüllen. Die Verbindung wird ohne
+   Neustart aufgebaut; der Token wird in der Oberfläche als Geheimnisfeld
+   behandelt.
 
 Die Fotobox fordert beim Start eine zufällige Upload-ID an und setzt den
 QR-Code automatisch auf die zurückgelieferte URL. Sie fragt alle zehn Sekunden

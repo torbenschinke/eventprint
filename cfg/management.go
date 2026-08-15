@@ -65,9 +65,6 @@ type Options struct {
 
 	// Camera konfiguriert die Übernahme der Kamerabilder.
 	Camera camera.Options
-
-	// Relay connects this private photobox to the public photoupld service.
-	Relay remote.Options
 }
 
 // OptionsFromEnv liest die Konfiguration aus Umgebungsvariablen. Damit lässt
@@ -79,8 +76,6 @@ type Options struct {
 //	EVENTPRINT_CAMERA_DIR     Tethering-Verzeichnis der Kamera
 //	EVENTPRINT_CAMERA_AUTOPRINT  "true" druckt jede Aufnahme sofort
 //	EVENTPRINT_CAMERA_DELETE  "true" löscht die Datei nach der Übernahme
-//	EVENTPRINT_UPLD_URL        öffentliche Basis-URL von photoupld
-//	EVENTPRINT_UPLD_TOKEN      Bearer-Token mit der Fotobox-Relay-Rolle
 func OptionsFromEnv() Options {
 	return Options{
 		EventTitle:   os.Getenv("EVENTPRINT_TITLE"),
@@ -91,11 +86,6 @@ func OptionsFromEnv() Options {
 			AutoPrintTemplate: printing.TemplateFull,
 			Delete:            envBool("EVENTPRINT_CAMERA_DELETE"),
 			Interval:          time.Second,
-		},
-		Relay: remote.Options{
-			URL:      os.Getenv("EVENTPRINT_UPLD_URL"),
-			Token:    os.Getenv("EVENTPRINT_UPLD_TOKEN"),
-			Interval: 10 * time.Second,
 		},
 	}
 }
@@ -164,14 +154,11 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	prints := printing.NewUseCases(cfg.Context(), cfg.EventBus(), jobRepo,
 		printing.NewSettingsPrinter(loadPrinterSettings), photos.OpenOriginal)
 
-	var relay *remote.Relay
-	if opts.Relay.Enabled() {
-		relay, err = remote.New(opts.Relay, photos, prints)
-		if err != nil {
-			return Management{}, fmt.Errorf("cannot configure upload relay: %w", err)
-		}
-		go relay.Run(cfg.Context())
-	}
+	relay := remote.NewManager(func() remote.Options {
+		booth := loadBoothSettings()
+		return remote.Options{URL: booth.UploaderURL, Token: booth.UploaderToken, Interval: 10 * time.Second}
+	}, photos, prints)
+	go relay.Run(cfg.Context())
 
 	pages := uiphotobox.Pages{
 		Booth:   ".",
@@ -196,7 +183,7 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 			"type": settings.TypeIdent(reflect.TypeFor[Settings]()),
 		},
 		UploadURL: func() string {
-			if relay != nil && relay.UploadURL() != "" {
+			if relay.UploadURL() != "" {
 				return relay.UploadURL()
 			}
 			// Erst zur Laufzeit auflösen: Die eingestellte öffentliche

@@ -26,6 +26,63 @@ type Relay struct {
 	processed map[string]struct{}
 }
 
+// Manager keeps the relay aligned with the current Nago settings.
+type Manager struct {
+	load     func() Options
+	photos   photo.UseCases
+	printing printing.UseCases
+	relay    atomic.Pointer[Relay]
+}
+
+func NewManager(load func() Options, photos photo.UseCases, prints printing.UseCases) *Manager {
+	return &Manager{load: load, photos: photos, printing: prints}
+}
+
+func (m *Manager) UploadURL() string {
+	if current := m.relay.Load(); current != nil {
+		return current.UploadURL()
+	}
+	return ""
+}
+
+func (m *Manager) Run(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	var active Options
+	var cancel context.CancelFunc
+	for {
+		next := m.load()
+		if next.URL != active.URL || next.Token != active.Token {
+			if cancel != nil {
+				cancel()
+			}
+			m.relay.Store(nil)
+			active = next
+			if active.Enabled() {
+				relay, err := New(active, m.photos, m.printing)
+				if err != nil {
+					slog.Error("cannot configure photoupld relay", "err", err)
+				} else {
+					var relayCtx context.Context
+					relayCtx, cancel = context.WithCancel(ctx)
+					m.relay.Store(relay)
+					go relay.Run(relayCtx)
+				}
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			if cancel != nil {
+				cancel()
+			}
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
 func New(opts Options, photos photo.UseCases, prints printing.UseCases) (*Relay, error) {
 	client, err := NewClient(opts)
 	if err != nil {

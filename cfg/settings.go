@@ -25,6 +25,12 @@ type Settings struct {
 	// Proxy stimmt der nicht: Dort landet oft die interne Adresse oder das
 	// falsche Schema im QR-Code, und kein Gast kommt auf die Upload-Seite.
 	PublicURL string `json:"publicUrl,omitempty" label:"Öffentliche Adresse" supportingText:"Vollständig inklusive Schema, z. B. https://fotobox.example.de. Leer: automatisch aus der Verbindung ermitteln."`
+
+	// UploaderURL ist die öffentliche Basis-URL der photoupld-Anwendung.
+	UploaderURL string `json:"uploaderUrl,omitempty" label:"Upload-Service" supportingText:"Öffentliche Basis-URL von photoupld, z. B. https://upload.example.de. Leer: Internet-Uploads deaktiviert."`
+
+	// UploaderToken authentifiziert diese Fotobox am Upload-Service.
+	UploaderToken string `json:"uploaderToken,omitempty" label:"Upload-Token" supportingText:"Access Token aus photoupld mit der Rolle Fotobox-Relay." style:"secret"`
 }
 
 func (Settings) GlobalSettings() bool { return true }
