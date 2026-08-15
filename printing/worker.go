@@ -21,20 +21,15 @@ type worker struct {
 	repo         Repository
 	printer      Printer
 	openOriginal photo.OpenOriginal
-
-	// raster wird je Auftrag ausgewertet, damit eine geänderte Einstellung
-	// ohne Neustart wirkt.
-	raster func() Raster
 }
 
-func newWorker(mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal, raster func() Raster) *worker {
+func newWorker(mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal) *worker {
 	return &worker{
 		mutex:        mutex,
 		bus:          bus,
 		repo:         repo,
 		printer:      printer,
 		openOriginal: openOriginal,
-		raster:       raster,
 	}
 }
 
@@ -152,7 +147,7 @@ func (w *worker) render(ctx context.Context, job Job) (Result, error) {
 		_ = reader.Close()
 	}()
 
-	buf, err := Render(reader, job.Template, w.raster())
+	buf, err := Render(reader, job.Template, NativeRaster4x6)
 	if err != nil {
 		return Result{}, err
 	}

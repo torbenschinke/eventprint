@@ -3,8 +3,7 @@ package printing_test
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/torbenschinke/eventprint/printing"
@@ -131,36 +130,26 @@ func TestParseQueues(t *testing.T) {
 	}
 }
 
-// hasOption sucht ein "-o schlüssel=wert" Paar in der Argumentliste.
-func hasOption(args []string, option string) bool {
-	for i, arg := range args {
-		if arg == "-o" && i+1 < len(args) && args[i+1] == option {
-			return true
-		}
-	}
+func hasOption(args []string, option string) bool { return slices.Contains(args, option) }
 
-	return false
-}
-
-// TestLpArgsDefaultsToLowSpeed hält die Vorgabe fest.
+// TestDriverOptionsDefaultsToLowSpeed hält die Vorgabe fest.
 //
 // Bei normaler Geschwindigkeit wirken die Farben auf diesem Gerät sichtbar
 // verwaschen: Der Thermokopf verweilt kürzer auf jeder Zeile und überträgt
 // entsprechend weniger Farbe. Für eine Fotobox zählt das Ergebnis mehr als
 // der Durchsatz, deshalb wird ohne ausdrückliche Wahl langsam gedruckt.
-func TestLpArgsDefaultsToLowSpeed(t *testing.T) {
-	args := printing.CUPSPrinter{Queue: "CZ01"}.LpArgsForTest("/tmp/x.jpg", "titel")
+func TestDriverOptionsDefaultsToLowSpeed(t *testing.T) {
+	args := printing.CUPSPrinter{Queue: "CZ01"}.DriverOptionsForTest()
 
 	if !hasOption(args, "StpPrintSpeed=LowSpeed") {
 		t.Errorf("StpPrintSpeed=LowSpeed fehlt in %v", args)
 	}
 }
 
-// TestLpArgsHonoursExplicitSpeed stellt sicher, dass die Einstellung auch
+// TestDriverOptionsHonourExplicitSpeed stellt sicher, dass die Einstellung auch
 // wirklich durchschlägt – wer Durchsatz braucht, muss ihn bekommen.
-func TestLpArgsHonoursExplicitSpeed(t *testing.T) {
-	args := printing.CUPSPrinter{Queue: "CZ01", PrintSpeed: printing.SpeedNormal}.
-		LpArgsForTest("/tmp/x.jpg", "titel")
+func TestDriverOptionsHonourExplicitSpeed(t *testing.T) {
+	args := printing.CUPSPrinter{Queue: "CZ01", PrintSpeed: printing.SpeedNormal}.DriverOptionsForTest()
 
 	if !hasOption(args, "StpPrintSpeed=Normal") {
 		t.Errorf("StpPrintSpeed=Normal fehlt in %v", args)
@@ -171,10 +160,10 @@ func TestLpArgsHonoursExplicitSpeed(t *testing.T) {
 	}
 }
 
-// TestLpArgsQualityDefaults sichert die übrigen Treiberoptionen ab, die für
+// TestDriverOptionsQualityDefaults sichert die übrigen Treiberoptionen ab, die für
 // die Bildqualität entscheidend sind.
-func TestLpArgsQualityDefaults(t *testing.T) {
-	args := printing.CUPSPrinter{Queue: "CZ01"}.LpArgsForTest("/tmp/x.jpg", "titel")
+func TestDriverOptionsQualityDefaults(t *testing.T) {
+	args := printing.CUPSPrinter{Queue: "CZ01"}.DriverOptionsForTest()
 
 	// Ohne Photo verwendet der Treiber die Vorgabe TextGraphics, die für
 	// Fotos die falsche Farbaufbereitung wählt.
@@ -186,22 +175,16 @@ func TestLpArgsQualityDefaults(t *testing.T) {
 		t.Errorf("PageSize fehlt oder ist falsch in %v", args)
 	}
 
-	// Die zu druckende Datei muss das letzte Argument sein.
-	if args[len(args)-1] != "/tmp/x.jpg" {
-		t.Errorf("letztes Argument = %q, erwartet die Datei", args[len(args)-1])
-	}
 }
 
-// TestLpArgsOptionalsAreOmitted prüft, dass unbelegte Einstellungen dem
+// TestDriverOptionsOmitEmptyValues prüft, dass unbelegte Einstellungen dem
 // Treiber überlassen bleiben statt ihn mit leeren Werten zu füttern.
-func TestLpArgsOptionalsAreOmitted(t *testing.T) {
-	args := printing.CUPSPrinter{Queue: "CZ01"}.LpArgsForTest("/tmp/x.jpg", "titel")
+func TestDriverOptionsOmitEmptyValues(t *testing.T) {
+	args := printing.CUPSPrinter{Queue: "CZ01"}.DriverOptionsForTest()
 
-	for i, arg := range args {
-		if arg == "-o" && i+1 < len(args) {
-			if value := args[i+1]; len(value) > 0 && value[len(value)-1] == '=' {
-				t.Errorf("leere Option %q in %v", value, args)
-			}
+	for _, value := range args {
+		if len(value) > 0 && value[len(value)-1] == '=' {
+			t.Errorf("leere Option %q in %v", value, args)
 		}
 	}
 
@@ -210,39 +193,12 @@ func TestLpArgsOptionalsAreOmitted(t *testing.T) {
 	}
 }
 
-// TestLpArgsPassesLaminate deckt das Oberflächenfinish ab.
-func TestLpArgsPassesLaminate(t *testing.T) {
-	args := printing.CUPSPrinter{Queue: "CZ01", Laminate: "Matte"}.
-		LpArgsForTest("/tmp/x.jpg", "titel")
+// TestDriverOptionsPassLaminate deckt das Oberflächenfinish ab.
+func TestDriverOptionsPassLaminate(t *testing.T) {
+	args := printing.CUPSPrinter{Queue: "CZ01", Laminate: "Matte"}.DriverOptionsForTest()
 
 	if !hasOption(args, "StpLaminate=Matte") {
 		t.Errorf("StpLaminate=Matte fehlt in %v", args)
-	}
-}
-
-func TestCustomFilterRequiresExecutableFile(t *testing.T) {
-	filter := filepath.Join(t.TempDir(), "rastertocz01")
-	if err := os.WriteFile(filter, []byte("#!/bin/sh\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	p := printing.CUPSPrinter{Queue: "CZ01", CustomFilter: filter}
-	if got := p.CustomFilterForTest(); got != "" {
-		t.Fatalf("nicht ausführbarer Filter wurde gewählt: %q", got)
-	}
-
-	if err := os.Chmod(filter, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if got := p.CustomFilterForTest(); got != filter {
-		t.Fatalf("CustomFilterForTest() = %q, erwartet %q", got, filter)
-	}
-}
-
-func TestCustomFilterCanForceSystemDriver(t *testing.T) {
-	p := printing.CUPSPrinter{Queue: "CZ01", CustomFilter: "-"}
-	if got := p.CustomFilterForTest(); got != "" {
-		t.Fatalf("erzwungener Systemtreiber wählte %q", got)
 	}
 }
 

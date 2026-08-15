@@ -11,7 +11,7 @@ import (
 
 // NewPreview erzeugt den [Preview] Anwendungsfall. Er rendert exakt dasselbe
 // Bild wie der Druck-Worker, sodass die Vorschau verbindlich ist.
-func NewPreview(openOriginal photo.OpenOriginal, raster func() Raster) Preview {
+func NewPreview(openOriginal photo.OpenOriginal) Preview {
 	return func(subject auth.Subject, id photo.ID, tpl TemplateID) ([]byte, error) {
 		if err := subject.Audit(PermPrint); err != nil {
 			return nil, err
@@ -31,7 +31,7 @@ func NewPreview(openOriginal photo.OpenOriginal, raster func() Raster) Preview {
 			_ = reader.Close()
 		}()
 
-		buf, err := Render(reader, tpl, raster())
+		buf, err := Render(reader, tpl, NativeRaster4x6)
 		if err != nil {
 			return nil, fmt.Errorf("cannot render preview: %w", err)
 		}

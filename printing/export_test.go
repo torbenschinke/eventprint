@@ -1,15 +1,4 @@
 package printing
 
-// LpArgsForTest legt den Aufbau der lp-Argumente für Tests offen.
-//
-// Die Argumentliste ist der einzige Ort, an dem sich überprüfen lässt, welche
-// Treiberoptionen tatsächlich gesetzt werden – ohne dafür Papier zu
-// verbrauchen. Nach außen bleibt sie ein Implementierungsdetail.
-func (p CUPSPrinter) LpArgsForTest(file, title string) []string {
-	return p.lpArgs(file, title)
-}
-
-// CustomFilterForTest legt die automatische Filtererkennung für Tests offen.
-func (p CUPSPrinter) CustomFilterForTest() string {
-	return p.customFilter()
-}
+// DriverOptionsForTest legt die an Gutenprint übergebenen Optionen offen.
+func (p CUPSPrinter) DriverOptionsForTest() []string { return p.driverOptions() }

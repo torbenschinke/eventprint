@@ -33,17 +33,6 @@ type Settings struct {
 	// PrintSpeed steuert das Tempo des Thermokopfes. Leer bedeutet
 	// [SpeedLow], siehe [Settings.Speed].
 	PrintSpeed string `json:"printSpeed,omitempty" label:"Druckgeschwindigkeit" values:"[\"LowSpeed\",\"Normal\"]" supportingText:"Langsam färbt kräftiger, weil der Thermokopf länger auf jeder Zeile verweilt. Normal ist schneller, kann aber blasser wirken."`
-
-	// RasterWidth und RasterHeight sind die Pixelmaße, die der Drucker für
-	// eine Seite erwartet.
-	//
-	// Sie sind einstellbar, weil sie vom Modell und vom Papier abhängen und
-	// sich nicht zuverlässig aus dem PPD ableiten lassen: Der CZ-01 verlangt
-	// für 10x15 cm 1224x1836 Pixel und nicht die rechnerischen 1200x1800,
-	// weil randloses Drucken einen Überstand braucht. Wird in einer anderen
-	// Größe gerendert, skaliert CUPS das Bild hoch und weicht es dabei auf.
-	RasterWidth  int `json:"rasterWidth,omitempty" label:"Rasterbreite" supportingText:"Pixel. 0 bedeutet 1224, den Wert des CZ-01 für 10x15 cm."`
-	RasterHeight int `json:"rasterHeight,omitempty" label:"Rasterhöhe" supportingText:"Pixel. 0 bedeutet 1836."`
 }
 
 // Werte für [Settings.PrintSpeed], wie sie der Gutenprint-Treiber erwartet.
@@ -68,17 +57,6 @@ func (s Settings) Speed() string {
 	}
 
 	return s.PrintSpeed
-}
-
-// Raster liefert die einzustellende Rastergröße, mit Rückfall auf den Wert
-// des CZ-01 für 10x15 cm.
-func (s Settings) Raster() Raster {
-	r := Raster{Width: s.RasterWidth, Height: s.RasterHeight}
-	if !r.Valid() {
-		return NativeRaster4x6
-	}
-
-	return r
 }
 
 func (Settings) GlobalSettings() bool { return true }

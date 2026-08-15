@@ -37,14 +37,6 @@ type Preview func(subject auth.Subject, id photo.ID, tpl TemplateID) ([]byte, er
 // Papier.
 type Diagnose func(subject auth.Subject) PrinterStatus
 
-// Options sind die Abhängigkeiten, die sich zur Laufzeit ändern können.
-type Options struct {
-	// Raster liefert die Pixelgröße, in der gerendert werden soll. Sie wird
-	// bei jedem Auftrag neu gelesen, damit eine Änderung der Einstellungen
-	// ohne Neustart wirkt.
-	Raster func() Raster
-}
-
 // UseCases bündelt alle Anwendungsfälle rund um das Drucken.
 type UseCases struct {
 	Print       Print
@@ -63,11 +55,7 @@ type UseCases struct {
 //
 // Der Worker endet, sobald ctx abgebrochen wird – also beim Herunterfahren
 // der Anwendung.
-func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal, opts Options) UseCases {
-	if opts.Raster == nil {
-		opts.Raster = func() Raster { return NativeRaster4x6 }
-	}
-
+func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal) UseCases {
 	var mutex sync.Mutex
 
 	// Der Puffer entkoppelt die Oberfläche vom Drucker. Ist er voll, wartet
@@ -76,13 +64,13 @@ func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer P
 
 	findJobByID := NewFindJobByID(repo)
 
-	worker := newWorker(&mutex, bus, repo, printer, openOriginal, opts.Raster)
+	worker := newWorker(&mutex, bus, repo, printer, openOriginal)
 	recoverStaleJobs(&mutex, repo, queue)
 	go worker.run(ctx, queue)
 
 	return UseCases{
 		Print:       NewPrint(&mutex, bus, repo, printer, queue),
-		Preview:     NewPreview(openOriginal, opts.Raster),
+		Preview:     NewPreview(openOriginal),
 		FindAllJobs: NewFindAllJobs(repo),
 		FindJobByID: findJobByID,
 		Retry:       NewRetry(&mutex, repo, findJobByID, queue),

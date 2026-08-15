@@ -151,10 +151,7 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 
 	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases)
 	prints := printing.NewUseCases(cfg.Context(), cfg.EventBus(), jobRepo,
-		printing.NewSettingsPrinter(loadPrinterSettings), photos.OpenOriginal,
-		printing.Options{
-			Raster: func() printing.Raster { return loadPrinterSettings().Raster() },
-		})
+		printing.NewSettingsPrinter(loadPrinterSettings), photos.OpenOriginal)
 
 	pages := uiphotobox.Pages{
 		Booth:   ".",

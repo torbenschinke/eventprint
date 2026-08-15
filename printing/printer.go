@@ -1,24 +1,22 @@
 package printing
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image/jpeg"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
-const customCZ01Filter = "/opt/eventprint/gutenprint/bin/rastertocz01"
-
 var (
-	systemDriverWarnings sync.Map
-	lpExecutable         = "lp"
-	cupsfilterExecutable = "cupsfilter"
-	cupsPPDDirectory     = "/etc/cups/ppd"
+	lpExecutable                 = "lp"
+	rastertogutenprintExecutable = "/usr/lib/cups/filter/rastertogutenprint.5.3"
+	cupsPPDDirectory             = "/etc/cups/ppd"
 )
 
 // Result ist die Quittung der Übergabe an den Drucker.
@@ -84,35 +82,9 @@ type CUPSPrinter struct {
 	// diesem Gerät den Unterschied zwischen satten und verwaschenen Farben
 	// ausmacht.
 	PrintSpeed string
-
-	// CustomFilter überschreibt den automatisch erkannten CZ-01-Filter.
-	// Leer verwendet den von scripts/install-gutenprint-cz01.sh installierten
-	// Filter. Der Wert "-" erzwingt den Systemtreiber, insbesondere in Tests.
-	CustomFilter string
 }
 
 func (p CUPSPrinter) Name() string { return p.Queue }
-
-// lpArgs baut die Argumentliste für lp.
-//
-// Die Zusammenstellung ist bewusst von der Ausführung getrennt, damit sich
-// prüfen lässt, welche Treiberoptionen tatsächlich gesetzt werden – ohne
-// dafür Papier zu verbrauchen.
-func (p CUPSPrinter) lpArgs(file, title string) []string {
-	// StpImageType=Photo aktiviert im Gutenprint-Treiber die Farbaufbereitung
-	// für Fotos statt der Vorgabe TextGraphics. fit-to-page bleibt als
-	// Sicherheitsnetz gesetzt, greift aber nicht: Das Bild liegt bereits in
-	// der nativen Rastergröße vor.
-	args := []string{
-		"-d", p.Queue,
-		"-t", title,
-	}
-	for _, option := range p.driverOptions() {
-		args = append(args, "-o", option)
-	}
-
-	return append(args, file)
-}
 
 func (p CUPSPrinter) Print(ctx context.Context, jpg []byte, name string) (Result, error) {
 	f, err := os.CreateTemp("", "eventprint-*.jpg")
@@ -121,8 +93,7 @@ func (p CUPSPrinter) Print(ctx context.Context, jpg []byte, name string) (Result
 	}
 
 	tmp := f.Name()
-	// lp kopiert die Datei in sein Spool-Verzeichnis, wir dürfen sie danach
-	// sofort entfernen.
+	// Die Datei ist nur die kontrollierte Eingabe für unseren Rasterencoder.
 	defer func() {
 		_ = os.Remove(tmp)
 	}()
@@ -141,13 +112,13 @@ func (p CUPSPrinter) Print(ctx context.Context, jpg []byte, name string) (Result
 		title = "eventprint"
 	}
 
-	filter := p.customFilter()
-	if filter != "" {
-		return p.printCustom(ctx, tmp, title, filter)
+	stream, err := p.filterJPEG(ctx, tmp, title)
+	if err != nil {
+		return Result{}, err
 	}
+	defer func() { _ = os.Remove(stream) }()
 
-	p.warnSystemDriver()
-	cmd := exec.CommandContext(ctx, lpExecutable, p.lpArgs(tmp, title)...)
+	cmd := exec.CommandContext(ctx, lpExecutable, "-d", p.Queue, "-t", title, "-o", "raw", stream)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -159,94 +130,81 @@ func (p CUPSPrinter) Print(ctx context.Context, jpg []byte, name string) (Result
 	return Result{JobID: ParseRequestID(message, p.Queue), Message: message}, nil
 }
 
-func (p CUPSPrinter) customFilter() string {
-	filter := p.CustomFilter
-	if filter == "-" {
-		return ""
+func (p CUPSPrinter) filterJPEG(ctx context.Context, jpegFile, title string) (string, error) {
+	pageSize := p.PageSize
+	if pageSize == "" {
+		pageSize = CupsPageSize
 	}
-	if filter == "" {
-		filter = customCZ01Filter
+	if pageSize != CupsPageSize {
+		return "", fmt.Errorf("unsupported CZ-01 page size %q: only %s has a verified raster", pageSize, CupsPageSize)
 	}
-
-	info, err := os.Stat(filter)
-	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
-		return ""
+	if filepath.Base(p.Queue) != p.Queue {
+		return "", fmt.Errorf("invalid CUPS queue name %q", p.Queue)
 	}
 
-	return filter
-}
-
-func (p CUPSPrinter) warnSystemDriver() {
-	key := p.Queue + "\x00" + p.CustomFilter
-	if _, loaded := systemDriverWarnings.LoadOrStore(key, struct{}{}); loaded {
-		return
+	ppd := filepath.Join(cupsPPDDirectory, p.Queue+".ppd")
+	if err := validateCZ01PPD(ppd); err != nil {
+		return "", err
 	}
 
-	slog.Warn("custom CZ-01 Gutenprint filter unavailable; using system driver",
-		"queue", p.Queue,
-		"expected", customCZ01Filter,
-	)
-}
+	jpegData, err := os.ReadFile(jpegFile)
+	if err != nil {
+		return "", fmt.Errorf("cannot read print JPEG: %w", err)
+	}
+	cfg, err := jpeg.DecodeConfig(bytes.NewReader(jpegData))
+	if err != nil {
+		return "", fmt.Errorf("cannot read print JPEG dimensions: %w", err)
+	}
+	if !NativeRaster4x6.Matches(cfg.Width, cfg.Height) {
+		return "", fmt.Errorf("refusing to print %dx%d JPEG: CZ-01 requires %dx%d or %dx%d",
+			cfg.Width, cfg.Height, NativeRaster4x6.Width, NativeRaster4x6.Height,
+			NativeRaster4x6.Height, NativeRaster4x6.Width)
+	}
 
-func (p CUPSPrinter) printCustom(ctx context.Context, jpegFile, title, filter string) (Result, error) {
 	raster, err := os.CreateTemp("", "eventprint-*.raster")
 	if err != nil {
-		return Result{}, fmt.Errorf("cannot create raster file: %w", err)
+		return "", fmt.Errorf("cannot create CUPS raster: %w", err)
 	}
-	defer func() { _ = os.Remove(raster.Name()) }()
-
-	ppd := filepath.Join(cupsPPDDirectory, filepath.Base(p.Queue)+".ppd")
-	if filepath.Base(p.Queue) != p.Queue {
+	rasterName := raster.Name()
+	defer func() {
 		_ = raster.Close()
-		return Result{}, fmt.Errorf("invalid CUPS queue name %q", p.Queue)
-	}
-
-	options := p.driverOptions()
-	cupsArgs := []string{"-p", ppd, "-i", "image/jpeg", "-m", "application/vnd.cups-raster"}
-	for _, option := range options {
-		cupsArgs = append(cupsArgs, "-o", option)
-	}
-	cupsArgs = append(cupsArgs, jpegFile)
-
-	var stderr strings.Builder
-	cmd := exec.CommandContext(ctx, cupsfilterExecutable, cupsArgs...)
-	cmd.Stdout = raster
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		_ = raster.Close()
-		return Result{}, fmt.Errorf("cupsfilter failed: %w: %s", err, strings.TrimSpace(stderr.String()))
+		_ = os.Remove(rasterName)
+	}()
+	if err := writeCZ01Raster(raster, jpegData); err != nil {
+		return "", err
 	}
 	if err := raster.Close(); err != nil {
-		return Result{}, fmt.Errorf("cannot close raster file: %w", err)
+		return "", fmt.Errorf("cannot close CUPS raster: %w", err)
+	}
+	if err := validateCZ01Raster(rasterName); err != nil {
+		return "", fmt.Errorf("refusing invalid raster before Gutenprint: %w", err)
 	}
 
 	stream, err := os.CreateTemp("", "eventprint-*.prn")
 	if err != nil {
-		return Result{}, fmt.Errorf("cannot create print stream: %w", err)
+		return "", fmt.Errorf("cannot create print stream: %w", err)
 	}
-	defer func() { _ = os.Remove(stream.Name()) }()
-
-	stderr.Reset()
-	filterArgs := []string{"1", "eventprint", title, "1", strings.Join(options, " "), raster.Name()}
-	cmd = exec.CommandContext(ctx, filter, filterArgs...)
+	streamName := stream.Name()
+	options := strings.Join(p.driverOptions(), " ")
+	var stderr strings.Builder
+	cmd := exec.CommandContext(ctx, rastertogutenprintExecutable, "1", "eventprint", title, "1", options, rasterName)
 	cmd.Env = append(os.Environ(), "PPD="+ppd)
 	cmd.Stdout = stream
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		_ = stream.Close()
-		return Result{}, fmt.Errorf("custom Gutenprint filter failed: %w: %s", err, strings.TrimSpace(stderr.String()))
+		_ = os.Remove(streamName)
+		return "", fmt.Errorf("system Gutenprint filter failed: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	if err := stream.Close(); err != nil {
-		return Result{}, fmt.Errorf("cannot close print stream: %w", err)
+		_ = os.Remove(streamName)
+		return "", fmt.Errorf("cannot close print stream: %w", err)
 	}
-
-	out, err := exec.CommandContext(ctx, lpExecutable, "-d", p.Queue, "-t", title, "-o", "raw", stream.Name()).CombinedOutput()
-	if err != nil {
-		return Result{}, fmt.Errorf("lp failed: %w: %s", err, strings.TrimSpace(string(out)))
+	if err := validateCZ01PrintStream(streamName); err != nil {
+		_ = os.Remove(streamName)
+		return "", fmt.Errorf("refusing invalid stream before printer: %w", err)
 	}
-
-	message := strings.TrimSpace(string(out))
-	return Result{JobID: ParseRequestID(message, p.Queue), Message: message}, nil
+	return streamName, nil
 }
 
 func (p CUPSPrinter) driverOptions() []string {
@@ -263,7 +221,6 @@ func (p CUPSPrinter) driverOptions() []string {
 		"PageSize=" + pageSize,
 		"StpImageType=Photo",
 		"StpPrintSpeed=" + speed,
-		"fit-to-page",
 	}
 	if p.Laminate != "" {
 		options = append(options, "StpLaminate="+p.Laminate)
