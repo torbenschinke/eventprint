@@ -73,9 +73,6 @@ steht. Danach hat die Oberfläche Vorrang.
 |---|---|
 | `EVENTPRINT_TITLE` | Überschrift auf dem Startbildschirm |
 | `EVENTPRINT_PRINTER` | CUPS-Warteschlange, z. B. `CZ01` |
-| `EVENTPRINT_CAMERA_DIR` | Tethering-Verzeichnis der Kamera. Leer = deaktiviert |
-| `EVENTPRINT_CAMERA_AUTOPRINT` | `true` druckt jede Aufnahme sofort |
-| `EVENTPRINT_CAMERA_DELETE` | `true` löscht die Datei nach der Übernahme |
 | `HOST` | Bind-Adresse. Für Gäste im WLAN `0.0.0.0` |
 | `NAGO_COOKIES_INSECURE` | `true`, solange ohne HTTPS betrieben |
 
@@ -122,19 +119,24 @@ Minuten. Beim Neustart entfernt `photoupld` verbliebene Relay-Bilder.
 
 ## Kamera anschließen
 
-Die Kamera wird per PTP/MTP angesprochen. Statt das Protokoll selbst zu
-implementieren, nutzt die Anwendung ein Übergabeverzeichnis – das entkoppelt
-sie vollständig vom Kameramodell:
+Die Fotobox erkennt unterstützte USB/PTP-Kameras mit `gphoto2` automatisch.
+Die Systemabhängigkeit muss einmalig installiert sein:
 
 ```bash
-mkdir -p /var/lib/photobox/incoming
-gphoto2 --capture-tethered --filename '/var/lib/photobox/incoming/%Y%m%d-%H%M%S.jpg'
+sudo apt install gphoto2
 ```
 
-Mit `EVENTPRINT_CAMERA_DIR=/var/lib/photobox/incoming` übernimmt die Fotobox
-jede Aufnahme automatisch. Eine Datei wird erst eingelesen, wenn ihre Größe
-zwischen zwei Durchläufen konstant bleibt – sonst würde ein noch übertragenes,
-halbes JPEG importiert.
+Die Kamera kann jederzeit an- oder abgesteckt werden. Spätestens nach zehn
+Sekunden startet die Fotobox den Tethering-Betrieb; nach einer Trennung sucht
+sie automatisch erneut. Beim Auslösen lädt `gphoto2` die Aufnahme herunter,
+belässt das Original auf der Speicherkarte und die Fotobox übernimmt sie in
+Historie und Galerie.
+
+Unter **Einstellungen → Fotobox → Kamera** lässt sich der automatische Druck
+abschalten und das Standardlayout wählen. Standardmäßig wird jede Aufnahme
+sofort als **Polaroid** gedruckt. Heruntergeladene Dateien werden erst nach
+erfolgreichem Import und gegebenenfalls erfolgreichem Einreihen des
+Druckauftrags entfernt.
 
 ## Aufbau
 

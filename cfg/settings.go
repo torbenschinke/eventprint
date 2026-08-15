@@ -6,14 +6,18 @@ import (
 
 	"github.com/worldiety/enum"
 	"go.wdy.de/nago/application/settings"
+
+	"github.com/torbenschinke/eventprint/printing"
 )
+
+const TemplateSource = "eventprint.templates"
 
 // Settings sind die global gültigen Einstellungen der Fotobox.
 //
 // Sie werden über das Admin-Center gepflegt, damit die Fotobox vor Ort ohne
 // Umgebungsvariablen und ohne Neustart eingerichtet werden kann.
 type Settings struct {
-	_ any `title:"Fotobox" description:"Titel der Veranstaltung und die Adresse, unter der Gäste die Fotobox erreichen."`
+	_ any `title:"Fotobox" description:"Veranstaltung, Upload-Service und automatische Kameraaufnahmen konfigurieren."`
 
 	// EventTitle erscheint als Überschrift auf dem Startbildschirm.
 	EventTitle string `json:"eventTitle,omitempty" label:"Titel der Veranstaltung" supportingText:"Erscheint groß auf dem Fotobox-Display, z. B. Hochzeit von Anna & Ben."`
@@ -31,6 +35,14 @@ type Settings struct {
 
 	// UploaderToken authentifiziert diese Fotobox am Upload-Service.
 	UploaderToken string `json:"uploaderToken,omitempty" label:"Upload-Token" supportingText:"Access Token aus photoupld mit der Rolle Fotobox-Relay." style:"secret"`
+
+	// CameraAutoPrint controls whether tethered captures are printed immediately.
+	CameraAutoPrint bool `section:"Kamera" json:"cameraAutoPrint" label:"Kameraaufnahmen automatisch drucken" supportingText:"Jede neue Aufnahme wird importiert und direkt als Druckauftrag eingereiht."`
+
+	// CameraTemplate is the default layout for tethered captures.
+	CameraTemplate printing.TemplateID `section:"Kamera" json:"cameraTemplate,omitempty" label:"Standardlayout der Kamera" supportingText:"Layout für automatisch gedruckte Kameraaufnahmen." source:"eventprint.templates"`
+
+	CameraDefaultsApplied bool `json:"cameraDefaultsApplied,omitempty" visible:"false"`
 }
 
 func (Settings) GlobalSettings() bool { return true }

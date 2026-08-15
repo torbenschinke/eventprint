@@ -11,8 +11,8 @@ import (
 	"iter"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -62,9 +62,6 @@ type Options struct {
 	// PrinterQueue ist der Name der CUPS-Warteschlange, z. B. "CZ01".
 	// Leer bedeutet Testbetrieb ohne Drucker.
 	PrinterQueue string
-
-	// Camera konfiguriert die Übernahme der Kamerabilder.
-	Camera camera.Options
 }
 
 // OptionsFromEnv liest die Konfiguration aus Umgebungsvariablen. Damit lässt
@@ -73,26 +70,11 @@ type Options struct {
 //
 //	EVENTPRINT_TITLE          Überschrift, z. B. "Hochzeit Anna & Ben"
 //	EVENTPRINT_PRINTER        CUPS-Warteschlange, leer = Testbetrieb
-//	EVENTPRINT_CAMERA_DIR     Tethering-Verzeichnis der Kamera
-//	EVENTPRINT_CAMERA_AUTOPRINT  "true" druckt jede Aufnahme sofort
-//	EVENTPRINT_CAMERA_DELETE  "true" löscht die Datei nach der Übernahme
 func OptionsFromEnv() Options {
 	return Options{
 		EventTitle:   os.Getenv("EVENTPRINT_TITLE"),
 		PrinterQueue: os.Getenv("EVENTPRINT_PRINTER"),
-		Camera: camera.Options{
-			Dir:               os.Getenv("EVENTPRINT_CAMERA_DIR"),
-			AutoPrint:         envBool("EVENTPRINT_CAMERA_AUTOPRINT"),
-			AutoPrintTemplate: printing.TemplateFull,
-			Delete:            envBool("EVENTPRINT_CAMERA_DELETE"),
-			Interval:          time.Second,
-		},
 	}
-}
-
-func envBool(key string) bool {
-	v, err := strconv.ParseBool(os.Getenv(key))
-	return err == nil && v
 }
 
 // Management ist das installierte Fotobox-Modul.
@@ -143,10 +125,14 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	if err := applyBoothDefaults(settingsMgmt, opts, loadBoothSettings); err != nil {
 		return Management{}, err
 	}
+	if err := applyCameraDefaults(settingsMgmt, loadBoothSettings); err != nil {
+		return Management{}, err
+	}
 
 	// Die Auswahlliste der Warteschlangen für das Einstellungsformular.
 	queues := &printing.QueueLister{}
 	cfg.AddContextValue(core.ContextValue[form.Source](printing.PrinterSource, cupsQueueSource{ctx: cfg.Context(), queues: queues}))
+	cfg.AddContextValue(core.ContextValue[form.Source](TemplateSource, templateSource{}))
 
 	warnAboutMissingQueue(cfg.Context(), queues, loadPrinterSettings())
 
@@ -237,7 +223,15 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		}
 	})
 
-	go camera.Watch(cfg.Context(), opts.Camera, photos, prints)
+	go camera.Run(cfg.Context(), filepath.Join(cfg.DataDir(), "camera", "incoming"), func() camera.Options {
+		booth := loadBoothSettings()
+		return camera.Options{
+			AutoPrint:         booth.CameraAutoPrint,
+			AutoPrintTemplate: booth.CameraTemplate,
+			ScanInterval:      time.Second,
+			DetectInterval:    10 * time.Second,
+		}
+	}, photos, prints)
 
 	management := Management{
 		Photos:   photos,
@@ -300,6 +294,20 @@ func applyBoothDefaults(mgmt application.SettingsManagement, opts Options, load 
 	return nil
 }
 
+func applyCameraDefaults(mgmt application.SettingsManagement, load func() Settings) error {
+	current := load()
+	if current.CameraDefaultsApplied {
+		return nil
+	}
+	current.CameraAutoPrint = true
+	current.CameraTemplate = printing.TemplatePolaroid
+	current.CameraDefaultsApplied = true
+	if err := mgmt.UseCases.StoreGlobal(user.SU(), current); err != nil {
+		return fmt.Errorf("cannot apply camera defaults: %w", err)
+	}
+	return nil
+}
+
 // warnAboutMissingQueue meldet beim Start, wenn die eingestellte
 // Warteschlange gar nicht existiert. Ohne diese Prüfung fällt der Tippfehler
 // erst beim ersten Druckversuch auf – im Zweifel mitten auf der Feier.
@@ -324,6 +332,26 @@ func warnAboutMissingQueue(ctx context.Context, queues *printing.QueueLister, cf
 type cupsQueueSource struct {
 	ctx    context.Context
 	queues *printing.QueueLister
+}
+
+type templateSource struct{}
+
+func (templateSource) FindAll(auth.Subject) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		for _, tpl := range printing.Templates() {
+			if !yield(string(tpl.ID), nil) {
+				return
+			}
+		}
+	}
+}
+
+func (templateSource) FindByID(_ auth.Subject, id string) (option.Opt[form.Entity], error) {
+	tpl := printing.TemplateByID(printing.TemplateID(id))
+	if string(tpl.ID) != id {
+		return option.None[form.Entity](), nil
+	}
+	return option.Some(form.Entity{ID: id, Value: tpl.Name}), nil
 }
 
 func (s cupsQueueSource) FindAll(subject auth.Subject) iter.Seq2[string, error] {

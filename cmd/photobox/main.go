@@ -13,7 +13,6 @@
 //	HOSTNAME=fotobox.local:3000 \
 //	EVENTPRINT_TITLE="Hochzeit von Anna & Ben" \
 //	EVENTPRINT_PRINTER=CZ01 \
-//	EVENTPRINT_CAMERA_DIR=/var/lib/photobox/incoming \
 //	NAGO_COOKIES_INSECURE=true \
 //	go run ./cmd/photobox
 //
