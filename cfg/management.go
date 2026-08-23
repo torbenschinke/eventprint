@@ -28,6 +28,7 @@ import (
 	"go.wdy.de/nago/presentation/ui/form"
 
 	"github.com/torbenschinke/eventprint/camera"
+	"github.com/torbenschinke/eventprint/facecrop"
 	"github.com/torbenschinke/eventprint/photo"
 	"github.com/torbenschinke/eventprint/printing"
 	"github.com/torbenschinke/eventprint/remote"
@@ -128,6 +129,9 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	if err := applyCameraDefaults(settingsMgmt, loadBoothSettings); err != nil {
 		return Management{}, err
 	}
+	if err := applyAutoCropDefaults(settingsMgmt, loadBoothSettings); err != nil {
+		return Management{}, err
+	}
 
 	// Die Auswahlliste der Warteschlangen für das Einstellungsformular.
 	queues := &printing.QueueLister{}
@@ -138,7 +142,12 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 
 	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases)
 	prints := printing.NewUseCases(cfg.Context(), cfg.EventBus(), jobRepo,
-		printing.NewSettingsPrinter(loadPrinterSettings), photos.OpenOriginal)
+		printing.NewSettingsPrinter(loadPrinterSettings), photos.OpenOriginal, func() printing.RenderOptions {
+			return printing.RenderOptions{
+				AutoCrop:    loadBoothSettings().AutoCrop,
+				DetectFaces: facecrop.Detect,
+			}
+		})
 
 	relay := remote.NewManager(func() remote.Options {
 		booth := loadBoothSettings()
@@ -304,6 +313,19 @@ func applyCameraDefaults(mgmt application.SettingsManagement, load func() Settin
 	current.CameraDefaultsApplied = true
 	if err := mgmt.UseCases.StoreGlobal(user.SU(), current); err != nil {
 		return fmt.Errorf("cannot apply camera defaults: %w", err)
+	}
+	return nil
+}
+
+func applyAutoCropDefaults(mgmt application.SettingsManagement, load func() Settings) error {
+	current := load()
+	if current.AutoCropDefaultsApplied {
+		return nil
+	}
+	current.AutoCrop = true
+	current.AutoCropDefaultsApplied = true
+	if err := mgmt.UseCases.StoreGlobal(user.SU(), current); err != nil {
+		return fmt.Errorf("cannot apply auto-crop defaults: %w", err)
 	}
 	return nil
 }

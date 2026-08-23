@@ -65,7 +65,7 @@ func newTestUseCases(t *testing.T, printer printing.Printer) printing.UseCases {
 	// wie im Betrieb, nur ohne Datei auf der Platte.
 	repo := json.NewSloppyJSONRepository[printing.Job, printing.JobID](mem.NewBlobStore("printjob"))
 
-	return printing.NewUseCases(ctx, events.NewEventBus(), repo, printer, openSample(t))
+	return printing.NewUseCases(ctx, events.NewEventBus(), repo, printer, openSample(t), nil)
 }
 
 // awaitJob wartet, bis der Auftrag abgeschlossen ist.

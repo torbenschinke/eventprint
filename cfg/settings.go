@@ -43,6 +43,10 @@ type Settings struct {
 	CameraTemplate printing.TemplateID `section:"Kamera" json:"cameraTemplate,omitempty" label:"Standardlayout der Kamera" supportingText:"Layout für automatisch gedruckte Kameraaufnahmen." source:"eventprint.templates"`
 
 	CameraDefaultsApplied bool `json:"cameraDefaultsApplied,omitempty" visible:"false"`
+
+	AutoCrop bool `section:"Bildausschnitt" json:"autoCrop" label:"Automatischer Polaroid-Bildausschnitt" supportingText:"Erkennt Gesichter und richtet den Polaroid-Ausschnitt darauf aus. Ohne Treffer wird der mittige Standardausschnitt verwendet."`
+
+	AutoCropDefaultsApplied bool `json:"autoCropDefaultsApplied,omitempty" visible:"false"`
 }
 
 func (Settings) GlobalSettings() bool { return true }

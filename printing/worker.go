@@ -16,20 +16,22 @@ import (
 // Einschränkung, sondern beabsichtigt: Es gibt genau einen Drucker, und ein
 // Dye-Sublimation-Gerät kann ohnehin nur ein Bild gleichzeitig verarbeiten.
 type worker struct {
-	mutex        *sync.Mutex
-	bus          events.Bus
-	repo         Repository
-	printer      Printer
-	openOriginal photo.OpenOriginal
+	mutex         *sync.Mutex
+	bus           events.Bus
+	repo          Repository
+	printer       Printer
+	openOriginal  photo.OpenOriginal
+	renderOptions func() RenderOptions
 }
 
-func newWorker(mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal) *worker {
+func newWorker(mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal, renderOptions func() RenderOptions) *worker {
 	return &worker{
-		mutex:        mutex,
-		bus:          bus,
-		repo:         repo,
-		printer:      printer,
-		openOriginal: openOriginal,
+		mutex:         mutex,
+		bus:           bus,
+		repo:          repo,
+		printer:       printer,
+		openOriginal:  openOriginal,
+		renderOptions: renderOptions,
 	}
 }
 
@@ -147,7 +149,7 @@ func (w *worker) render(ctx context.Context, job Job) (Result, error) {
 		_ = reader.Close()
 	}()
 
-	buf, err := Render(reader, job.Template, NativeRaster4x6)
+	buf, err := RenderWithOptions(reader, job.Template, NativeRaster4x6, w.renderOptions())
 	if err != nil {
 		return Result{}, err
 	}

@@ -53,9 +53,12 @@ type UseCases struct {
 
 // NewUseCases verdrahtet die Anwendungsfälle und startet den Druck-Worker.
 //
+// renderOptions wird bei jedem Rendern erneut ausgewertet, damit eine
+// geänderte Einstellung sofort greift. nil bedeutet: keine Bildkorrekturen.
+//
 // Der Worker endet, sobald ctx abgebrochen wird – also beim Herunterfahren
 // der Anwendung.
-func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal) UseCases {
+func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal, renderOptions func() RenderOptions) UseCases {
 	var mutex sync.Mutex
 
 	// Der Puffer entkoppelt die Oberfläche vom Drucker. Ist er voll, wartet
@@ -64,13 +67,15 @@ func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer P
 
 	findJobByID := NewFindJobByID(repo)
 
-	worker := newWorker(&mutex, bus, repo, printer, openOriginal)
+	renderOptions = orDefaultRenderOptions(renderOptions)
+
+	worker := newWorker(&mutex, bus, repo, printer, openOriginal, renderOptions)
 	recoverStaleJobs(&mutex, repo, queue)
 	go worker.run(ctx, queue)
 
 	return UseCases{
 		Print:       NewPrint(&mutex, bus, repo, printer, queue),
-		Preview:     NewPreview(openOriginal),
+		Preview:     NewPreview(openOriginal, renderOptions),
 		FindAllJobs: NewFindAllJobs(repo),
 		FindJobByID: findJobByID,
 		Retry:       NewRetry(&mutex, repo, findJobByID, queue),

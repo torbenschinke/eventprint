@@ -120,11 +120,17 @@ Minuten. Beim Neustart entfernt `photoupld` verbliebene Relay-Bilder.
 ## Kamera anschließen
 
 Die Fotobox erkennt unterstützte USB/PTP-Kameras mit `gphoto2` automatisch.
-Die Systemabhängigkeit muss einmalig installiert sein:
+Für den automatischen Polaroid-Bildausschnitt verwendet sie außerdem GoCV mit
+OpenCV 4.x und dem eingebetteten YuNet-Modell. Die Systemabhängigkeiten müssen
+vor dem Bauen und Starten der Fotobox einmalig installiert sein:
 
 ```bash
-sudo apt install gphoto2
+sudo apt install gphoto2 libopencv-dev pkg-config
 ```
+
+Der Fotobox-Build benötigt deshalb aktiviertes CGO und eine über
+`pkg-config --modversion opencv4` auffindbare OpenCV-Installation. Der separat
+gebaute Upload-Service benötigt OpenCV nicht.
 
 Die Kamera kann jederzeit an- oder abgesteckt werden. Spätestens nach zehn
 Sekunden startet die Fotobox den Tethering-Betrieb; nach einer Trennung sucht
@@ -137,6 +143,11 @@ abschalten und das Standardlayout wählen. Standardmäßig wird jede Aufnahme
 sofort als **Polaroid** gedruckt. Heruntergeladene Dateien werden erst nach
 erfolgreichem Import und gegebenenfalls erfolgreichem Einreihen des
 Druckauftrags entfernt.
+
+Unter **Einstellungen → Fotobox → Bildausschnitt** kann der automatische
+Polaroid-Bildausschnitt deaktiviert werden. Er ist standardmäßig aktiv und
+richtet Gruppen sowie Einzelpersonen anhand erkannter Gesichter aus. Werden
+keine Gesichter erkannt, bleibt es beim mittigen Standardausschnitt.
 
 ## Aufbau
 

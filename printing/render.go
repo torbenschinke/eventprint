@@ -59,6 +59,31 @@ var VisibleMedia4x6 = Raster{Width: 1200, Height: 1800}
 // dem Druck, neu komprimiert.
 const jpegQuality = 95
 
+// FaceDetector liefert Gesichtsrechtecke in den Koordinaten des übergebenen
+// Bildes. Fehler werden als leere Trefferliste behandelt, damit ein Ausdruck
+// nie an der optionalen Erkennung scheitert.
+type FaceDetector func(image.Image) []image.Rectangle
+
+// RenderOptions steuert optionale, layoutabhängige Bildkorrekturen.
+type RenderOptions struct {
+	// AutoCrop richtet den Polaroid-Ausschnitt an erkannten Gesichtern aus.
+	AutoCrop bool
+
+	// DetectFaces wird von außen gesetzt, damit dieses Paket unabhängig von
+	// OpenCV bleibt und der Upload-Service weiterhin ohne cgo baut.
+	DetectFaces FaceDetector
+}
+
+// orDefaultRenderOptions macht die Angabe optional: nil bedeutet "keine
+// Bildkorrekturen".
+func orDefaultRenderOptions(load func() RenderOptions) func() RenderOptions {
+	if load != nil {
+		return load
+	}
+
+	return func() RenderOptions { return RenderOptions{} }
+}
+
 // Render dekodiert das Quellbild aus src und erzeugt eine druckfertige
 // JPEG-Datei in genau der Pixelgröße, die der Drucker erwartet.
 //
@@ -68,6 +93,12 @@ const jpegQuality = 95
 // Ausschließlich [NativeRaster4x6] ist zulässig. Dadurch kann kein Aufrufer
 // versehentlich eine Größe erzeugen, die Gutenprint später skaliert.
 func Render(src io.Reader, tpl TemplateID, raster Raster) ([]byte, error) {
+	return RenderWithOptions(src, tpl, raster, RenderOptions{})
+}
+
+// RenderWithOptions rendert wie [Render] und berücksichtigt zusätzlich die
+// übergebenen Bildkorrekturen.
+func RenderWithOptions(src io.Reader, tpl TemplateID, raster Raster, opts RenderOptions) ([]byte, error) {
 	if raster != NativeRaster4x6 {
 		return nil, fmt.Errorf("unsupported print raster %dx%d: expected %dx%d",
 			raster.Width, raster.Height, NativeRaster4x6.Width, NativeRaster4x6.Height)
@@ -86,7 +117,7 @@ func Render(src io.Reader, tpl TemplateID, raster Raster) ([]byte, error) {
 		return nil, fmt.Errorf("cannot decode source image: %w", err)
 	}
 
-	canvas := renderTemplate(img, tpl, raster)
+	canvas := renderTemplate(img, tpl, raster, opts)
 
 	applyCalibration(canvas)
 	compensateDriverRotation(canvas)
@@ -222,7 +253,7 @@ func withJFIFHeader(jpg []byte) []byte {
 }
 
 // renderTemplate legt das Motiv gemäß Layout auf eine weiße Seite.
-func renderTemplate(img image.Image, tpl TemplateID, raster Raster) *image.RGBA {
+func renderTemplate(img image.Image, tpl TemplateID, raster Raster, opts RenderOptions) *image.RGBA {
 	bounds := img.Bounds()
 
 	pageW, pageH := raster.Short(), raster.Long()
@@ -264,7 +295,11 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster) *image.RGBA 
 		side := min(visibleW, visibleH) * 6 / 100
 		bottom := min(visibleW, visibleH) * 22 / 100
 		area := image.Rect(visible.Min.X+side, visible.Min.Y+side, visible.Max.X-side, visible.Max.Y-bottom)
-		drawCover(canvas, area, img)
+		if opts.AutoCrop && opts.DetectFaces != nil {
+			drawCoverCrop(canvas, area, img, cropForFaces(img.Bounds(), opts.DetectFaces(img), area))
+		} else {
+			drawCover(canvas, area, img)
+		}
 
 	default: // TemplateFull
 		drawCover(canvas, canvas.Bounds(), img)
@@ -316,7 +351,106 @@ func drawCover(dst *image.RGBA, area image.Rectangle, src image.Image) {
 	offY := sb.Min.Y + (sb.Dy()-cropH)/2
 	crop := image.Rect(offX, offY, offX+cropW, offY+cropH)
 
+	drawCoverCrop(dst, area, src, crop)
+}
+
+func drawCoverCrop(dst *image.RGBA, area image.Rectangle, src image.Image, crop image.Rectangle) {
+	if crop.Empty() {
+		drawCover(dst, area, src)
+		return
+	}
 	xdraw.CatmullRom.Scale(dst, area, src, crop, draw.Over, nil)
+}
+
+// faceGroup spannt eine gemeinsame Box über alle erkannten Gesichter auf.
+// Treffer außerhalb des Bildes werden beschnitten, damit ein Detektor mit
+// leicht überstehenden Rechtecken die Box nicht künstlich aufbläht.
+func faceGroup(bounds image.Rectangle, faces []image.Rectangle) image.Rectangle {
+	var group image.Rectangle
+	for _, face := range faces {
+		face = face.Intersect(bounds)
+		if face.Empty() {
+			continue
+		}
+		if group.Empty() {
+			group = face
+		} else {
+			group = group.Union(face)
+		}
+	}
+
+	return group
+}
+
+// cropForFaces legt die gemeinsame Gesichtsbox in die Mitte der oberen
+// Hälfte des Ausschnitts. Links, rechts und oben bleiben nach Möglichkeit
+// jeweils 10 % der Ausschnitthöhe frei.
+//
+// Der gelieferte Ausschnitt hat exakt das Seitenverhältnis von area, denn
+// [drawCoverCrop] bildet ihn ohne Rücksicht auf Proportionen darauf ab – jede
+// Abweichung würde das Motiv verzerren.
+//
+// Nicht immer sind alle Vorgaben erfüllbar: Ein Ausschnitt kann das Original
+// nicht überschreiten, und angeschnittene oder sehr weit verteilte Gesichter
+// erzwingen ein Verschieben. In diesen Fällen gilt die Reihenfolge Bildgrenze
+// vor Padding vor Zentrierung. Ein leeres Rechteck bedeutet "kein Ergebnis",
+// der Aufrufer fällt dann auf den mittigen Standardausschnitt zurück.
+func cropForFaces(bounds image.Rectangle, faces []image.Rectangle, area image.Rectangle) image.Rectangle {
+	group := faceGroup(bounds, faces)
+	if group.Empty() || bounds.Empty() || area.Empty() {
+		return image.Rectangle{}
+	}
+
+	const (
+		// padding ist der Anteil der Ausschnitthöhe, der links, rechts und
+		// oben frei bleibt, damit keine Gesichter angeschnitten werden.
+		padding = 0.10
+
+		// groupBand ist die daraus folgende maximale Höhe der Gesichtsbox:
+		// Ihre Mitte liegt auf 1/4 der Höhe, oben bleiben 10 % frei, also
+		// 2*(0.25-0.10) = 0.30.
+		groupBand = 0.30
+	)
+
+	aspect := float64(area.Dx()) / float64(area.Dy())
+	if aspect <= 2*padding {
+		// Ein derart schmaler Bereich lässt das seitliche Padding nicht zu.
+		// Der mittige Standardausschnitt ist dann die ehrlichere Antwort.
+		return image.Rectangle{}
+	}
+
+	// Es gilt cropW = cropH*aspect. Die schärfere der beiden Forderungen
+	// bestimmt den Zoom, sodass die Gesichtsbox auf mindestens einer Achse
+	// formatfüllend im vorgesehenen Bereich sitzt.
+	cropH := max(
+		float64(group.Dx())/(aspect-2*padding),
+		float64(group.Dy())/groupBand,
+	)
+
+	// Nicht über die native Druckauflösung hinaus vergrößern. Ohne diese
+	// Grenze würde eine einzelne Person nah an der Kamera auf einen winzigen
+	// Ausschnitt zoomen, der auf 300 dpi sichtbar unscharf ausgedruckt wird.
+	cropH = max(cropH, float64(area.Dy()))
+
+	// Der Ausschnitt kann das Original nicht überschreiten; das Verhältnis
+	// bleibt dabei erhalten. Das geht dem Padding bewusst vor.
+	cropH = min(cropH, float64(bounds.Dy()))
+	cropH = min(cropH, float64(bounds.Dx())/aspect)
+
+	h := max(1, int(cropH+0.5))
+	w := max(1, int(cropH*aspect+0.5))
+	w, h = min(w, bounds.Dx()), min(h, bounds.Dy())
+
+	// Horizontal zentriert, vertikal so, dass die Gesichtsmitte auf 1/4 der
+	// Ausschnitthöhe liegt – also mittig in der oberen Hälfte.
+	x := group.Min.X + group.Dx()/2 - w/2
+	y := group.Min.Y + group.Dy()/2 - h/4
+
+	// Ins Bild schieben statt beschneiden, damit das Seitenverhältnis hält.
+	x = max(bounds.Min.X, min(x, bounds.Max.X-w))
+	y = max(bounds.Min.Y, min(y, bounds.Max.Y-h))
+
+	return image.Rect(x, y, x+w, y+h)
 }
 
 // drawContain skaliert das Motiv so, dass es vollständig in area passt, und

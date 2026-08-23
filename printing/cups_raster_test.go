@@ -194,10 +194,10 @@ func TestValidateCZ01RasterRejectsCorruptHeader(t *testing.T) {
 }
 
 func TestTemplatesUseVisibleMediaPixels(t *testing.T) {
-	border := renderTemplate(solidImage(1080, 1680, color.Black), TemplateBorder, NativeRaster4x6)
+	border := renderTemplate(solidImage(1080, 1680, color.Black), TemplateBorder, NativeRaster4x6, RenderOptions{})
 	assertTransition(t, border, 93, 78, 1173, 1758)
 
-	polaroid := renderTemplate(solidImage(1056, 1464, color.Black), TemplatePolaroid, NativeRaster4x6)
+	polaroid := renderTemplate(solidImage(1056, 1464, color.Black), TemplatePolaroid, NativeRaster4x6, RenderOptions{})
 	assertTransition(t, polaroid, 105, 90, 1161, 1554)
 }
 
@@ -215,7 +215,7 @@ func TestBorderChoosesBestOrientationAndCentersEntireImage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			img := renderTemplate(solidImage(tt.width, tt.height, color.Black), TemplateBorder, NativeRaster4x6)
+			img := renderTemplate(solidImage(tt.width, tt.height, color.Black), TemplateBorder, NativeRaster4x6, RenderOptions{})
 			bounds := img.Bounds()
 			if got := bounds.Dx() > bounds.Dy(); got != tt.landscape {
 				t.Fatalf("Papier quer = %v, erwartet %v (%dx%d)", got, tt.landscape, bounds.Dx(), bounds.Dy())
