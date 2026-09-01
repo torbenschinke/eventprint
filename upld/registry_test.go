@@ -73,3 +73,26 @@ func TestTrackPurgesImageWhenSessionExpired(t *testing.T) {
 		t.Fatal("orphan was not purged")
 	}
 }
+
+// TestPurgeKeepsUsedSession hält fest, dass die Verfallsfrist am letzten
+// Zugriff hängt und nicht am Alter der Sitzung.
+//
+// Vorher wurde eine Sitzung nach 30 Minuten verworfen, gleich ob sie benutzt
+// wurde. Auf einer Feier wechselte der QR-Code dadurch mitten im Betrieb, und
+// wer ihn kurz zuvor gescannt hatte, lud ins Leere.
+func TestPurgeKeepsUsedSession(t *testing.T) {
+	r := NewRegistry(nil)
+	id, _ := r.Open("box")
+
+	// Die Fotobox fragt ihre Warteschlange ab – das ist ein Zugriff.
+	if _, err := r.Pending("box"); err != nil {
+		t.Fatalf("Pending: %v", err)
+	}
+
+	// Der Stichtag liegt vor diesem Zugriff, aber nach der Eröffnung.
+	r.PurgeOlderThan(time.Now().Add(-time.Millisecond))
+
+	if !r.Valid(id) {
+		t.Fatal("eine benutzte Sitzung wurde verworfen")
+	}
+}

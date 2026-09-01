@@ -58,6 +58,19 @@ func (w *worker) process(ctx context.Context, id JobID) {
 		return
 	}
 
+	// Nur ein wartender Auftrag darf gedruckt werden. Landet dieselbe Kennung
+	// ein zweites Mal in der Warteschlange – durch einen doppelten Klick, eine
+	// Wiederholung oder die Wiederherstellung beim Start –, wäre das sonst ein
+	// zweites Blatt Papier für dasselbe Bild.
+	if job.State != StateQueued {
+		slog.Warn("skipping print job that is not queued",
+			"job", string(job.ID),
+			"state", string(job.State),
+		)
+
+		return
+	}
+
 	job.State = StatePrinting
 	job.Message = ""
 	w.store(job)
@@ -184,15 +197,30 @@ func (w *worker) store(job Job) {
 	}
 }
 
+// maxRecoverAge begrenzt, wie alt ein wartender Auftrag sein darf, um beim
+// Start noch gedruckt zu werden.
+//
+// Ein Auftrag, der beim letzten Herunterfahren offen war, ist nach einer
+// Nachtruhe kein Auftrag mehr, sondern eine Überraschung: Niemand steht dann
+// noch am Drucker, und das Bild gehört zu einem Gast, der längst gegangen
+// ist. Solche Aufträge werden ausgewiesen, nicht ausgeführt.
+const maxRecoverAge = 15 * time.Minute
+
 // recoverStaleJobs behandelt Aufträge, die beim letzten Herunterfahren noch
-// offen waren. Wartende Aufträge werden erneut eingereiht; ein Auftrag, der
-// mitten im Druck stand, wird als fehlgeschlagen markiert, weil unbekannt
+// offen waren. Junge wartende Aufträge werden erneut eingereiht; ein Auftrag,
+// der mitten im Druck stand, wird als fehlgeschlagen markiert, weil unbekannt
 // ist, ob das Papier bereits verbraucht wurde.
-func recoverStaleJobs(mutex *sync.Mutex, repo Repository, queue chan<- JobID) {
+//
+// In beiden Fällen wird ein eventuell noch vorhandener Auftrag des
+// Druckdienstes storniert. Ohne das würde er beim nächsten Erreichen des
+// Druckers zusätzlich zum neuen Versuch ausgegeben.
+func recoverStaleJobs(ctx context.Context, mutex *sync.Mutex, repo Repository, printer Printer, queue chan<- JobID) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	var requeue []JobID
+
+	cutoff := time.Now().Add(-maxRecoverAge)
 
 	for job, err := range repo.All() {
 		if err != nil {
@@ -200,17 +228,40 @@ func recoverStaleJobs(mutex *sync.Mutex, repo Repository, queue chan<- JobID) {
 			return
 		}
 
-		switch job.State {
-		case StateQueued:
-			requeue = append(requeue, job.ID)
+		if job.State.Done() {
+			continue
+		}
 
-		case StatePrinting:
+		// Der frühere Auftrag im Druckdienst ist in jedem Fall hinfällig: Er
+		// gehört zu einem Lauf, dessen Ausgang niemand mehr kennt.
+		cancelPrinterJob(ctx, printer, job)
+
+		switch {
+		case job.State == StatePrinting:
 			job.State = StateFailed
 			job.Message = "Der Auftrag wurde durch einen Neustart der Fotobox unterbrochen."
-			job.FinishedAt = time.Now()
+
+		case job.CreatedAt.Before(cutoff):
+			job.State = StateFailed
+			job.Message = "Der Auftrag lag beim Neustart zu lange zurück und wurde nicht mehr automatisch gedruckt. Über 'Wiederholen' lässt er sich bewusst erneut ausgeben."
+
+		default:
+			job.PrinterJob = ""
 			if err := repo.Save(job); err != nil {
-				slog.Error("cannot mark stale print job", "job", string(job.ID), "err", err)
+				slog.Error("cannot reset recovered print job", "job", string(job.ID), "err", err)
+				continue
 			}
+
+			requeue = append(requeue, job.ID)
+
+			continue
+		}
+
+		job.PrinterJob = ""
+		job.FinishedAt = time.Now()
+
+		if err := repo.Save(job); err != nil {
+			slog.Error("cannot mark stale print job", "job", string(job.ID), "err", err)
 		}
 	}
 
@@ -223,5 +274,26 @@ func recoverStaleJobs(mutex *sync.Mutex, repo Repository, queue chan<- JobID) {
 			slog.Warn("print queue full while recovering", "job", string(id))
 			return
 		}
+	}
+}
+
+// cancelPrinterJob nimmt den zugehörigen Auftrag aus der Warteschlange des
+// Druckdienstes, sofern der Drucker das unterstützt.
+func cancelPrinterJob(ctx context.Context, printer Printer, job Job) {
+	if job.PrinterJob == "" {
+		return
+	}
+
+	canceller, ok := printer.(Canceller)
+	if !ok {
+		return
+	}
+
+	if err := canceller.Cancel(ctx, job.PrinterJob); err != nil {
+		slog.Warn("cannot cancel leftover printer job",
+			"job", string(job.ID),
+			"printerJob", job.PrinterJob,
+			"err", err,
+		)
 	}
 }

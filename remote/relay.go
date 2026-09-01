@@ -116,8 +116,14 @@ func (r *Relay) Run(ctx context.Context) {
 			slog.Error("cannot poll photoupld", "err", err)
 			var httpErr HTTPError
 			if errors.As(err, &httpErr) && httpErr.StatusCode >= 400 && httpErr.StatusCode < 500 {
+				// Die Sitzung ist hinfällig, eine neue wird gleich geöffnet.
+				//
+				// r.processed wird dabei bewusst nicht geleert: Die Menge ist
+				// die einzige Absicherung dagegen, ein bereits gedrucktes
+				// Bild ein zweites Mal auszugeben, falls dessen Bestätigung
+				// zuvor fehlschlug. Sie kostet nur wenige Bytes je Upload und
+				// darf deshalb über den Sitzungswechsel hinaus bestehen.
 				r.uploadURL.Store(nil)
-				clear(r.processed)
 			}
 		}
 

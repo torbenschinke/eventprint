@@ -26,6 +26,10 @@ type fakePrinter struct {
 	outcome  printing.Outcome
 	printErr error
 	printed  int
+
+	// canceled hält fest, welche Aufträge zurückgenommen wurden. Genau daran
+	// entscheidet sich, ob eine Wiederholung ein zweites Blatt erzeugt.
+	canceled []string
 }
 
 func (p *fakePrinter) Name() string { return "Fake" }
@@ -44,6 +48,12 @@ func (p *fakePrinter) Await(context.Context, string) printing.Outcome { return p
 
 func (p *fakePrinter) Status(context.Context) printing.PrinterStatus {
 	return printing.PrinterStatus{Queue: "Fake", Exists: true, Enabled: true, Accepting: true}
+}
+
+func (p *fakePrinter) Cancel(_ context.Context, jobID string) error {
+	p.canceled = append(p.canceled, jobID)
+
+	return nil
 }
 
 // openSample liefert das Beispielbild als Originaldaten des Fotos.
@@ -209,5 +219,37 @@ func TestRetryRequeuesFailedJob(t *testing.T) {
 
 	if printer.printed != 2 {
 		t.Errorf("es wurden %d Aufträge übergeben, erwartet 2", printer.printed)
+	}
+}
+
+// TestRetryCancelsPreviousPrinterJob sichert die zweite Hälfte des
+// Doppeldrucks ab.
+//
+// Ein fehlgeschlagener Auftrag kann im Druckdienst weiterhin anhängig sein –
+// nach einem Timeout ist das sogar der Regelfall. Wird er vor der
+// Wiederholung nicht zurückgenommen, existieren zwei Aufträge für dasselbe
+// Bild, und der Drucker gibt es zweimal aus.
+func TestRetryCancelsPreviousPrinterJob(t *testing.T) {
+	printer := &fakePrinter{outcome: printing.Outcome{Done: true, Reason: "timeout"}}
+
+	uc := newTestUseCases(t, printer)
+
+	id, err := uc.Print(user.SU(), "irgendein-foto", printing.TemplateFull)
+	if err != nil {
+		t.Fatalf("Print: %v", err)
+	}
+
+	awaitJob(t, uc, id)
+
+	printer.outcome = printing.Outcome{Done: true, Success: true, Reason: "job-completed-successfully"}
+
+	if err := uc.Retry(user.SU(), id); err != nil {
+		t.Fatalf("Retry: %v", err)
+	}
+
+	awaitJob(t, uc, id)
+
+	if len(printer.canceled) != 1 || printer.canceled[0] != "Fake-1" {
+		t.Fatalf("stornierte Aufträge = %v, erwartet [Fake-1]", printer.canceled)
 	}
 }

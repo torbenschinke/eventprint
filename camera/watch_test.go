@@ -169,3 +169,46 @@ func (r *recordingRunner) Run(_ context.Context, _ io.Writer, name string, args 
 	r.args = append([]string(nil), args...)
 	return r.runErr
 }
+
+// TestWatcherDoesNotReprintWhenRemoveFails deckt den Fall ab, dass die
+// importierte Datei nicht gelöscht werden kann.
+//
+// Der Eintrag bleibt dann offen und der Durchlauf im Sekundentakt sah ihn
+// erneut. Vorher bedeutete das einen weiteren Ausdruck je Sekunde, solange
+// die Datei liegen blieb.
+func TestWatcherDoesNotReprintWhenRemoveFails(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "capture.jpg")
+	if err := os.WriteFile(path, testJPEG(t), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	attempts := 0
+	w := &watcher{
+		dir: dir, load: func() Options { return Options{AutoPrint: true, AutoPrintTemplate: printing.TemplateBorder} },
+		photos: photo.UseCases{Import: func(_ user.Subject, _ photo.Options, _ nagoimage.File) (photo.Photo, error) {
+			return photo.Photo{ID: "photo"}, nil
+		}},
+		prints: printing.UseCases{Print: func(_ user.Subject, _ photo.ID, _ printing.TemplateID) (printing.JobID, error) {
+			attempts++
+			return "job", nil
+		}},
+		states: map[string]fileState{}, pending: map[string]pendingPhoto{},
+	}
+
+	w.scan()
+	w.scan()
+
+	// Das Löschen ist gescheitert, die Datei liegt also noch da.
+	if err := os.WriteFile(path, testJPEG(t), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	w.pending[path] = pendingPhoto{id: "photo", template: printing.TemplateBorder, printed: true}
+
+	w.scan()
+	w.scan()
+
+	if attempts != 1 {
+		t.Fatalf("attempts=%d, want 1 – ein liegengebliebenes Bild darf nicht erneut gedruckt werden", attempts)
+	}
+}

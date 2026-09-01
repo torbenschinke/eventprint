@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/worldiety/option v0.0.0-20251007074526-863facc0bc83
-	go.wdy.de/nago v0.0.0-20260811122601-eb0d2c67dfb5
+	go.wdy.de/nago v0.0.0-20260825122142-0bc1268bd119
 	gocv.io/x/gocv v0.43.0
 	golang.org/x/image v0.33.0
 )

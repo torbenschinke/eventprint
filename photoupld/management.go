@@ -87,6 +87,14 @@ func Enable(cfg *application.Configurator) (Management, error) {
 	return management, nil
 }
 
+// sessionIdleTimeout ist die Zeit ohne jeden Zugriff, nach der eine
+// Upload-Sitzung verworfen wird.
+//
+// Gemessen wird der letzte Zugriff, nicht das Alter. Eine laufende Fotobox
+// fragt ihre Sitzung regelmäßig ab und hält den QR-Code damit den ganzen
+// Abend über gültig; verstummt sie, räumt der Verfall hinter ihr auf.
+const sessionIdleTimeout = 30 * time.Minute
+
 func reap(ctx context.Context, registry *upld.Registry) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -95,7 +103,7 @@ func reap(ctx context.Context, registry *upld.Registry) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			registry.PurgeOlderThan(time.Now().Add(-30 * time.Minute))
+			registry.PurgeOlderThan(time.Now().Add(-sessionIdleTimeout))
 		}
 	}
 }

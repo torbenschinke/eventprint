@@ -100,10 +100,15 @@ So ist das Ergebnis deterministisch und vorher prüfbar.
 ### Status prüfen
 
 ```bash
-lpstat -o          # offene Jobs
-lpstat -p CZ01     # Druckerstatus
-cancel -a          # alle Jobs abbrechen
+lpstat -o                          # offene Jobs
+lpstat -W not-completed -o CZ01    # Rückstau in der Queue
+lpstat -p CZ01                     # Druckerstatus
+cancel -a                          # alle Jobs abbrechen
 ```
+
+Die zweite Zeile ist die wichtige: Sie zeigt, was CUPS noch drucken will.
+Die Fotobox zeigt dieselbe Liste auf der Druckstatus-Seite an. Weicht sie von
+den Aufträgen darunter ab, liegen dort Aufträge, die niemand mehr erwartet.
 
 ---
 
@@ -132,6 +137,30 @@ sudo cupsenable CZ01
 **Diagnose-Hinweis:** Solange ein Job hängt, hält dessen Backend-Prozess das
 USB-Gerät belegt — `sudo /usr/lib/cups/backend/gutenprint53+usb` listet dann
 nichts. Vorher immer `cancel -a` ausführen.
+
+### 1b. Nachdruck Minuten später, ohne Zutun
+
+**Symptom:** Nach dem Wiederanschließen des Druckers wird korrekt gedruckt.
+Ein bis drei Minuten später kommt dasselbe Bild noch einmal, nach einer
+weiteren Pause erneut. Die Fotobox meldet für den Auftrag "Fehler / timeout".
+
+**Ursache:** Der Auftrag wurde gedruckt, aber der Backend meldete danach einen
+Fehler — nach einem Replug ist das die Regel. CUPS setzt ihn mit
+`ErrorPolicy=retry-job` zurück auf *pending* und startet ihn nach
+`JobRetryInterval` erneut. Er gilt dabei nie als abgeschlossen, weshalb die
+Fotobox ihn nach fünf Minuten aufgibt — der Auftrag in CUPS bleibt davon
+unberührt.
+
+**Lösung:** Die Fotobox storniert einen aufgegebenen Auftrag inzwischen selbst
+(`cancel -x`). Zusätzlich empfiehlt sich, das Wiederholen ganz abzuschalten:
+
+```bash
+lpstat -W not-completed -o CZ01                             # Rückstau prüfen
+sudo lpadmin -p CZ01 -o printer-error-policy=abort-job      # kein Nachdruck
+```
+
+Ein Ausdruck, der ausbleibt, ist auf einer Feier harmlos — man drückt erneut.
+Ein Ausdruck, der Stunden später von selbst kommt, ist es nicht.
 
 ### 2. Script bricht still ab (Bash-Falle)
 

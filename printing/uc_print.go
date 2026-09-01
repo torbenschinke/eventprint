@@ -1,7 +1,9 @@
 package printing
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 )
 
 // NewPrint erzeugt den [Print] Anwendungsfall.
-func NewPrint(mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printer, queue chan<- JobID) Print {
+func NewPrint(ctx context.Context, mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printer, queue chan<- JobID) Print {
 	return func(subject auth.Subject, id photo.ID, tpl TemplateID) (JobID, error) {
 		if err := subject.Audit(PermPrint); err != nil {
 			return "", err
@@ -36,7 +38,23 @@ func NewPrint(mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printe
 		}
 		mutex.Unlock()
 
-		queue <- job.ID
+		if err := enqueue(ctx, queue, job.ID); err != nil {
+			// Ein Auftrag, der nie in der Warteschlange ankam, darf nicht als
+			// wartend zurückbleiben – sonst verspricht die Oberfläche einen
+			// Ausdruck, der nie erfolgt.
+			job.State = StateFailed
+			job.Message = err.Error()
+			job.FinishedAt = time.Now()
+
+			mutex.Lock()
+			if saveErr := repo.Save(job); saveErr != nil {
+				slog.Error("cannot mark unqueued print job", "job", string(job.ID), "err", saveErr)
+			}
+			mutex.Unlock()
+
+			return "", err
+		}
+
 		bus.Publish(JobQueued{Job: job.ID})
 
 		return job.ID, nil

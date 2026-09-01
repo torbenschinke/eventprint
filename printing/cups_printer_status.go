@@ -30,6 +30,14 @@ type PrinterStatus struct {
 	// Message ist die Zustandsmeldung des Geräts, z. B. "Out of paper".
 	Message string
 
+	// Spooled sind die Aufträge, die CUPS noch nicht abgeschlossen hat.
+	//
+	// Diese Liste ist die Warteschlange des Druckdienstes, nicht die der
+	// Fotobox. Beide können auseinanderlaufen – etwa wenn die Fotobox einen
+	// Auftrag aufgegeben hat, CUPS ihn aber weiterhin ausliefern will. Genau
+	// dieser Unterschied blieb bisher unsichtbar.
+	Spooled []string
+
 	// Err beschreibt, warum der Zustand nicht ermittelt werden konnte.
 	Err error
 }
@@ -76,6 +84,12 @@ func QueryPrinter(ctx context.Context, queue string) PrinterStatus {
 	status.Enabled = status.Exists && !isDisabled(string(printerOut))
 	status.Accepting = acceptErr == nil && !isRejecting(string(acceptOut))
 	status.Message = deviceMessage(string(printerOut))
+
+	if status.Exists {
+		if spooled, err := PendingJobs(ctx, queue); err == nil {
+			status.Spooled = spooled
+		}
+	}
 
 	return status
 }

@@ -115,7 +115,11 @@ func printerProblemHint(wnd core.Window, opts Options) core.View {
 	status := opts.Printing.Diagnose(wnd.Subject())
 
 	problem := status.Problem()
-	if problem == "" && status.Message == "" {
+	// Ein Rückstau im Druckdienst ist auch ohne Fehler eine Meldung wert: Er
+	// erklärt, warum trotz "Fertig" in der Liste noch Papier kommt.
+	backlog := spooledHint(status)
+
+	if problem == "" && status.Message == "" && backlog == "" {
 		return nil
 	}
 
@@ -129,6 +133,7 @@ func printerProblemHint(wnd core.Window, opts Options) core.View {
 		ui.Text(title).Font(ui.TitleMedium),
 		ui.If(problem != "", ui.Text(problem).Font(ui.BodyMedium).TextAlignment(ui.TextAlignCenter)),
 		ui.If(status.Message != "", ui.Text(status.Message).Font(ui.MonoSmall).TextAlignment(ui.TextAlignCenter)),
+		ui.If(backlog != "", ui.Text(backlog).Font(ui.BodySmall).TextAlignment(ui.TextAlignCenter)),
 	).
 		Gap(ui.L8).
 		Alignment(ui.Center).
@@ -150,6 +155,23 @@ func pendingBadge(pending int) core.View {
 	}
 
 	return ui.Text(label).Font(ui.LabelMedium)
+}
+
+// spooledHint beschreibt den Rückstau in der Warteschlange des Druckdienstes.
+//
+// Diese Zahl stammt aus CUPS, nicht aus der Liste darunter. Weichen beide
+// voneinander ab, liegen dort Aufträge, die die Fotobox nicht mehr verfolgt –
+// und genau die kommen später unerwartet aus dem Gerät.
+func spooledHint(status printing.PrinterStatus) string {
+	n := len(status.Spooled)
+	switch {
+	case n == 0:
+		return ""
+	case n == 1:
+		return "In der Warteschlange des Druckdienstes liegt noch 1 Auftrag (" + status.Spooled[0] + ")."
+	default:
+		return "In der Warteschlange des Druckdienstes liegen noch " + strconv.Itoa(n) + " Aufträge."
+	}
 }
 
 // jobRow rendert eine Zeile der Auftragsliste.

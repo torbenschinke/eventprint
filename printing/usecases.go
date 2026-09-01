@@ -4,10 +4,12 @@ import (
 	"context"
 	"iter"
 	"sync"
+	"time"
 
 	"github.com/worldiety/option"
 	"go.wdy.de/nago/auth"
 	"go.wdy.de/nago/pkg/events"
+	"go.wdy.de/nago/pkg/std"
 
 	"github.com/torbenschinke/eventprint/photo"
 )
@@ -51,6 +53,33 @@ type UseCases struct {
 	Printer Printer
 }
 
+// enqueueTimeout begrenzt das Warten auf einen freien Platz in der
+// Warteschlange.
+//
+// Ein unbegrenztes Warten wäre gefährlich: Am Kanal hängen nicht nur Klicks
+// der Oberfläche, sondern auch die Schleifen für Kamera und Fern-Uploads. Ein
+// festsitzender Worker würde sie alle stillstehen lassen, ohne dass irgendwo
+// eine Meldung erschiene.
+const enqueueTimeout = 5 * time.Second
+
+// enqueue reiht eine Auftragskennung ein und gibt nach [enqueueTimeout] auf.
+func enqueue(ctx context.Context, queue chan<- JobID, id JobID) error {
+	timer := time.NewTimer(enqueueTimeout)
+	defer timer.Stop()
+
+	select {
+	case queue <- id:
+		return nil
+
+	case <-ctx.Done():
+		return std.NewLocalizedError("Fotobox wird beendet", "Der Druckauftrag wurde nicht mehr angenommen.")
+
+	case <-timer.C:
+		return std.NewLocalizedError("Warteschlange voll",
+			"Der Drucker kommt nicht hinterher. Bitte prüfe den Druckstatus, bevor weitere Aufträge gestartet werden.")
+	}
+}
+
 // NewUseCases verdrahtet die Anwendungsfälle und startet den Druck-Worker.
 //
 // renderOptions wird bei jedem Rendern erneut ausgewertet, damit eine
@@ -70,15 +99,15 @@ func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer P
 	renderOptions = orDefaultRenderOptions(renderOptions)
 
 	worker := newWorker(&mutex, bus, repo, printer, openOriginal, renderOptions)
-	recoverStaleJobs(&mutex, repo, queue)
+	recoverStaleJobs(ctx, &mutex, repo, printer, queue)
 	go worker.run(ctx, queue)
 
 	return UseCases{
-		Print:       NewPrint(&mutex, bus, repo, printer, queue),
+		Print:       NewPrint(ctx, &mutex, bus, repo, printer, queue),
 		Preview:     NewPreview(openOriginal, renderOptions),
 		FindAllJobs: NewFindAllJobs(repo),
 		FindJobByID: findJobByID,
-		Retry:       NewRetry(&mutex, repo, findJobByID, queue),
+		Retry:       NewRetry(ctx, &mutex, repo, printer, findJobByID, queue),
 		Diagnose:    NewDiagnose(ctx, printer),
 		Printer:     printer,
 	}

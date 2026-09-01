@@ -2,10 +2,87 @@ package printing
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 )
+
+// cancelExecutable ist das CUPS-Kommando, mit dem ein übergebener Auftrag
+// wieder aus der Warteschlange genommen wird.
+var cancelExecutable = "cancel"
+
+// cancelTimeout begrenzt das Storno. Es läuft auch beim Herunterfahren noch,
+// darf die Anwendung dabei aber nicht festhalten.
+const cancelTimeout = 10 * time.Second
+
+// CancelJob entfernt einen Auftrag samt Spool-Datei aus CUPS.
+//
+// Das ist die Gegenrichtung zu lp und der einzige Weg, die Kontrolle über
+// einen Auftrag zurückzugewinnen. Ohne sie bleibt ein Auftrag, den die
+// Fotobox aufgegeben hat, in der CUPS-Warteschlange liegen: Sobald der
+// Drucker wieder erreichbar ist, druckt CUPS ihn eigenständig nach – unter
+// Umständen Stunden später und mehrfach, denn CUPS wiederholt einen Auftrag
+// nach ErrorPolicy=retry-job so lange, bis er als abgeschlossen gilt.
+func CancelJob(ctx context.Context, jobID string) error {
+	if jobID == "" {
+		return nil
+	}
+
+	// Der Aufrufer bricht seinen Kontext beim Herunterfahren gerade ab –
+	// genau dann muss das Storno aber noch stattfinden. Deshalb wird die
+	// Abbruchkette bewusst durchtrennt und nur die Frist übernommen.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cancelTimeout)
+	defer cancel()
+
+	// "-x" löscht zusätzlich die Spool-Datei. Ohne das bliebe der Auftrag als
+	// abgebrochen erhalten und ließe sich über die CUPS-Oberfläche erneut
+	// starten – genau die Überraschung, die vermieden werden soll.
+	out, err := exec.CommandContext(ctx, cancelExecutable, "-x", jobID).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("cannot cancel cups job %s: %w: %s", jobID, err, strings.TrimSpace(string(out)))
+	}
+
+	return nil
+}
+
+// PendingJobs liefert die Kennungen aller Aufträge, die CUPS noch nicht
+// abgeschlossen hat.
+//
+// Diese Auskunft fehlte bisher vollständig: Die Fotobox fragte ausschließlich
+// die fertigen Aufträge ab und war damit blind für ihren eigenen Rückstau.
+// Ein wartender Auftrag ist etwas grundlegend anderes als ein verschwundener,
+// und nur diese Liste unterscheidet die beiden Fälle.
+func PendingJobs(ctx context.Context, queue string) ([]string, error) {
+	out, err := exec.CommandContext(ctx, "lpstat", "-W", "not-completed", "-o", queue).Output()
+	if err != nil {
+		return nil, err
+	}
+
+	return ParsePendingJobs(string(out)), nil
+}
+
+// ParsePendingJobs liest die Auftragskennungen aus der Ausgabe von
+// "lpstat -W not-completed -o <queue>". Ausgewertet wird nur das erste Feld
+// der nicht eingerückten Zeilen, damit die Übersetzung keine Rolle spielt.
+func ParsePendingJobs(out string) []string {
+	var ids []string
+
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+			continue
+		}
+
+		name, _, _ := strings.Cut(strings.TrimSpace(line), " ")
+		if name != "" {
+			ids = append(ids, name)
+		}
+	}
+
+	return ids
+}
 
 // Outcome ist das tatsächliche Ergebnis eines Druckauftrags, so wie CUPS es
 // nach der Verarbeitung meldet.
@@ -136,6 +213,11 @@ func jobBlock(out, jobID string) ([]string, bool) {
 // Die Zeitgrenze verhindert, dass ein hängender Auftrag die Warteschlange der
 // Fotobox blockiert: Der Worker arbeitet bewusst seriell, weil es nur einen
 // Drucker gibt.
+//
+// Wird die Grenze erreicht oder die Fotobox beendet, wird der Auftrag in CUPS
+// storniert. Das ist zwingend: Ein aufgegebener, aber nicht stornierter
+// Auftrag ist für die Fotobox unsichtbar, für CUPS aber weiterhin gültig und
+// wird später ohne jedes Zutun gedruckt.
 func AwaitJob(ctx context.Context, queue, jobID string, timeout, interval time.Duration) Outcome {
 	if interval <= 0 {
 		interval = time.Second
@@ -143,25 +225,71 @@ func AwaitJob(ctx context.Context, queue, jobID string, timeout, interval time.D
 
 	deadline := time.Now().Add(timeout)
 
+	// missing zählt, wie oft der Auftrag weder als abgeschlossen noch als
+	// wartend auftauchte. Erst nach mehreren Runden gilt er als verschwunden,
+	// denn zwischen den beiden lpstat-Aufrufen kann ein Zustandswechsel
+	// liegen.
+	var missing int
+
 	for {
 		outcome, err := JobStatus(ctx, queue, jobID)
 		if err == nil && outcome.Done {
 			return outcome
 		}
 
-		if time.Now().After(deadline) {
-			return Outcome{
-				Done:    true,
-				Success: false,
-				Reason:  "timeout",
-				Message: "CUPS meldet den Auftrag auch nach " + timeout.String() + " nicht als abgeschlossen. Prüfe, ob der Drucker angeschlossen und eingeschaltet ist.",
+		if err == nil {
+			switch pending, perr := PendingJobs(ctx, queue); {
+			case perr != nil:
+				// Keine Auskunft ist kein Befund – weiter warten.
+			case slices.Contains(pending, jobID):
+				missing = 0
+			default:
+				missing++
+				if missing >= vanishedThreshold {
+					// Weder fertig noch wartend: Jemand hat den Auftrag von
+					// außen entfernt. Weiteres Warten wäre sinnlos.
+					return Outcome{
+						Done:    true,
+						Success: false,
+						Reason:  "vanished",
+						Message: "CUPS kennt den Auftrag nicht mehr. Er wurde vermutlich außerhalb der Fotobox abgebrochen.",
+					}
+				}
 			}
+		}
+
+		if time.Now().After(deadline) {
+			return abandonJob(ctx, jobID, "timeout",
+				"CUPS hat den Auftrag auch nach "+timeout.String()+" nicht als abgeschlossen gemeldet. "+
+					"Er wurde aus der Warteschlange entfernt, damit der Drucker ihn nicht später von sich aus nachdruckt. "+
+					"Möglicherweise ist das Blatt dennoch entstanden.")
 		}
 
 		select {
 		case <-ctx.Done():
-			return Outcome{Done: true, Reason: "canceled", Message: "Die Fotobox wurde beendet."}
+			return abandonJob(ctx, jobID, "canceled",
+				"Die Fotobox wurde beendet. Der Auftrag wurde aus der CUPS-Warteschlange entfernt.")
 		case <-time.After(interval):
 		}
 	}
+}
+
+// vanishedThreshold ist die Anzahl aufeinanderfolgender Abfragen, nach denen
+// ein weder fertiger noch wartender Auftrag als verschwunden gilt.
+const vanishedThreshold = 3
+
+// abandonJob gibt einen Auftrag auf und räumt ihn in CUPS weg.
+//
+// Scheitert das Storno, wird das ausdrücklich in der Meldung genannt: Dann
+// droht genau der Nachdruck, den diese Funktion verhindern soll, und die
+// Bedienung muss eingreifen.
+func abandonJob(ctx context.Context, jobID, reason, message string) Outcome {
+	if err := CancelJob(ctx, jobID); err != nil {
+		slog.Error("cannot cancel abandoned cups job", "printerJob", jobID, "reason", reason, "err", err)
+
+		message += " Achtung: Der Auftrag ließ sich nicht aus der CUPS-Warteschlange entfernen. " +
+			"Solange er dort liegt, kann der Drucker ihn erneut ausgeben – im Terminal hilft 'cancel -a'."
+	}
+
+	return Outcome{Done: true, Success: false, Reason: reason, Message: message}
 }

@@ -54,6 +54,15 @@ type fileState struct {
 type pendingPhoto struct {
 	id       photo.ID
 	template printing.TemplateID
+
+	// printed hält fest, dass der Auftrag bereits eingereiht wurde.
+	//
+	// Der Eintrag bleibt bestehen, bis die Datei gelöscht ist. Scheitert das
+	// Löschen – etwa weil das Verzeichnis schreibgeschützt ist –, sah der
+	// nächste Durchlauf im Sekundentakt einen offenen Eintrag und druckte
+	// erneut. Ohne diese Markierung wäre eine einzige klemmende Datei ein
+	// endloser Papierverbrauch.
+	printed bool
 }
 
 // Run keeps camera detection, tethering, importing and printing alive until ctx ends.
@@ -215,11 +224,19 @@ func (w *watcher) ingest(path string) {
 }
 
 func (w *watcher) finish(path string, pending pendingPhoto) {
-	if w.load().AutoPrint {
+	if !pending.printed && w.load().AutoPrint {
 		if _, err := w.prints.Print(user.SU(), pending.id, pending.template); err != nil {
+			// Der Auftrag kam nicht in die Warteschlange. Der nächste
+			// Durchlauf versucht es erneut – etwa nachdem der Drucker wieder
+			// erreichbar ist.
 			slog.Error("cannot auto print camera photo", "photo", string(pending.id), "err", err)
 			return
 		}
+
+		// Ab hier ist der Druck angestoßen und darf unter keinen Umständen
+		// wiederholt werden.
+		pending.printed = true
+		w.pending[path] = pending
 	}
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		slog.Error("cannot remove imported camera file", "path", path, "err", err)

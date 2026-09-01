@@ -60,6 +60,18 @@ type Tracker interface {
 	Status(ctx context.Context) PrinterStatus
 }
 
+// Canceller wird von Druckern implementiert, die einen bereits übergebenen
+// Auftrag wieder zurücknehmen können.
+//
+// Ohne diese Fähigkeit kann die Fotobox einen Auftrag nur hinzufügen, nie
+// entfernen. Jeder aufgegebene Auftrag bliebe dann in der Warteschlange des
+// Druckdienstes zurück und käme dort irgendwann von selbst zum Ausdruck.
+type Canceller interface {
+	// Cancel nimmt den Auftrag aus der Warteschlange. Ein unbekannter oder
+	// bereits abgeschlossener Auftrag ist kein Fehler.
+	Cancel(ctx context.Context, jobID string) error
+}
+
 // CUPSPrinter druckt über das lp-Kommando des lokalen CUPS.
 //
 // Bewusst wird lp und nicht libcups verwendet: das Kommando ist auf jedem
@@ -274,6 +286,11 @@ func (p CUPSPrinter) Status(ctx context.Context) PrinterStatus {
 	return QueryPrinter(ctx, p.Queue)
 }
 
+// Cancel nimmt einen übergebenen Auftrag aus der CUPS-Warteschlange.
+func (p CUPSPrinter) Cancel(ctx context.Context, jobID string) error {
+	return CancelJob(ctx, jobID)
+}
+
 // Zeitgrenzen für die Nachverfolgung. Ein 10x15-Ausdruck braucht am CZ-01
 // etwa 15 Sekunden; die großzügige Grenze deckt eine gefüllte Warteschlange
 // ab, ohne die Fotobox bei einem hängenden Auftrag dauerhaft zu blockieren.
@@ -305,3 +322,6 @@ func (DiscardPrinter) Await(context.Context, string) Outcome {
 func (DiscardPrinter) Status(context.Context) PrinterStatus {
 	return PrinterStatus{Queue: TestModeName, Exists: true, Enabled: true, Accepting: true}
 }
+
+// Cancel hat im Testbetrieb nichts zurückzunehmen.
+func (DiscardPrinter) Cancel(context.Context, string) error { return nil }
