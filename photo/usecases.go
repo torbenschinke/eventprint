@@ -50,14 +50,17 @@ type UseCases struct {
 }
 
 // NewUseCases verdrahtet die Anwendungsfälle mit ihren Abhängigkeiten.
-func NewUseCases(bus events.Bus, repo Repository, images image.UseCases) UseCases {
+//
+// archive sichert jedes eingehende Bild zusätzlich unverändert als Datei.
+// nil schaltet die Sicherung ab.
+func NewUseCases(bus events.Bus, repo Repository, images image.UseCases, archive Archive) UseCases {
 	var mutex sync.Mutex
 
 	findByID := NewFindByID(repo)
 	findAll := NewFindAll(repo)
 
 	return UseCases{
-		Import:       NewImport(&mutex, bus, repo, images.CreateSrcSet),
+		Import:       NewImport(&mutex, bus, repo, images.CreateSrcSet, archive),
 		FindByID:     findByID,
 		FindAll:      findAll,
 		FindLatest:   NewFindLatest(findAll),

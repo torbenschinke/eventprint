@@ -5,6 +5,7 @@ import (
 	"fmt"
 	stdimage "image"
 	"image/jpeg"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -18,7 +19,9 @@ import (
 )
 
 // NewImport erzeugt den [Import] Anwendungsfall.
-func NewImport(mutex *sync.Mutex, bus events.Bus, repo Repository, createSrcSet image.CreateSrcSet) Import {
+//
+// archive darf nil sein; dann wird nicht gesichert.
+func NewImport(mutex *sync.Mutex, bus events.Bus, repo Repository, createSrcSet image.CreateSrcSet, archive Archive) Import {
 	return func(subject auth.Subject, opts Options, file image.File) (Photo, error) {
 		if err := subject.Audit(PermImport); err != nil {
 			return Photo{}, err
@@ -35,7 +38,25 @@ func NewImport(mutex *sync.Mutex, bus events.Bus, repo Repository, createSrcSet 
 		now := time.Now()
 		id := NewID(now)
 
-		upright, err := uprightFile(file)
+		var buf bytes.Buffer
+		if _, err := file.Transfer(&buf); err != nil {
+			return Photo{}, fmt.Errorf("cannot read image: %w", err)
+		}
+
+		raw := buf.Bytes()
+
+		// Gesichert wird vor jeder Verarbeitung. Was hier abgelegt wird, ist
+		// exakt das, was Kamera oder Smartphone geliefert haben – inklusive
+		// EXIF-Block und ohne erneute Kompression.
+		if archive != nil {
+			if err := archive(id, file.Name(), raw); err != nil {
+				// Bewusst kein Abbruch: Das Archiv ist eine Zugabe für nach
+				// der Feier, der Druck ist der Zweck des Abends.
+				slog.Error("cannot archive original photo", "photo", string(id), "name", file.Name(), "err", err)
+			}
+		}
+
+		upright, err := uprightBytes(raw, file.Name(), mimeTypeOf(file))
 		if err != nil {
 			return Photo{}, err
 		}
@@ -90,19 +111,12 @@ func NewImport(mutex *sync.Mutex, bus events.Bus, repo Repository, createSrcSet 
 //
 // Bilder ohne Drehung werden unverändert durchgereicht und dabei nicht neu
 // komprimiert.
-func uprightFile(file image.File) (image.File, error) {
-	var buf bytes.Buffer
-	if _, err := file.Transfer(&buf); err != nil {
-		return nil, fmt.Errorf("cannot read image: %w", err)
-	}
-
-	raw := buf.Bytes()
-
+func uprightBytes(raw []byte, name, mime string) (image.File, error) {
 	o := orient.FromJPEG(raw)
 	if o == orient.Normal {
 		return image.MemFile{
-			Filename:     file.Name(),
-			MimeTypeHint: mimeTypeOf(file),
+			Filename:     name,
+			MimeTypeHint: mime,
 			Bytes:        raw,
 		}, nil
 	}
@@ -118,7 +132,7 @@ func uprightFile(file image.File) (image.File, error) {
 	}
 
 	return image.MemFile{
-		Filename:     file.Name(),
+		Filename:     name,
 		MimeTypeHint: "image/jpeg",
 		Bytes:        out.Bytes(),
 	}, nil

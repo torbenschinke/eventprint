@@ -54,6 +54,11 @@ type Options struct {
 	// BoothSettingsParams wählt dort den richtigen Abschnitt aus.
 	BoothSettingsParams core.Values
 
+	// ArchiveDir ist der Ordner, in dem jedes eingehende Bild zusätzlich im
+	// Original liegt. Er wird nur angezeigt, damit die Betreuung ihn nach der
+	// Feier findet, ohne die Anwendung zu befragen.
+	ArchiveDir string
+
 	// UploadURL liefert die absolute, von außen erreichbare Adresse der
 	// Upload-Seite. Sie wird erst zur Laufzeit gebildet, weil Nago den
 	// öffentlichen Hostnamen aus der ersten Verbindung ableitet.

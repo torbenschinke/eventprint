@@ -26,6 +26,8 @@ Die Einrichtung des Druckers ist getrennt dokumentiert: **[DRUCKER.md](DRUCKER.m
   mit Nachdruck und Löschen.
 * **Druckstatus** mit Warteschlange, Fehlerursache und Wiederholung, etwa nach
   einem Papierwechsel.
+* **Archiv der Originale**: Jedes eingehende Bild wird zusätzlich unverändert
+  als Datei abgelegt, für die digitale Weitergabe nach der Feier.
 
 ## Schnellstart
 
@@ -148,6 +150,43 @@ Unter **Einstellungen → Fotobox → Bildausschnitt** kann der automatische
 Polaroid-Bildausschnitt deaktiviert werden. Er ist standardmäßig aktiv und
 richtet Gruppen sowie Einzelpersonen anhand erkannter Gesichter aus. Werden
 keine Gesichter erkannt, bleibt es beim mittigen Standardausschnitt.
+
+## Archiv der Originale
+
+Jedes Bild – von der Kamera, vom Gast-Upload und aus dem Internet – wird beim
+Import zusätzlich unverändert in einem gewöhnlichen Ordner gesichert:
+
+```
+<Datenverzeichnis>/photos/originals/
+```
+
+Das Datenverzeichnis nennt die Anwendung beim Start (`photo archive ready`);
+die Historie zeigt den Pfad nach der Anmeldung als Betreuer ebenfalls an.
+
+Gesichert wird die Datei **vor** jeder Verarbeitung, also mit EXIF-Block,
+Aufnahmezeit und ursprünglicher Kompression. Das unterscheidet den Ordner vom
+internen Bildspeicher, in dem gedrehte Aufnahmen aufgerichtet und dabei neu
+kodiert werden.
+
+Der Dateiname beginnt mit der Foto-ID, die den Zeitstempel in Millisekunden
+enthält:
+
+```
+1788201767405-176029a2a2b47578_DSC02301.jpg
+```
+
+Damit entspricht die alphabetische Sortierung im Dateimanager der zeitlichen,
+und der ursprüngliche Name bleibt zur Wiedererkennung erhalten. Nach der Feier
+genügt es, den Ordner zu kopieren.
+
+Zwei Eigenschaften sind bewusst so gewählt:
+
+* **Der Ordner wird nur beschrieben.** Wird ein Foto in der Historie gelöscht,
+  verschwindet es aus der Fotobox, die Datei im Archiv bleibt. Soll ein Bild
+  wirklich verschwinden, muss es dort von Hand entfernt werden.
+* **Ein Fehler beim Sichern bricht den Import nicht ab.** Eine volle Platte
+  darf nicht dazu führen, dass auf einer Feier nichts mehr gedruckt wird. Der
+  Fehler steht im Protokoll (`cannot archive original photo`).
 
 ## Aufbau
 

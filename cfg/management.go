@@ -140,7 +140,20 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 
 	warnAboutMissingQueue(cfg.Context(), queues, loadPrinterSettings())
 
-	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases)
+	// Das Archiv sammelt jedes eingehende Bild im Original, damit die Fotos
+	// nach der Feier digital weitergegeben werden können. Es wird nur
+	// beschrieben – gelöscht wird dort nichts, auch nicht, wenn ein Foto aus
+	// der Historie verschwindet.
+	archiveDir := filepath.Join(cfg.DataDir(), "photos", "originals")
+
+	archive, err := photo.NewDirArchive(archiveDir)
+	if err != nil {
+		return Management{}, err
+	}
+
+	slog.Info("photo archive ready", "dir", archiveDir)
+
+	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases, archive)
 	prints := printing.NewUseCases(cfg.Context(), cfg.EventBus(), jobRepo,
 		printing.NewSettingsPrinter(loadPrinterSettings), photos.OpenOriginal, func() printing.RenderOptions {
 			return printing.RenderOptions{
@@ -163,9 +176,10 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	}
 
 	uiOpts := uiphotobox.Options{
-		Pages:    pages,
-		Photos:   photos,
-		Printing: prints,
+		Pages:      pages,
+		Photos:     photos,
+		Printing:   prints,
+		ArchiveDir: archiveDir,
 		EventTitle: func() string {
 			return loadBoothSettings().EventTitle
 		},

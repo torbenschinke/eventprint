@@ -40,6 +40,8 @@ func PageGallery(wnd core.Window, opts Options) core.View {
 		alert.BannerMessages(wnd),
 		dialog.View(),
 
+		archiveHint(wnd, opts),
+
 		ui.HStack(
 			ui.Text("Alle Fotos").Font(ui.TitleLarge),
 			ui.Spacer(),
@@ -53,6 +55,30 @@ func PageGallery(wnd core.Window, opts Options) core.View {
 	).
 		Gap(ui.L24).
 		WithPadding(ui.Padding{}.All(ui.L24)).
+		Frame(ui.Frame{}.FullWidth())
+}
+
+// archiveHint nennt der Betreuung den Ordner mit den Originalen.
+//
+// Der Hinweis richtet sich ausdrücklich nicht an Gäste, deshalb erscheint er
+// nur nach Anmeldung. Er benennt auch die Folge des Löschens: Die Kachel
+// verschwindet aus der Historie, die Datei im Archiv bleibt.
+func archiveHint(wnd core.Window, opts Options) core.View {
+	if opts.ArchiveDir == "" || !wnd.Subject().Valid() {
+		return nil
+	}
+
+	return ui.VStack(
+		ui.Text("Originale für die Weitergabe").Font(ui.LabelLarge),
+		ui.Text("Jedes Bild liegt zusätzlich unverändert im Ordner:").Font(ui.BodySmall),
+		ui.Text(opts.ArchiveDir).Font(ui.MonoSmall),
+		ui.Text("Löschen entfernt ein Bild aus der Historie, nicht aus diesem Ordner.").Font(ui.BodySmall),
+	).
+		Gap(ui.L4).
+		Alignment(ui.Leading).
+		BackgroundColor(ui.M2).
+		WithPadding(ui.Padding{}.All(ui.L16)).
+		Border(ui.Border{}.Radius(ui.L12)).
 		Frame(ui.Frame{}.FullWidth())
 }
 
