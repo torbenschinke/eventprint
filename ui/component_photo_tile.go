@@ -31,7 +31,11 @@ func photoTile(p photo.Photo, size ui.Length, onClick func()) core.View {
 // thumbnailPx ist die angeforderte Kantenlänge der Vorschau. Das
 // Image-Subsystem liefert daraufhin die kleinste passende Variante, statt das
 // mehrere Megabyte große Original über die Leitung zu schicken.
-const thumbnailPx = 512
+//
+// Die Kacheln sind 160 bzw. 200 Punkte groß. 512 lieferte deshalb die
+// 568er-Variante und damit ein Vielfaches der tatsächlich sichtbaren Fläche –
+// bei einer vollen Historie summiert sich das.
+const thumbnailPx = 128
 
 // emptyHint erscheint, solange noch kein einziges Foto vorhanden ist.
 func emptyHint(title, message string) core.View {
