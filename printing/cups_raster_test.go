@@ -297,3 +297,51 @@ func solidImage(width, height int, c color.Color) *image.RGBA {
 	}
 	return img
 }
+
+// TestPaperLandscapeMatchesRenderedPage bindet die Regel, nach der die
+// Vorschau das Papier dreht, an die tatsächlich erzeugte Seite.
+//
+// Die Vorschau hat die Drehung früher gar nicht nachvollzogen und zeigte
+// immer ein hochkantes Blatt. Ein Querformatfoto sah dort deshalb völlig
+// anders aus als der Ausdruck. Seitdem beide dieselbe Funktion befragen, muss
+// dieser Test sicherstellen, dass sie nicht wieder auseinanderlaufen.
+func TestPaperLandscapeMatchesRenderedPage(t *testing.T) {
+	sizes := []struct {
+		name          string
+		width, height int
+	}{
+		{"panorama", 2400, 400},
+		{"quer 3:2", 3000, 2000},
+		{"quer 4:3", 2048, 1536},
+		{"quadrat", 1000, 1000},
+		{"hoch 3:4", 1536, 2048},
+		{"hoch schmal", 400, 2400},
+	}
+
+	for _, tpl := range Templates() {
+		for _, size := range sizes {
+			t.Run(string(tpl.ID)+"/"+size.name, func(t *testing.T) {
+				page := renderTemplate(solidImage(size.width, size.height, color.Black), tpl.ID, NativeRaster4x6, RenderOptions{})
+
+				rendered := page.Bounds().Dx() > page.Bounds().Dy()
+				predicted := PaperLandscape(tpl.ID, size.width, size.height)
+
+				if rendered != predicted {
+					t.Fatalf("PaperLandscape = %v, gedruckt wird quer = %v", predicted, rendered)
+				}
+			})
+		}
+	}
+}
+
+// TestPaperLandscapeWithoutDimensions deckt den Zustand ab, in dem die
+// Vorschau noch kein Bild kennt. Ohne Maße darf sie kein Querformat raten.
+func TestPaperLandscapeWithoutDimensions(t *testing.T) {
+	for _, tpl := range Templates() {
+		for _, size := range [][2]int{{0, 0}, {0, 100}, {100, 0}, {-1, -1}} {
+			if PaperLandscape(tpl.ID, size[0], size[1]) {
+				t.Errorf("%s bei %dx%d quer, erwartet hochkant", tpl.ID, size[0], size[1])
+			}
+		}
+	}
+}

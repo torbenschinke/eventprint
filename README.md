@@ -19,8 +19,19 @@ Die Einrichtung des Druckers ist getrennt dokumentiert: **[DRUCKER.md](DRUCKER.m
   | Layout | Verhalten |
   |---|---|
   | Formatfüllend | randlos, das Motiv wird mittig auf 3:2 beschnitten |
-  | Mit Rand | vollständiges Motiv, gleichmäßiger weißer Rand |
+  | Mit Rand | vollständiges Motiv, weißer Rand ringsum |
   | Polaroid | Sofortbild-Look, breiter Steg unten |
+
+  Bei „Formatfüllend“ und „Mit Rand“ wird das Papier in die Richtung gedreht,
+  in der das Motiv größer herauskommt – ein Querformatfoto ergibt also ein
+  quer liegendes Bild. Das Polaroid bleibt immer hochkant, sonst säße der
+  breite Steg an der falschen Kante.
+
+  Der Einzug bei „Mit Rand“ beträgt 5 % der kurzen Papierkante, also etwa
+  5 mm auf allen vier Seiten. Der *sichtbare* Rand ist trotzdem nicht überall
+  gleich breit: Das Motiv behält sein Seitenverhältnis, und was an den beiden
+  übrigen Kanten frei bleibt, kommt dort hinzu. Bei einem 4:3-Foto ist der
+  Rand seitlich rund dreimal so breit wie oben und unten.
 
 * **Historie** aller Fotos – Kameraaufnahmen und Gast-Uploads gleichermaßen –
   mit Nachdruck und Löschen.

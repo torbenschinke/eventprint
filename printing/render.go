@@ -252,18 +252,44 @@ func withJFIFHeader(jpg []byte) []byte {
 	return out
 }
 
+// PaperLandscape meldet, ob der Ausdruck im Querformat entsteht.
+//
+// Die Fotobox dreht das Papier, damit das Motiv so groß wie möglich
+// herauskommt. Die Vorschau muss dieselbe Entscheidung treffen, sonst zeigt
+// sie bei einem Querformatfoto ein hochkantes Blatt und damit einen ganz
+// anderen Ausschnitt als der Ausdruck. Deshalb steht die Regel hier an einer
+// einzigen Stelle und nicht zweimal nebeneinander.
+//
+// Ein Polaroid behält immer das Hochformat: Der breite Steg gehört an die
+// kurze Kante, sonst ist es kein Sofortbild mehr.
+func PaperLandscape(tpl TemplateID, imgW, imgH int) bool {
+	// Unbekannte Maße: Die Vorschau fragt schon, bevor ein Bild gewählt ist.
+	// Hochkant ist dann die richtige Annahme, weil ein leeres Blatt so
+	// aussieht wie die Papierschublade des Druckers.
+	if imgW <= 0 || imgH <= 0 {
+		return false
+	}
+
+	switch tpl {
+	case TemplatePolaroid:
+		return false
+
+	case TemplateBorder:
+		// Bei quadratischen Motiven ist keine Richtung im Vorteil; das
+		// Hochformat bleibt dann die ruhigere Wahl.
+		return borderFitsBetter(image.Rect(0, 0, imgW, imgH), NativeRaster4x6.Long(), NativeRaster4x6.Short())
+
+	default:
+		return imgW >= imgH
+	}
+}
+
 // renderTemplate legt das Motiv gemäß Layout auf eine weiße Seite.
 func renderTemplate(img image.Image, tpl TemplateID, raster Raster, opts RenderOptions) *image.RGBA {
 	bounds := img.Bounds()
 
 	pageW, pageH := raster.Short(), raster.Long()
-	// Ein Polaroid hat unabhängig von der Motivausrichtung eine feste
-	// Hochformat-Geometrie. Würde die Seite bei einem Querformatmotiv gedreht,
-	// läge der breite Steg an einer langen statt an derselben kurzen Kante, die
-	// auch die Vorschau zeigt.
-	if tpl == TemplateBorder && borderFitsBetter(bounds, raster.Long(), raster.Short()) {
-		pageW, pageH = raster.Long(), raster.Short()
-	} else if tpl != TemplatePolaroid && tpl != TemplateBorder && bounds.Dx() >= bounds.Dy() {
+	if PaperLandscape(tpl, bounds.Dx(), bounds.Dy()) {
 		pageW, pageH = raster.Long(), raster.Short()
 	}
 
@@ -283,8 +309,14 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster, opts RenderO
 
 	switch tpl {
 	case TemplateBorder:
-		// gleichmäßiger Rand von 5 % der kurzen Seite, das Motiv wird
+		// Gleichmäßiger Einzug von 5 % der kurzen Seite, danach wird das Motiv
 		// vollständig eingepasst (contain).
+		//
+		// Der Einzug ist auf allen vier Seiten gleich, der sichtbare weiße
+		// Rand ist es nicht: Das eingepasste Motiv behält sein
+		// Seitenverhältnis, und was an den beiden übrigen Kanten frei bleibt,
+		// kommt dort zum Einzug hinzu. Bei einem 4:3-Foto ist der Rand seitlich
+		// rund dreimal so breit wie oben und unten.
 		margin := min(visibleW, visibleH) * 5 / 100
 		area := image.Rect(visible.Min.X+margin, visible.Min.Y+margin, visible.Max.X-margin, visible.Max.Y-margin)
 		drawContain(canvas, area, img)

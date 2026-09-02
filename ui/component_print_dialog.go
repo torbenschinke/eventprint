@@ -87,22 +87,28 @@ func (d printDialog) View() core.View {
 }
 
 func (d printDialog) body() core.View {
+	img, width, height := d.previewImage()
+
 	return ui.VStack(
-		preview.Selector(d.previewImage(), d.template),
+		preview.Selector(img, width, height, d.template),
 		ui.Text("Der Ausdruck erscheint innerhalb einer Minute am Drucker.").Font(ui.BodySmall),
 	).Gap(ui.L24).Alignment(ui.Center)
 }
 
-func (d printDialog) previewImage() image.ID {
+// previewImage liefert das Bild samt seinen Maßen. Die Maße entscheiden, ob
+// die Vorschau ein quer oder hochkant liegendes Blatt zeigt.
+func (d printDialog) previewImage() (image.ID, int, int) {
 	id := d.selected.Get()
 	if id == "" {
-		return ""
+		return "", 0, 0
 	}
 
 	optPhoto, err := d.opts.Photos.FindByID(d.wnd.Subject(), id)
 	if err != nil || optPhoto.IsNone() {
-		return ""
+		return "", 0, 0
 	}
 
-	return optPhoto.Unwrap().Image
+	p := optPhoto.Unwrap()
+
+	return p.Image, p.Width, p.Height
 }

@@ -8,8 +8,12 @@ const (
 	// Seitenverhältnis des Papiers beschnitten, es bleibt kein weißer Rand.
 	TemplateFull TemplateID = "full"
 
-	// TemplateBorder druckt das vollständige Bild mit einem gleichmäßigen
-	// weißen Rand. Es geht nichts vom Motiv verloren.
+	// TemplateBorder druckt das vollständige Bild mit einem weißen Rand
+	// ringsum. Es geht nichts vom Motiv verloren.
+	//
+	// Der Einzug ist auf allen vier Seiten gleich, der sichtbare Rand nicht:
+	// Das Motiv behält sein Seitenverhältnis, und was an den beiden übrigen
+	// Kanten frei bleibt, kommt dort hinzu.
 	TemplateBorder TemplateID = "border"
 
 	// TemplatePolaroid druckt im Sofortbild-Look: schmaler Rand oben und an
@@ -35,7 +39,7 @@ func Templates() []Template {
 		{
 			ID:          TemplateBorder,
 			Name:        "Mit Rand",
-			Description: "Das komplette Motiv mit einem gleichmäßigen weißen Rand ringsum.",
+			Description: "Das ganze Bild ist zu sehen, nichts wird abgeschnitten. Ringsum wird ein weißer Rand hinzugefügt.",
 		},
 		{
 			ID:          TemplatePolaroid,
