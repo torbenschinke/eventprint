@@ -55,6 +55,12 @@ var NativeRaster4x6 = Raster{Width: 1266, Height: 1836}
 // VisibleMedia4x6 ist die physisch sichtbare 4x6-Fläche bei 300 dpi.
 var VisibleMedia4x6 = Raster{Width: 1200, Height: 1800}
 
+// PassepartoutMargin ist der Rand des Passepartouts in Rasterpunkten.
+//
+// 1 cm bei 300 dpi, also 300 / 2,54 = 118,1 Punkte. Abgerundet, damit der
+// Rand nie schmaler ausfällt als angekündigt.
+const PassepartoutMargin = 118
+
 // jpegQuality ist bewusst hoch gewählt: das Bild wird nur einmal, direkt vor
 // dem Druck, neu komprimiert.
 const jpegQuality = 95
@@ -274,12 +280,10 @@ func PaperLandscape(tpl TemplateID, imgW, imgH int) bool {
 	case TemplatePolaroid:
 		return false
 
-	case TemplateBorder:
-		// Bei quadratischen Motiven ist keine Richtung im Vorteil; das
-		// Hochformat bleibt dann die ruhigere Wahl.
-		return borderFitsBetter(image.Rect(0, 0, imgW, imgH), NativeRaster4x6.Long(), NativeRaster4x6.Short())
-
 	default:
+		// Das nutzbare Feld ist in beiden Papierlagen dasselbe Rechteck, nur
+		// gekippt. Für einen mittigen Zuschnitt fällt deshalb genau die Lage
+		// weniger Motiv weg, die zur Ausrichtung des Bildes passt.
 		return imgW >= imgH
 	}
 }
@@ -308,18 +312,22 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster, opts RenderO
 	)
 
 	switch tpl {
-	case TemplateBorder:
-		// Gleichmäßiger Einzug von 5 % der kurzen Seite, danach wird das Motiv
-		// vollständig eingepasst (contain).
+	case TemplatePassepartout:
+		// Ein Passepartout ist ein Rahmen, kein Rest. Der Rand ist deshalb auf
+		// allen vier Seiten exakt gleich breit, und das Motiv wird formatfüllend
+		// eingesetzt (cover) – im Zweifel also beschnitten.
 		//
-		// Der Einzug ist auf allen vier Seiten gleich, der sichtbare weiße
-		// Rand ist es nicht: Das eingepasste Motiv behält sein
-		// Seitenverhältnis, und was an den beiden übrigen Kanten frei bleibt,
-		// kommt dort zum Einzug hinzu. Bei einem 4:3-Foto ist der Rand seitlich
-		// rund dreimal so breit wie oben und unten.
-		margin := min(visibleW, visibleH) * 5 / 100
-		area := image.Rect(visible.Min.X+margin, visible.Min.Y+margin, visible.Max.X-margin, visible.Max.Y-margin)
-		drawContain(canvas, area, img)
+		// Die frühere Fassung passte das Motiv vollständig ein (contain). Das
+		// bewahrte zwar jeden Bildpunkt, ließ den sichtbaren Rand aber je nach
+		// Bildformat unterschiedlich breit ausfallen, was auf dem Papier
+		// schlicht nach einem Fehler aussah.
+		area := image.Rect(
+			visible.Min.X+PassepartoutMargin,
+			visible.Min.Y+PassepartoutMargin,
+			visible.Max.X-PassepartoutMargin,
+			visible.Max.Y-PassepartoutMargin,
+		)
+		drawCover(canvas, area, img)
 
 	case TemplatePolaroid:
 		// klassische Sofortbild-Proportionen: schmaler Rand oben/seitlich,
@@ -338,26 +346,6 @@ func renderTemplate(img image.Image, tpl TemplateID, raster Raster, opts RenderO
 	}
 
 	return canvas
-}
-
-// borderFitsBetter vergleicht die tatsächlich nutzbare Motivgröße in beiden
-// Papierorientierungen. Das ist robuster als nur Hoch- und Querformat des
-// Originals zu vergleichen und garantiert auch für Quadrat-, Panorama- und
-// andere Seitenverhältnisse die größtmögliche vollständige Abbildung.
-func borderFitsBetter(src image.Rectangle, pageW, pageH int) bool {
-	landscape := borderContainScale(src, pageW, pageH)
-	portrait := borderContainScale(src, pageH, pageW)
-	return landscape > portrait
-}
-
-func borderContainScale(src image.Rectangle, pageW, pageH int) float64 {
-	visibleW, visibleH := VisibleMedia4x6.Short(), VisibleMedia4x6.Long()
-	if pageW > pageH {
-		visibleW, visibleH = visibleH, visibleW
-	}
-	margin := min(visibleW, visibleH) * 5 / 100
-	usableW, usableH := visibleW-2*margin, visibleH-2*margin
-	return min(float64(usableW)/float64(src.Dx()), float64(usableH)/float64(src.Dy()))
 }
 
 // drawCover skaliert das Motiv formatfüllend in area und beschneidet mittig,
@@ -483,27 +471,4 @@ func cropForFaces(bounds image.Rectangle, faces []image.Rectangle, area image.Re
 	y = max(bounds.Min.Y, min(y, bounds.Max.Y-h))
 
 	return image.Rect(x, y, x+w, y+h)
-}
-
-// drawContain skaliert das Motiv so, dass es vollständig in area passt, und
-// zentriert es dort. Das entspricht CSS object-fit: contain.
-func drawContain(dst *image.RGBA, area image.Rectangle, src image.Image) {
-	sb := src.Bounds()
-	if sb.Empty() || area.Empty() {
-		return
-	}
-
-	scale := min(
-		float64(area.Dx())/float64(sb.Dx()),
-		float64(area.Dy())/float64(sb.Dy()),
-	)
-
-	w := int(float64(sb.Dx()) * scale)
-	h := int(float64(sb.Dy()) * scale)
-
-	offX := area.Min.X + (area.Dx()-w)/2
-	offY := area.Min.Y + (area.Dy()-h)/2
-	target := image.Rect(offX, offY, offX+w, offY+h)
-
-	xdraw.CatmullRom.Scale(dst, target, src, sb, draw.Over, nil)
 }

@@ -19,19 +19,19 @@ Die Einrichtung des Druckers ist getrennt dokumentiert: **[DRUCKER.md](DRUCKER.m
   | Layout | Verhalten |
   |---|---|
   | Formatfüllend | randlos, das Motiv wird mittig auf 3:2 beschnitten |
-  | Mit Rand | vollständiges Motiv, weißer Rand ringsum |
+  | Passepartout | weißer Rahmen von 1 cm, ringsum exakt gleich breit |
   | Polaroid | Sofortbild-Look, breiter Steg unten |
 
-  Bei „Formatfüllend“ und „Mit Rand“ wird das Papier in die Richtung gedreht,
-  in der das Motiv größer herauskommt – ein Querformatfoto ergibt also ein
-  quer liegendes Bild. Das Polaroid bleibt immer hochkant, sonst säße der
-  breite Steg an der falschen Kante.
+  Bei „Formatfüllend“ und „Passepartout“ wird das Papier in die Richtung
+  gedreht, in der das Motiv liegt – ein Querformatfoto ergibt also ein quer
+  liegendes Bild. Das Polaroid bleibt immer hochkant, sonst säße der breite
+  Steg an der falschen Kante.
 
-  Der Einzug bei „Mit Rand“ beträgt 5 % der kurzen Papierkante, also etwa
-  5 mm auf allen vier Seiten. Der *sichtbare* Rand ist trotzdem nicht überall
-  gleich breit: Das Motiv behält sein Seitenverhältnis, und was an den beiden
-  übrigen Kanten frei bleibt, kommt dort hinzu. Bei einem 4:3-Foto ist der
-  Rand seitlich rund dreimal so breit wie oben und unten.
+  Beim Passepartout hat der Rahmen Vorrang vor dem Motiv: Passt das
+  Seitenverhältnis nicht zur verbleibenden Fläche, wird das Bild an den Kanten
+  beschnitten. Ein ungleichmäßiger Rand sieht auf dem Papier nach einem Fehler
+  aus, ein knapperer Ausschnitt nicht. Bei einem 4:3-Foto gehen dabei rund
+  18 % der Höhe verloren, bei 3:2 rund 8 %.
 
 * **Historie** aller Fotos – Kameraaufnahmen und Gast-Uploads gleichermaßen –
   mit Nachdruck und Löschen.
@@ -342,7 +342,8 @@ go test ./...
 
 Die Tests des Renderers prüfen die Kernanforderung direkt am Pixel: exakte
 Papiergeometrie (1200x1800 @ 300 dpi), keine weißen Ecken beim formatfüllenden
-Layout, weißer Rand beim Layout „Mit Rand", breiterer Steg unten beim Polaroid.
+Layout, ringsum exakt gleich breiter Rahmen beim Passepartout, breiterer Steg
+unten beim Polaroid.
 Dazu kommen Tests für die Druckerauswahl, das Auswerten von `lpstat -a`, den
 Aufbau der öffentlichen Adresse und die eindeutigen Einstellungs-Diskriminatoren.
 

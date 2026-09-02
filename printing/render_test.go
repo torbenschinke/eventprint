@@ -92,10 +92,10 @@ func TestRenderFullHasNoBorder(t *testing.T) {
 	}
 }
 
-// TestRenderBorderHasWhiteMargin ist die Gegenprobe: Beim Layout "Mit Rand"
+// TestRenderPassepartoutHasWhiteMargin ist die Gegenprobe: Beim Passepartout
 // muss ringsum Papier sichtbar bleiben, während die Bildmitte belegt ist.
-func TestRenderBorderHasWhiteMargin(t *testing.T) {
-	img := renderSample(t, printing.TemplateBorder)
+func TestRenderPassepartoutHasWhiteMargin(t *testing.T) {
+	img := renderSample(t, printing.TemplatePassepartout)
 	b := img.Bounds()
 
 	if !isNearWhite(img.At(b.Min.X+2, b.Min.Y+2)) {

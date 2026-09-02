@@ -8,13 +8,16 @@ const (
 	// Seitenverhältnis des Papiers beschnitten, es bleibt kein weißer Rand.
 	TemplateFull TemplateID = "full"
 
-	// TemplateBorder druckt das vollständige Bild mit einem weißen Rand
-	// ringsum. Es geht nichts vom Motiv verloren.
+	// TemplatePassepartout setzt das Motiv in einen weißen Rahmen von 1 cm,
+	// auf allen vier Seiten exakt gleich breit.
 	//
-	// Der Einzug ist auf allen vier Seiten gleich, der sichtbare Rand nicht:
-	// Das Motiv behält sein Seitenverhältnis, und was an den beiden übrigen
-	// Kanten frei bleibt, kommt dort hinzu.
-	TemplateBorder TemplateID = "border"
+	// Anders als die übrigen Layouts hat der Rahmen Vorrang vor dem Motiv:
+	// Passt das Seitenverhältnis nicht, wird das Bild beschnitten, statt den
+	// Rand ungleichmäßig werden zu lassen.
+	//
+	// Der gespeicherte Wert bleibt "border". Er steht in bereits abgelegten
+	// Druckaufträgen und darf sich deshalb nicht ändern.
+	TemplatePassepartout TemplateID = "border"
 
 	// TemplatePolaroid druckt im Sofortbild-Look: schmaler Rand oben und an
 	// den Seiten, breiter Steg unten für eine handschriftliche Notiz.
@@ -37,9 +40,9 @@ func Templates() []Template {
 			Description: "Randlos über das ganze Papier. Die Ränder des Motivs werden passend beschnitten.",
 		},
 		{
-			ID:          TemplateBorder,
-			Name:        "Mit Rand",
-			Description: "Das ganze Bild ist zu sehen, nichts wird abgeschnitten. Ringsum wird ein weißer Rand hinzugefügt.",
+			ID:          TemplatePassepartout,
+			Name:        "Passepartout",
+			Description: "Das Bild sitzt in einem weißen Rahmen. Der Rand ist überall 1 cm breit. Dafür wird das Bild an den Kanten etwas beschnitten.",
 		},
 		{
 			ID:          TemplatePolaroid,

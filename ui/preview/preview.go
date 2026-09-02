@@ -15,12 +15,15 @@ import (
 const (
 	paperWhite ui.Color = "#FFFFFF"
 	// Die kurze und die lange Kante des Blattes im Verhältnis 2:3.
-	paperShort    = ui.L96
-	paperLong     = ui.Length("9rem")
-	borderInset   = ui.Length("0.45rem")
-	polaroidSide  = ui.Length("0.55rem")
-	polaroidFoot  = ui.Length("2rem")
-	previewPixels = 256
+	paperShort = ui.L96
+	paperLong  = ui.Length("9rem")
+	// 1 cm Rand auf einem 10,16 cm breiten Blatt sind 9,84 % der kurzen Kante.
+	// Bezogen auf paperShort (6rem) also 0,59rem – auf allen vier Seiten
+	// gleich, wie beim Druck.
+	passepartoutInset = ui.Length("0.59rem")
+	polaroidSide      = ui.Length("0.55rem")
+	polaroidFoot      = ui.Length("2rem")
+	previewPixels     = 256
 )
 
 // Selector displays all templates using a prepared Nago image pyramid.
@@ -35,7 +38,7 @@ func Selector(img image.ID, imgW, imgH int, selected *core.State[printing.Templa
 		cards = append(cards, card(img, imgW, imgH, tpl, selected))
 	}
 
-	return ui.HStack(cards...).Gap(ui.L16).Alignment(ui.Top).Wrap(true)
+	return ui.HStack(cards...).Gap(ui.L16).Alignment(ui.Stretch).Wrap(true)
 }
 
 func card(img image.ID, imgW, imgH int, tpl printing.Template, selected *core.State[printing.TemplateID]) core.View {
@@ -116,9 +119,11 @@ func motif(img image.ID, tpl printing.TemplateID) core.View {
 	// FitCover selects a suitable precomputed pyramid element instead of the original.
 	uri := httpimage.URI(img, image.FitCover, previewPixels, previewPixels)
 	switch tpl {
-	case printing.TemplateBorder:
-		return ui.Image().URI(uri).ObjectFit(ui.FitContain).
-			Frame(ui.Frame{}.Size(ui.Full, ui.Full)).Padding(ui.Padding{}.All(borderInset))
+	case printing.TemplatePassepartout:
+		// FitCover, nicht FitContain: Der Rahmen hat Vorrang, das Motiv wird
+		// dafür beschnitten. Genau das muss die Vorschau zeigen.
+		return ui.Image().URI(uri).ObjectFit(ui.FitCover).
+			Frame(ui.Frame{}.Size(ui.Full, ui.Full)).Padding(ui.Padding{}.All(passepartoutInset))
 	case printing.TemplatePolaroid:
 		return ui.Image().URI(uri).ObjectFit(ui.FitCover).
 			Frame(ui.Frame{}.Size(ui.Full, ui.Full)).

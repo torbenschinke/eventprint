@@ -141,10 +141,10 @@ def test_reprint_from_booth_screen(page: Page, server: str):
 
     # Kachel antippen öffnet die Layout-Auswahl.
     photo_tiles(page).first.click()
-    choose_template_and_print(page, "Mit Rand")
+    choose_template_and_print(page, "Passepartout")
 
     page.goto(f"{server}/print/status")
-    expect(page.get_by_text("Mit Rand")).to_be_visible(timeout=30_000)
+    expect(page.get_by_text("Passepartout")).to_be_visible(timeout=30_000)
 
 
 def login_as_operator(page: Page, base_url: str) -> None:

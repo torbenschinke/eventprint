@@ -194,49 +194,96 @@ func TestValidateCZ01RasterRejectsCorruptHeader(t *testing.T) {
 }
 
 func TestTemplatesUseVisibleMediaPixels(t *testing.T) {
-	border := renderTemplate(solidImage(1080, 1680, color.Black), TemplateBorder, NativeRaster4x6, RenderOptions{})
-	assertTransition(t, border, 93, 78, 1173, 1758)
+	// Sichtbare Fläche 1200x1800, mittig im Raster 1266x1836, also ab (33,18).
+	// Dazu 118 Punkte Passepartout auf jeder Seite.
+	passepartout := renderTemplate(solidImage(1080, 1680, color.Black), TemplatePassepartout, NativeRaster4x6, RenderOptions{})
+	assertTransition(t, passepartout, 151, 136, 1115, 1700)
 
 	polaroid := renderTemplate(solidImage(1056, 1464, color.Black), TemplatePolaroid, NativeRaster4x6, RenderOptions{})
 	assertTransition(t, polaroid, 105, 90, 1161, 1554)
 }
 
-func TestBorderChoosesBestOrientationAndCentersEntireImage(t *testing.T) {
+// TestPassepartoutHasEqualMarginOnAllSides ist die tragende Zusage dieses
+// Layouts: Der weiße Rahmen ist auf allen vier Seiten exakt gleich breit.
+//
+// Die Vorgängerfassung passte das Motiv vollständig ein und ließ den Rand
+// dadurch je nach Bildformat verschieden breit werden – bei einem 4:3-Foto
+// seitlich rund dreimal so breit wie oben und unten. Der Rahmen hat jetzt
+// Vorrang, das Motiv wird dafür beschnitten.
+func TestPassepartoutHasEqualMarginOnAllSides(t *testing.T) {
 	tests := []struct {
-		name      string
-		width     int
-		height    int
-		landscape bool
+		name          string
+		width, height int
+		landscape     bool
 	}{
 		{name: "panorama", width: 2400, height: 400, landscape: true},
-		{name: "portrait", width: 400, height: 2400, landscape: false},
-		{name: "square", width: 1000, height: 1000, landscape: false},
+		{name: "quer 3:2", width: 3000, height: 2000, landscape: true},
+		{name: "quer 4:3", width: 2048, height: 1536, landscape: true},
+		{name: "quadrat", width: 1000, height: 1000, landscape: true},
+		{name: "hoch 3:4", width: 1536, height: 2048, landscape: false},
+		{name: "hoch schmal", width: 400, height: 2400, landscape: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			img := renderTemplate(solidImage(tt.width, tt.height, color.Black), TemplateBorder, NativeRaster4x6, RenderOptions{})
-			bounds := img.Bounds()
+			page := renderTemplate(solidImage(tt.width, tt.height, color.Black), TemplatePassepartout, NativeRaster4x6, RenderOptions{})
+			bounds := page.Bounds()
+
 			if got := bounds.Dx() > bounds.Dy(); got != tt.landscape {
 				t.Fatalf("Papier quer = %v, erwartet %v (%dx%d)", got, tt.landscape, bounds.Dx(), bounds.Dy())
 			}
 
-			motif := nonWhiteBounds(img)
+			// Der Rand bezieht sich auf die physisch sichtbare Fläche, nicht
+			// auf das Raster: Das Raster ist ringsum etwas größer, und dieser
+			// Überstand wird ohnehin nicht gedruckt.
+			visW, visH := VisibleMedia4x6.Short(), VisibleMedia4x6.Long()
+			if bounds.Dx() > bounds.Dy() {
+				visW, visH = visH, visW
+			}
+			visible := image.Rect(
+				(bounds.Dx()-visW)/2,
+				(bounds.Dy()-visH)/2,
+				(bounds.Dx()-visW)/2+visW,
+				(bounds.Dy()-visH)/2+visH,
+			)
+
+			motif := nonWhiteBounds(page)
 			if motif.Empty() {
 				t.Fatal("Motiv fehlt")
 			}
-			left, right := motif.Min.X-bounds.Min.X, bounds.Max.X-motif.Max.X
-			top, bottom := motif.Min.Y-bounds.Min.Y, bounds.Max.Y-motif.Max.Y
-			if abs(left-right) > 1 || abs(top-bottom) > 1 {
-				t.Errorf("Motiv nicht zentriert: links=%d rechts=%d oben=%d unten=%d", left, right, top, bottom)
+
+			margins := map[string]int{
+				"links":  motif.Min.X - visible.Min.X,
+				"oben":   motif.Min.Y - visible.Min.Y,
+				"rechts": visible.Max.X - motif.Max.X,
+				"unten":  visible.Max.Y - motif.Max.Y,
 			}
 
-			gotRatio := float64(motif.Dx()) / float64(motif.Dy())
-			wantRatio := float64(tt.width) / float64(tt.height)
-			if difference := gotRatio/wantRatio - 1; difference < -0.01 || difference > 0.01 {
-				t.Errorf("Motivseitenverhältnis %.4f, erwartet %.4f; Bild wurde beschnitten", gotRatio, wantRatio)
+			for side, got := range margins {
+				if got != PassepartoutMargin {
+					t.Errorf("Rand %s = %d, erwartet %d – der Rahmen muss ringsum gleich breit sein", side, got, PassepartoutMargin)
+				}
 			}
 		})
+	}
+}
+
+// TestPassepartoutFillsItsFrame stellt sicher, dass innerhalb des Rahmens
+// kein Papier durchscheint. Genau das war der optische Mangel der alten
+// Fassung.
+func TestPassepartoutFillsItsFrame(t *testing.T) {
+	// 4:3 auf einem Feld von 1564x964 – das Seitenverhältnis passt bewusst
+	// nicht, es muss also beschnitten werden.
+	page := renderTemplate(solidImage(2048, 1536, color.Black), TemplatePassepartout, NativeRaster4x6, RenderOptions{})
+
+	motif := nonWhiteBounds(page)
+
+	for y := motif.Min.Y; y < motif.Max.Y; y++ {
+		for x := motif.Min.X; x < motif.Max.X; x++ {
+			if color.RGBAModel.Convert(page.At(x, y)).(color.RGBA) == (color.RGBA{255, 255, 255, 255}) {
+				t.Fatalf("weißer Punkt bei (%d,%d) innerhalb des Rahmens – das Motiv füllt ihn nicht aus", x, y)
+			}
+		}
 	}
 }
 

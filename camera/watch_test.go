@@ -82,7 +82,7 @@ func TestWatcherKeepsCaptureInHistoryWithoutAutoPrint(t *testing.T) {
 	}
 	var imported photo.Options
 	var printed printing.TemplateID
-	w := newTestWatcher(dir, func() Options { return Options{AutoPrint: false, AutoPrintTemplate: printing.TemplateBorder} }, &imported, &printed)
+	w := newTestWatcher(dir, func() Options { return Options{AutoPrint: false, AutoPrintTemplate: printing.TemplatePassepartout} }, &imported, &printed)
 	w.scan()
 	w.scan()
 	if imported.Source != photo.SourceCamera {
@@ -101,7 +101,7 @@ func TestWatcherRetriesPrintWithoutDuplicateImport(t *testing.T) {
 	}
 	imports, attempts := 0, 0
 	w := &watcher{
-		dir: dir, load: func() Options { return Options{AutoPrint: true, AutoPrintTemplate: printing.TemplateBorder} },
+		dir: dir, load: func() Options { return Options{AutoPrint: true, AutoPrintTemplate: printing.TemplatePassepartout} },
 		photos: photo.UseCases{Import: func(_ user.Subject, opts photo.Options, _ nagoimage.File) (photo.Photo, error) {
 			imports++
 			return photo.Photo{ID: "photo"}, nil
@@ -185,7 +185,7 @@ func TestWatcherDoesNotReprintWhenRemoveFails(t *testing.T) {
 
 	attempts := 0
 	w := &watcher{
-		dir: dir, load: func() Options { return Options{AutoPrint: true, AutoPrintTemplate: printing.TemplateBorder} },
+		dir: dir, load: func() Options { return Options{AutoPrint: true, AutoPrintTemplate: printing.TemplatePassepartout} },
 		photos: photo.UseCases{Import: func(_ user.Subject, _ photo.Options, _ nagoimage.File) (photo.Photo, error) {
 			return photo.Photo{ID: "photo"}, nil
 		}},
@@ -203,7 +203,7 @@ func TestWatcherDoesNotReprintWhenRemoveFails(t *testing.T) {
 	if err := os.WriteFile(path, testJPEG(t), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	w.pending[path] = pendingPhoto{id: "photo", template: printing.TemplateBorder, printed: true}
+	w.pending[path] = pendingPhoto{id: "photo", template: printing.TemplatePassepartout, printed: true}
 
 	w.scan()
 	w.scan()
