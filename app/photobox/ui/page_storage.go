@@ -20,9 +20,12 @@ type StorageOptions struct {
 	// DiskUsage misst den Datenträger, auf dem die Fotobox arbeitet.
 	DiskUsage func() (diskfree.Usage, error)
 
-	// DataBytes ist der Platzbedarf der Fotobox insgesamt, also Bildablage,
-	// Archiv und Verwaltung.
-	DataBytes func() (int64, error)
+	// ImageBytes ist der Platzbedarf der Bildablage.
+	//
+	// Von der Ablage erfragt und nicht vom Dateisystem: Im Datenverzeichnis
+	// liegen auch die Zwischenspeicher des Übersetzers, und die haben mit
+	// Fotos nichts zu tun.
+	ImageBytes func() (int64, error)
 }
 
 // PageStorage zeigt die Speicherbelegung und räumt die Fotobox frei.
@@ -81,22 +84,17 @@ func (m *storageModel) statistics() core.View {
 		return alert.BannerError(err)
 	}
 
-	data, err := m.opts.DataBytes()
-	if err != nil {
-		return alert.BannerError(err)
-	}
-
 	// Die Bildablage getrennt vom Archiv ausweisen.
 	//
 	// Beides sind Kopien derselben Fotos: Das Archiv ist der Ordner für die
 	// Weitergabe, die Bildablage das, woraus Galerie und Druck lesen. Wer nur
 	// eine Summe sähe, könnte nicht einschätzen, was das Aufräumen bringt.
-	images := data - archive.Bytes
-	if images < 0 {
-		images = 0
+	images, err := m.opts.ImageBytes()
+	if err != nil {
+		return alert.BannerError(err)
 	}
 
-	rest := disk.UsedBytes() - data
+	rest := disk.UsedBytes() - archive.Bytes - images
 	if rest < 0 {
 		rest = 0
 	}
@@ -106,7 +104,7 @@ func (m *storageModel) statistics() core.View {
 		storageRow("Fotoarchiv (Originale zur Weitergabe)",
 			fmt.Sprintf("%s in %d Dateien", diskfree.GiB(archive.Bytes), archive.Files), false),
 		storageRow("Bildablage (Galerie und Druck)", diskfree.GiB(images), false),
-		storageRow("System und Übriges", diskfree.GiB(rest), false),
+		storageRow("System, Programm und Zwischenspeicher", diskfree.GiB(rest), false),
 		storageRow("Frei", diskfree.GiB(disk.FreeBytes), true),
 	).
 		Gap(ui.L8).

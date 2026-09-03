@@ -1,10 +1,7 @@
 package cfgphotobox
 
 import (
-	"fmt"
-	"io/fs"
 	"net"
-	"path/filepath"
 	"strings"
 )
 
@@ -115,38 +112,4 @@ func withLANHost(rawURL string, lan string) string {
 	}
 
 	return rawURL
-}
-
-// dirBytes summiert den Platzbedarf eines Verzeichnisbaums.
-//
-// Nötig, weil sich der Anteil der Fotobox nicht aus dem Dateisystem ablesen
-// lässt: Dort liegt auch alles andere. Ohne diese Zahl bliebe offen, ob das
-// Aufräumen überhaupt lohnt.
-func dirBytes(root string) (int64, error) {
-	var total int64
-
-	err := filepath.WalkDir(root, func(_ string, d fs.DirEntry, err error) error {
-		if err != nil {
-			// Eine unlesbare Stelle darf die ganze Auskunft nicht verhindern.
-			return nil
-		}
-
-		if d.IsDir() || !d.Type().IsRegular() {
-			return nil
-		}
-
-		info, err := d.Info()
-		if err != nil {
-			return nil
-		}
-
-		total += info.Size()
-
-		return nil
-	})
-	if err != nil {
-		return 0, fmt.Errorf("cannot measure %q: %w", root, err)
-	}
-
-	return total, nil
 }

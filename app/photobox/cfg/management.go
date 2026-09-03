@@ -167,12 +167,12 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 
 	slog.Info("photo archive ready", "dir", archiveDir)
 
-	purgeImage, err := newPurgeImage(cfg)
+	imgStores, err := newImageStores(cfg)
 	if err != nil {
 		return Management{}, err
 	}
 
-	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases, archive, archiveDir, purgeImage)
+	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases, archive, archiveDir, imgStores.Purge)
 
 	printer := printing.NewSettingsPrinter(loadPrinterSettings)
 
@@ -419,9 +419,7 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		DiskUsage: func() (diskfree.Usage, error) {
 			return diskfree.Of(cfg.DataDir())
 		},
-		DataBytes: func() (int64, error) {
-			return dirBytes(cfg.DataDir())
-		},
+		ImageBytes: imgStores.Bytes,
 	}
 
 	cfg.RootViewWithDecoration(pages.Storage, func(wnd core.Window) core.View {

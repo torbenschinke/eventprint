@@ -330,7 +330,7 @@ def test_the_box_is_only_wiped_after_a_deliberate_confirmation(page: Page, serve
     expect(page.get_by_text("Speicher und Archiv")).to_be_visible(timeout=30_000)
 
     # Die Statistik nennt alle drei Anteile.
-    for zeile in ["Speicherkarte insgesamt", "Fotoarchiv", "Bildablage", "System und Übriges"]:
+    for zeile in ["Speicherkarte insgesamt", "Fotoarchiv", "Bildablage", "System, Programm und Zwischenspeicher"]:
         expect(page.get_by_text(zeile).first).to_be_visible()
 
     page.get_by_role("button", name="Fotobox freiräumen").click()
