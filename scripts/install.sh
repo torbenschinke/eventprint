@@ -418,7 +418,18 @@ setup_kiosk() {
   run install -m 0755 "${PREFIX}/deploy/kiosk/mirror-displays.sh" /usr/local/bin/eventprint-mirror-displays
   run install -m 0755 "${PREFIX}/deploy/kiosk/kiosk-session.sh" /usr/local/bin/eventprint-kiosk-session
 
+  # Jede Ebene einzeln anlegen.
+  #
+  # install -d setzt den Besitzer nur auf das LETZTE Verzeichnis; ein neu
+  # angelegtes Elternverzeichnis bleibt bei root. Genau das ist passiert:
+  # .config gehoerte root, und Chromium konnte darin sein Profil nicht anlegen.
+  # Es starb daraufhin mit "--database is required", der Bildschirm blieb
+  # schwarz, und zu sehen war nur der Mauszeiger auf dem openbox-Hintergrund.
+  run install -d -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0755 "${home}/.config"
   run install -d -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0755 "${home}/.config/openbox"
+
+  # Sicherheitsnetz fuer Bestandsinstallationen, die den Fehler schon haben.
+  run chown -R "${KIOSK_USER}:${KIOSK_USER}" "${home}/.config"
   run install -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0644 \
       "${PREFIX}/deploy/kiosk/openbox-rc.xml" "${home}/.config/openbox/rc.xml"
 
