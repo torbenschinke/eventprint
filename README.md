@@ -162,6 +162,13 @@ Das Gerät ist ein Abbild des Repositories, keine Arbeitskopie: `update.sh`
 setzt mit `git reset --hard` auf den Stand der Gegenseite. Lokale Änderungen
 unter `/opt/eventprint` gehen dabei verloren.
 
+Damit das nicht das falsche Verzeichnis trifft, bricht `update.sh` ab, sobald
+das Arbeitsverzeichnis lokale Änderungen hat. Ein Gerätecheckout hat nie
+welche; ein Entwicklungsverzeichnis immer. Das Skript bezieht sein Ziel aus
+seinem eigenen Ort, nicht aus dem Arbeitsverzeichnis des Aufrufers — ein Aufruf
+mit absolutem Pfad aus einem anderen Verzeichnis heraus meint also weiterhin
+den Checkout, in dem das Skript liegt.
+
 ## Einrichten
 
 Beides geschieht in der Oberfläche, wirkt sofort und überlebt einen Neustart.

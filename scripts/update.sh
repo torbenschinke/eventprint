@@ -55,6 +55,20 @@ current="$(git rev-parse HEAD 2>/dev/null)" || {
   exit 0
 }
 
+# Ein Gerätecheckout ist ein Abbild des Repositories und hat nie lokale
+# Änderungen. Hat er doch welche, ist dies eine Arbeitskopie – und dann wäre
+# das "git reset --hard" weiter unten ein Datenverlust.
+#
+# Der Schutz stammt aus einem echten Vorfall: Dieses Skript wurde versehentlich
+# mit absolutem Pfad aufgerufen und arbeitete dadurch auf dem
+# Entwicklungsverzeichnis statt auf dem Gerät. ROOT_DIR leitet sich vom Ort des
+# Skripts ab, nicht vom Arbeitsverzeichnis des Aufrufers.
+if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+  log "Arbeitsverzeichnis hat lokale Änderungen – dies ist keine Gerätekopie."
+  log "Es wird nichts geholt und nichts zurückgesetzt."
+  exit 0
+fi
+
 target="${current}"
 
 # Ein kurzer Zeitrahmen: Hängt das Netz, soll die Fotobox nicht minutenlang im
@@ -120,7 +134,7 @@ done
 
 if [[ ${failed} -ne 0 ]]; then
   if binaries_present; then
-    log "behalte den zuletzt lauffähigen Stand (${built:0:12})"
+    log "behalte den vorhandenen Stand${built:+ (${built:0:12})}"
   else
     log "ACHTUNG: es gibt keine lauffähige Binärdatei; der Dienst wird nicht starten"
   fi
