@@ -231,20 +231,35 @@ PRINT_QUEUE="${PRINT_QUEUE:-CZ01}"
 REQUIRED_PAGE_SIZE="w288h432"
 
 # detect_printer_uri liefert das USB-Ziel des angeschlossenen Druckers.
+#
+# Es gibt zwei Schreibweisen, und welche erscheint, haengt davon ab, ob der
+# Gutenprint-Treiber schon installiert ist:
+#
+#   usb://CITIZEN%20SYSTEMS/CZ-01?serial=RZ2C57003197   ohne Treiber
+#   gutenprint53+usb://citizen-cz-01/RZ2C57003197       mit Treiber
+#
+# Dieses Skript installiert den Treiber selbst, die zweite Form ist also der
+# Normalfall. Die erste bleibt trotzdem gueltig, etwa wenn jemand das Skript
+# auf einem System mit vorhandener Einrichtung laufen laesst.
 detect_printer_uri() {
-  lpinfo -v 2>/dev/null | awk '$1 == "direct" && $2 ~ /^usb:\/\// { print $2 }'
+  lpinfo -v 2>/dev/null | awk '
+    $1 == "direct" && ($2 ~ /^usb:\/\// || $2 ~ /^gutenprint[0-9]*\+usb:\/\//) { print $2 }
+  '
 }
 
-# ppd_for_uri sucht die Gutenprint-PPD zum Modell aus dem Geraete-URI.
-#
-# Aus usb://CITIZEN%20SYSTEMS/CZ-01?serial=... wird das Modell CZ-01 und daraus
-# die Kennung citizen-cz-01. Bewusst ueber die Modellbezeichnung und nicht ueber
-# eine fest eingetragene PPD: So richtet sich auch ein Schwestermodell ein, ohne
-# dass jemand dieses Skript anfasst.
-ppd_for_uri() {
-  local uri="$1" model
+# model_key liefert die Gutenprint-Kennung des Modells aus dem Geraete-URI.
+model_key() {
+  local uri="$1" rest model
 
-  # Modell ist der letzte Pfadbestandteil vor dem Fragezeichen.
+  rest="${uri#*://}"
+
+  if [[ "${uri}" == gutenprint*+usb://* ]]; then
+    # Die Kennung steht bereits im URI: citizen-cz-01/RZ2C57003197
+    printf '%s' "${rest%%/*}"
+    return 0
+  fi
+
+  # Sonst ist das Modell der letzte Pfadbestandteil vor dem Fragezeichen.
   model="${uri%%\?*}"
   model="${model##*/}"
   model="$(printf '%b' "${model//%/\\x}")"        # %20 und Verwandte aufloesen
@@ -252,9 +267,25 @@ ppd_for_uri() {
 
   [[ -n "${model}" ]] || return 1
 
+  printf '%s' "${model}"
+}
+
+# ppd_for_uri sucht die Gutenprint-PPD zum Modell aus dem Geraete-URI.
+#
+# Bewusst ueber die Modellbezeichnung und nicht ueber eine fest eingetragene
+# PPD: So richtet sich auch ein Schwestermodell ein, ohne dass jemand dieses
+# Skript anfasst.
+ppd_for_uri() {
+  local key
+  key="$(model_key "$1")" || return 1
+  [[ -n "${key}" ]] || return 1
+
   # Der abschliessende Schraegstrich grenzt cx-02 sauber gegen cx-02w ab.
-  lpinfo -m 2>/dev/null |
-    awk -v m="-${model}/" '$1 ~ /^gutenprint/ && index($1, m) > 0 { print $1 }'
+  # Der fuehrende Bindestrich bzw. Doppelschraegstrich verhindert, dass eine
+  # Teilzeichenkette in der Mitte trifft.
+  lpinfo -m 2>/dev/null | awk -v full="//${key}/" -v tail="-${key}/" '
+    $1 ~ /^gutenprint/ && (index($1, full) > 0 || index($1, tail) > 0) { print $1 }
+  '
 }
 
 setup_printer_queue() {
