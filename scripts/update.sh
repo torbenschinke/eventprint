@@ -93,6 +93,13 @@ if [[ "${FACECROP:-1}" == "0" ]]; then
   tagflag=(-tags nofacecrop)
 fi
 
+# Beim ersten Hochfahren nach einem frischen Klon gibt es dist/ noch nicht:
+# Das Verzeichnis steht in .gitignore und entsteht erst beim Bauen.
+if ! mkdir -p "${DIST_DIR}"; then
+  log "kann ${DIST_DIR} nicht anlegen, überspringe die Aktualisierung"
+  exit 0
+fi
+
 staging="$(mktemp -d "${DIST_DIR}/.staging-XXXXXX" 2>/dev/null)" || {
   log "kein Platz für den Zwischenbau, behalte den laufenden Stand"
   exit 0
