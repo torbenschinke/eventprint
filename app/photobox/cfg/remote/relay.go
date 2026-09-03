@@ -45,6 +45,47 @@ func (m *Manager) UploadURL() string {
 	return ""
 }
 
+// State beschreibt, woran der Upload-Dienst gerade ist.
+type State int
+
+const (
+	// StateOff bedeutet: kein Upload-Dienst eingetragen. Gäste laden dann
+	// direkt bei der Fotobox hoch.
+	StateOff State = iota
+
+	// StateMissingToken bedeutet: Adresse eingetragen, Token fehlt.
+	StateMissingToken
+
+	// StateConnecting bedeutet: eingerichtet, aber noch keine Sitzung. Das ist
+	// entweder der Moment nach dem Start oder ein abgelehntes Token.
+	StateConnecting
+
+	// StateReady bedeutet: Sitzung steht, der QR-Code führt zum Dienst.
+	StateReady
+)
+
+// State liefert den Zustand für die Anzeige.
+//
+// Ohne diese Auskunft fiel die Fotobox bei jedem Problem stumm auf ihre eigene
+// Upload-Seite zurück - und deren Adresse leitet Nago aus der ersten
+// Verbindung ab. Auf dem Kiosk ist das localhost. Im QR-Code stand dann eine
+// Adresse, die nur der Rechner selbst erreicht, und der Code sah dabei aus wie
+// jeder andere. Ein Gast scannt ihn und landet im Nichts.
+func (m *Manager) State() State {
+	opts := m.load()
+
+	switch {
+	case !opts.Configured():
+		return StateOff
+	case !opts.Enabled():
+		return StateMissingToken
+	case m.UploadURL() == "":
+		return StateConnecting
+	default:
+		return StateReady
+	}
+}
+
 func (m *Manager) Run(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()

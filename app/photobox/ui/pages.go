@@ -73,6 +73,14 @@ type Options struct {
 	// auskommt - und genau so eine ist die PIN.
 	CanConfigure func(wnd core.Window) bool
 
+	// UploadProblem beschreibt, warum der QR-Code gerade nicht taugt.
+	//
+	// Leer bedeutet: alles in Ordnung. Ohne diese Auskunft zeigte die Fotobox
+	// bei jedem Problem stumm einen QR-Code auf ihre eigene Adresse – und die
+	// leitet Nago aus der ersten Verbindung ab, auf dem Kiosk also localhost.
+	// Der Code sah dabei aus wie jeder andere, führte aber ins Nichts.
+	UploadProblem func() string
+
 	// UploadURL liefert die absolute, von außen erreichbare Adresse der
 	// Upload-Seite. Sie wird erst zur Laufzeit gebildet, weil Nago den
 	// öffentlichen Hostnamen aus der ersten Verbindung ableitet.

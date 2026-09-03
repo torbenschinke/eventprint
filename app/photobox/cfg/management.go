@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -248,6 +249,31 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		return nil
 	}
 
+	// boothUploadURL bildet die Adresse, die im QR-Code landet.
+	//
+	// Die Reihenfolge ist die der Verlässlichkeit:
+	//
+	//  1. die von Hand gesetzte öffentliche Adresse,
+	//  2. die Adresse der Fotobox im örtlichen Netz,
+	//  3. das, was Nago aus der ersten Verbindung ableitet.
+	//
+	// Der dritte Fall ist der gefährliche: Auf dem Kiosk verbindet sich der
+	// eigene Browser als Erster, und Nago leitet daraus localhost ab. Im
+	// QR-Code stand dann eine Adresse, die kein Gast erreicht - und der Code
+	// sah aus wie jeder andere.
+	//
+	// Schritt 2 repariert genau das ohne Zutun: Die Fotobox steht mit den
+	// Gästen im selben WLAN, und deren Handys erreichen sie unter dieser
+	// Adresse. Sie von Hand einzutragen wäre ein Schritt, den beim Aufbau
+	// niemand mehr weiß.
+	boothUploadURL := func() string {
+		derived := loadBoothSettings().PublicURLFor(string(pages.Upload), func() string {
+			return cfg.ContextPathURI(string(pages.Upload), nil)
+		})
+
+		return withLANHost(derived, lanAddress(net.Interfaces))
+	}
+
 	uiOpts := uiphotobox.Options{
 		Pages:      pages,
 		Photos:     photos,
@@ -295,16 +321,35 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 				return tapGates.Tap(sessionID)
 			},
 		},
+		// UploadProblem uebersetzt den Zustand des Relais in einen Satz, der
+		// vor dem Geraet stehen darf.
+		//
+		// Die localhost-Adresse ist dabei der heimtueckischste Fall: Nago
+		// leitet die eigene Adresse aus der ersten Verbindung ab, und auf dem
+		// Kiosk ist das der Rechner selbst. Der QR-Code sieht dann normal aus
+		// und fuehrt ins Nichts.
+		UploadProblem: func() string {
+			switch relay.State() {
+			case remote.StateMissingToken:
+				return "Der Upload-Dienst ist eingetragen, aber ohne Zugangstoken. Als Betreuer anmelden und es nachtragen."
+			case remote.StateConnecting:
+				return "Der Upload-Dienst antwortet nicht. Meist stimmt das Zugangstoken nicht oder es fehlt die Rolle Fotobox-Relay."
+			}
+
+			// Ohne Upload-Dienst laden Gaeste direkt bei der Fotobox hoch.
+			// Dann muss aber die eigene Adresse von aussen erreichbar sein.
+			if isLocalOnly(boothUploadURL()) {
+				return "Die Fotobox ist in keinem Netz erreichbar. WLAN verbinden oder als Betreuer die öffentliche Adresse setzen."
+			}
+
+			return ""
+		},
 		UploadURL: func() string {
 			if relay.UploadURL() != "" {
 				return relay.UploadURL()
 			}
-			// Erst zur Laufzeit auflösen: Die eingestellte öffentliche
-			// Adresse kann sich jederzeit ändern, und die automatische
-			// Ermittlung steht beim Konfigurieren noch nicht fest.
-			return loadBoothSettings().PublicURLFor(string(pages.Upload), func() string {
-				return cfg.ContextPathURI(string(pages.Upload), nil)
-			})
+
+			return boothUploadURL()
 		},
 	}
 

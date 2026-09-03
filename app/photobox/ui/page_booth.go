@@ -1,7 +1,6 @@
 package uiphotobox
 
 import (
-	"strings"
 	"time"
 
 	"go.wdy.de/nago/presentation/core"
@@ -74,6 +73,33 @@ func uploadInvitation(wnd core.Window, opts Options, pad pinPad) core.View {
 		url = opts.UploadURL()
 	}
 
+	// Ein QR-Code, der ins Leere führt, ist schlimmer als keiner: Er sieht aus
+	// wie jeder andere, und der Gast merkt den Fehler erst mit dem Handy in
+	// der Hand.
+	if problem := uploadProblem(opts); problem != "" {
+		return ui.VStack(
+			ui.Text("Eigene Fotos drucken").Font(ui.TitleMedium),
+			configureGate(wnd, opts, pad,
+				ui.VStack(
+					ui.Text("Gerade nicht möglich").Font(ui.BodyLarge).
+						TextAlignment(ui.TextAlignCenter),
+					ui.Text(problem).Font(ui.BodySmall).
+						TextAlignment(ui.TextAlignCenter),
+				).
+					Gap(ui.L8).
+					Alignment(ui.Center).
+					Frame(ui.Frame{}.Size(ui.L256, ui.L256)),
+			),
+			settingsShortcut(wnd, opts),
+		).
+			Gap(ui.L16).
+			Alignment(ui.Center).
+			BackgroundColor(ui.M2).
+			WithPadding(ui.Padding{}.All(ui.L24)).
+			Border(ui.Border{}.Radius(ui.L16)).
+			Frame(ui.Frame{Width: ui.L400})
+	}
+
 	return ui.VStack(
 		ui.Text("Eigene Fotos drucken").Font(ui.TitleMedium),
 		ui.Text("Code scannen, Bild auswählen, fertig.").Font(ui.BodyMedium).
@@ -85,7 +111,6 @@ func uploadInvitation(wnd core.Window, opts Options, pad pinPad) core.View {
 		),
 		ui.Text(url).Font(ui.MonoSmall).
 			TextAlignment(ui.TextAlignCenter),
-		unreachableURLHint(wnd, opts, url),
 	).
 		Gap(ui.L16).
 		Alignment(ui.Center).
@@ -93,44 +118,6 @@ func uploadInvitation(wnd core.Window, opts Options, pad pinPad) core.View {
 		WithPadding(ui.Padding{}.All(ui.L24)).
 		Border(ui.Border{}.Radius(ui.L16)).
 		Frame(ui.Frame{Width: ui.L400})
-}
-
-// localHosts sind die Namen, unter denen die Fotobox nur auf dem eigenen
-// Rechner erreichbar ist.
-var localHosts = []string{"localhost", "127.0.0.1", "[::1]", "0.0.0.0"}
-
-// unreachableURLHint warnt, wenn im QR-Code eine Adresse steht, die vom
-// Smartphone eines Gastes nicht erreichbar ist.
-//
-// Das passiert regelmäßig hinter einem Reverse Proxy oder wenn die Fotobox
-// zuerst lokal geöffnet wurde: Nago leitet den öffentlichen Namen sonst aus
-// der ersten Verbindung ab. Der Hinweis richtet sich an die Bedienung, nicht
-// an die Gäste, und erscheint deshalb nur für angemeldete Nutzer.
-func unreachableURLHint(wnd core.Window, opts Options, url string) core.View {
-	if !canConfigure(wnd, opts) || opts.BoothSettings == "" {
-		return nil
-	}
-
-	reachable := true
-	for _, host := range localHosts {
-		if strings.Contains(url, "//"+host) {
-			reachable = false
-			break
-		}
-	}
-
-	if reachable {
-		return nil
-	}
-
-	return ui.VStack(
-		ui.Text("Diese Adresse erreicht nur dieser Rechner. Gäste können den Code nicht nutzen.").
-			Font(ui.BodySmall).
-			TextAlignment(ui.TextAlignCenter),
-		ui.SecondaryButton(func() {
-			wnd.Navigation().ForwardTo(opts.BoothSettings, opts.BoothSettingsParams)
-		}).Title("Öffentliche Adresse setzen"),
-	).Gap(ui.L8).Alignment(ui.Center)
 }
 
 // latestPhotos rendert das Raster der jüngsten Aufnahmen.
@@ -181,4 +168,27 @@ func canConfigure(wnd core.Window, opts Options) bool {
 	}
 
 	return opts.CanConfigure(wnd)
+}
+
+// settingsShortcut bringt die Betreuung ohne Umweg in die Einstellungen.
+//
+// Nur fuer sie: Ein Gast kann daran nichts aendern, und ein Knopf, der ihn zu
+// einer Anmeldung fuehrt, verwirrt nur.
+func settingsShortcut(wnd core.Window, opts Options) core.View {
+	if !canConfigure(wnd, opts) || opts.BoothSettings == "" {
+		return nil
+	}
+
+	return ui.SecondaryButton(func() {
+		wnd.Navigation().ForwardTo(opts.BoothSettings, opts.BoothSettingsParams)
+	}).Title("Einstellungen öffnen")
+}
+
+// uploadProblem beantwortet, ob der QR-Code gerade taugt.
+func uploadProblem(opts Options) string {
+	if opts.UploadProblem == nil {
+		return ""
+	}
+
+	return opts.UploadProblem()
 }

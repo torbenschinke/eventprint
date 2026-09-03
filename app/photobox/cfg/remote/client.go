@@ -21,7 +21,17 @@ type Options struct {
 }
 
 func (o Options) Enabled() bool {
-	return strings.TrimSpace(o.URL) != "" && strings.TrimSpace(o.Token) != ""
+	return o.Configured() && strings.TrimSpace(o.Token) != ""
+}
+
+// Configured meldet, dass ein Upload-Dienst eingetragen ist.
+//
+// Getrennt von [Options.Enabled], weil der Unterschied wesentlich ist: Wer nur
+// die Adresse einträgt und das Token vergisst, hat etwas gewollt, das nicht
+// geschieht. Ohne diese Unterscheidung fiele der Fall mit "gar nicht
+// eingerichtet" zusammen und bliebe stumm.
+func (o Options) Configured() bool {
+	return strings.TrimSpace(o.URL) != ""
 }
 
 type Job struct {
@@ -39,9 +49,31 @@ type Client struct {
 type HTTPError struct {
 	StatusCode int
 	Status     string
+
+	// Body ist die Begründung des Servers, gekürzt.
+	//
+	// Sie wurde vorher weggeworfen. Übrig blieb "photoupld returned 400 Bad
+	// Request" – eine Meldung, aus der niemand ableiten kann, ob das Token
+	// unbekannt ist, abgelaufen oder nur ohne die nötige Rolle.
+	Body string
 }
 
-func (e HTTPError) Error() string { return "photoupld returned " + e.Status }
+func (e HTTPError) Error() string {
+	msg := "photoupld returned " + e.Status
+	if e.Body != "" {
+		msg += ": " + e.Body
+	}
+
+	// Bei genau diesem Fall liegt die Ursache fast immer am Token, und der
+	// Server kann es nicht sagen: Nago reicht ein unbekanntes Token als
+	// anonymen Nutzer durch, und die fehlende Berechtigung wird erst später
+	// zum Fehler. "Unbekannt" und "ohne Rolle" sehen von außen gleich aus.
+	if e.StatusCode == http.StatusBadRequest {
+		msg += " (Token prüfen: existiert es in photoupld, ist es gültig, und trägt es die Rolle Fotobox-Relay?)"
+	}
+
+	return msg
+}
 
 func NewClient(opts Options) (*Client, error) {
 	base, err := url.Parse(strings.TrimRight(opts.URL, "/"))
@@ -109,8 +141,16 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values) 
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		defer resp.Body.Close()
-		_, _ = io.Copy(io.Discard, resp.Body)
-		return nil, HTTPError{StatusCode: resp.StatusCode, Status: resp.Status}
+
+		// Begrenzt lesen: Ein fremder Dienst darf nicht bestimmen, wie viel
+		// Speicher eine Fehlermeldung belegt.
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+
+		return nil, HTTPError{
+			StatusCode: resp.StatusCode,
+			Status:     resp.Status,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 	return resp, nil
 }

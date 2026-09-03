@@ -93,9 +93,18 @@ def test_empty_booth_shows_nothing_but_the_booth(page: Page, server: str):
     expect(page.get_by_text(EVENT_TITLE)).to_be_visible()
     expect(page.get_by_text("Noch keine Fotos")).to_be_visible()
 
-    # Der QR-Code muss die von außen erreichbare Upload-Adresse enthalten,
-    # sonst läuft der Gast ins Leere.
-    expect(page.get_by_text(f"{server}/upload")).to_be_visible()
+    # Der QR-Code muss eine Adresse zeigen, die ein Gast erreichen kann.
+    #
+    # Bewusst nicht auf die Adresse des Testservers prüfen: Die Fotobox ersetzt
+    # einen nur örtlich gültigen Namen durch ihre Adresse im Netz. Genau das
+    # ist der Zweck – ein QR-Code mit localhost sieht aus wie jeder andere und
+    # führt ins Nichts.
+    code = page.get_by_text(re.compile(r"https?://\S+/upload"))
+    expect(code).to_be_visible()
+
+    gezeigt = code.inner_text()
+    for lokal in ["localhost", "127.0.0.1", "[::1]", "0.0.0.0"]:
+        assert lokal not in gezeigt, f"der QR-Code zeigt die unbrauchbare Adresse {gezeigt}"
 
     # Kein Rahmen: keine Menüleiste, keine Fußzeile.
     #
@@ -152,6 +161,24 @@ def test_guest_upload_print_and_reprint(page: Page, server: str):
 
     page.goto(f"{server}/print/status")
     expect(page.get_by_text("Passepartout")).to_be_visible(timeout=30_000)
+
+
+def open_booth_settings(page: Page, base_url: str) -> None:
+    """Öffnet die Einstellungen der Fotobox über das Admin-Center.
+
+    Denselben Weg geht auch ein Mensch: Es gibt keinen Knopf mehr auf dem
+    Startbildschirm, seit der QR-Code sich seine Adresse selbst sucht und
+    deshalb nichts mehr zu bemängeln hat.
+    """
+    page.goto(f"{base_url}/admin")
+
+    # Über das Suchfeld des Admin-Centers filtern. Nach "Fotobox" zu suchen
+    # wäre mehrdeutig: So heißt auch der Menüeintrag und die Kartengruppe der
+    # Funkverbindung. Die Beschreibung der Einstellungskarte ist eindeutig.
+    page.locator("main").get_by_role("textbox").first.fill("Veranstaltung")
+
+    page.get_by_role("button", name="Auswählen").first.click()
+    expect(page.get_by_label("Titel der Veranstaltung")).to_be_visible(timeout=30_000)
 
 
 def tap_qr_code(page: Page, times: int) -> None:
@@ -221,9 +248,7 @@ def test_pin_unlocks_the_configuration_on_a_factory_new_box(page: Page, server: 
     # einrichten, obwohl die PIN stimmte.
     neuer_titel = "Sommerfest 2026"
 
-    page.goto(server)
-    page.get_by_role("button", name="Öffentliche Adresse setzen").click()
-    expect(page.get_by_label("Titel der Veranstaltung")).to_be_visible(timeout=30_000)
+    open_booth_settings(page, server)
 
     page.get_by_label("Titel der Veranstaltung").fill(neuer_titel)
     page.get_by_role("button", name="Speichern").click()
@@ -269,14 +294,13 @@ def test_public_url_setting_changes_qr_code(page: Page, server: str):
 
     login_as_operator(page, server)
 
-    # Der Hinweis erscheint, weil im QR-Code eine lokale Adresse steht.
-    expect(page.get_by_text("Diese Adresse erreicht nur dieser Rechner.")).to_be_visible()
-    page.get_by_role("button", name="Öffentliche Adresse setzen").click()
+    open_booth_settings(page, server)
 
-    expect(page.get_by_text("Öffentliche Adresse")).to_be_visible(timeout=30_000)
     page.get_by_label("Öffentliche Adresse").fill(public_url)
     page.get_by_role("button", name="Speichern").click()
 
+    # Eine von Hand gesetzte Adresse hat Vorrang vor allem anderen, auch vor
+    # der selbst erkannten Netzadresse. Hinter einem Reverse Proxy ist sie die
+    # einzige, die stimmt.
     page.goto(server)
     expect(page.get_by_text(f"{public_url}/upload")).to_be_visible(timeout=30_000)
-    expect(page.get_by_text("Diese Adresse erreicht nur dieser Rechner.")).to_have_count(0)

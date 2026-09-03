@@ -2,6 +2,7 @@ package photoupld
 
 import (
 	"io"
+	"log/slog"
 	"time"
 
 	"go.wdy.de/nago/application"
@@ -40,12 +41,41 @@ type AckResponse struct {
 // keine Entscheidung. Läge die Fachlichkeit hier, gäbe es sie zweimal, sobald
 // dieselbe Sache auch über die Oberfläche erreichbar sein soll.
 func ConfigureAPI(api *hapi.API, tokens application.TokenManagement, uc upld.UseCases, uploadURL func(upld.UploadID) string) {
+	// warnAboutToken macht die haeufigste Fehlbedienung im Protokoll sichtbar.
+	//
+	// Nago reicht ein unbekanntes oder abgelaufenes Token als anonymen Nutzer
+	// durch, statt es abzulehnen. Der Fehler faellt deshalb erst auf, wenn der
+	// Anwendungsfall die Berechtigung prueft - und wird dort zu einem nackten
+	// 400 ohne Begruendung. Von aussen sehen "Token unbekannt" und "Token ohne
+	// Rolle" damit gleich aus, und wer die Fotobox einrichtet, sucht im
+	// Dunkeln.
+	warnAboutToken := func(subject auth.Subject) {
+		if subject.HasPermission(upld.PermOpenSession) {
+			return
+		}
+
+		if subject.ID() == "" {
+			slog.Warn("photoupld: Anfrage ohne brauchbares Token abgelehnt",
+				"hinweis", "Token fehlt, ist unbekannt oder abgelaufen")
+
+			return
+		}
+
+		slog.Warn("photoupld: Token ohne die noetige Rolle abgelehnt",
+			"subject", subject.ID(),
+			"hinweis", "dem Token die Rolle Fotobox-Relay zuweisen")
+	}
+
 	authenticate := func(dst *authenticated, subject auth.Subject) error {
 		dst.Subject = subject
+		warnAboutToken(subject)
+
 		return nil
 	}
 	jobAuth := func(dst *jobRequest, subject auth.Subject) error {
 		dst.Subject = subject
+		warnAboutToken(subject)
+
 		return nil
 	}
 	jobID := hapi.StrFromQuery(hapi.StrParam[jobRequest]{Name: "id", Required: true, IntoModel: func(dst *jobRequest, value string) error {
