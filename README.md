@@ -475,6 +475,53 @@ lpstat -p CZ01                     # Zustand des Druckers
 sudo cupsenable CZ01               # angehaltenen Drucker freigeben
 ```
 
+## Betrieb vor Ort
+
+### Kiosk
+
+`install.sh` richtet ein eigenes, eingeschränktes Konto `fotobox` ein: keine
+Shell, gesperrtes Passwort, kein sudo. Es meldet sich automatisch an und
+startet Chromium im Vollbild auf `http://localhost:3000`.
+
+**X11 statt Wayland, und das ist keine Geschmacksfrage.** labwc und wlroots
+kennen keinen Clone-Modus; zwei Ausgänge zeigen dort zwangsläufig
+verschiedene Ausschnitte. Der Fernseher als gespiegelter zweiter Bildschirm
+verlangt `xrandr --same-as` und damit X11. Als Fenstersteuerung dient openbox
+mit einer `rc.xml` **ohne jede Tastenbindung** – der Raspberry Pi 400 ist
+selbst eine Tastatur, ein Gast hat sie also immer in der Hand.
+
+`eventprint-mirror-displays` läuft als Schleife und sucht die beste Auflösung,
+die *beide* Geräte können. Ein Fernseher mit 4K würde sonst das Layout des
+Touchscreens verschieben und die Bedienflächen unerreichbar machen. Er darf
+beim Hochfahren fehlen und später dazukommen.
+
+### Betreuer-PIN
+
+Die Fotobox hat ab Werk **keine** PIN. Wer davorsteht, vergibt sie:
+fünfmal zügig den QR-Code antippen, dann das Ziffernfeld. Ab der ersten
+Vergabe kommt nur noch hinein, wer die bisherige PIN kennt.
+
+> Das gehört an den Aufbau, nicht auf den Abend. Bis die PIN vergeben ist,
+> könnte sie jeder vergeben, der davorsteht – anders ginge es nicht, denn ein
+> Geheimnis, das niemand kennt, sperrt auch den Aufbauenden aus.
+
+Die PIN liegt als Argon2-Ableitung in den Einstellungen, nie im Klartext. Nach
+drei Fehlversuchen sperrt die Eingabe für wachsende Zeit, gedeckelt bei 15
+Minuten; der Zähler gilt anwendungsweit, damit ein privates Fenster ihn nicht
+umgeht. Eine Freischaltung verfällt nach 30 Minuten, weil die Box
+unbeaufsichtigt steht.
+
+### Drucker
+
+Die CUPS-Warteschlange richtet `install.sh` selbst ein: `lpinfo` liefert das
+USB-Ziel, daraus folgt die Gutenprint-PPD. Sie wird gegen das Format
+`w288h432` geprüft, für das die Anwendung ihren Raster baut – sonst fiele der
+Fehler erst beim ersten Druckversuch auf. Der Name der Warteschlange landet als
+`EVENTPRINT_PRINTER` in `/etc/default/eventprint`.
+
+Findet das Skript keinen oder mehrere Drucker, richtet es **nichts** ein und
+sagt das. Raten wäre hier schlimmer als nichts zu tun.
+
 ## Tests
 
 Die Aufteilung folgt einer Regel: **Im Browser steht nur, was ein Browser
