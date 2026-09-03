@@ -31,9 +31,6 @@ type PinAccess struct {
 
 	// Tap zählt eine Berührung des QR-Codes und meldet, ob das Tor aufgeht.
 	Tap func(sessionID string) bool
-
-	// Lock meldet die Sitzung wieder ab.
-	Lock func(sessionID string)
 }
 
 // pinLength ist die erwartete Stellenzahl. Sie steht hier gespiegelt, damit die

@@ -57,23 +57,26 @@ func main() {
 		// Die Menueleiste gehoert dem Betreuer, nicht den Gaesten.
 		//
 		// Fuer die Veranstaltung reicht der Startbildschirm: Fotos ansehen,
-		// antippen, drucken. Alles andere - Historie, Druckstatus - ist
-		// Betreuung und hat auf einem 1024x600-Bildschirm nichts verloren, den
-		// den ganzen Abend Gaeste bedienen. Jeder Eintrag verlangt deshalb
-		// PermConfigure und erscheint erst nach der PIN.
+		// antippen, drucken. Alles andere ist Betreuung und hat auf einem
+		// 1024x600-Bildschirm nichts verloren, den den ganzen Abend Gaeste
+		// bedienen. Jeder Eintrag verlangt deshalb PermConfigure.
 		//
-		// Login(false): Auf dem Touchscreen gibt es keine Tastatur, mit der
-		// jemand Mail und Passwort eingeben koennte. Der Weg hinein ist die PIN
-		// - fuenfmal auf den QR-Code. Vom Smartphone aus bleibt die uebliche
-		// Anmeldung unter /account/login erreichbar.
+		// Gaeste bekommen den Rahmen gar nicht erst - das entscheidet
+		// cfgphotobox.Enable je Seite. Deshalb kann Login hier eingeschaltet
+		// bleiben, ohne dass ein Gast je eine Anmeldung zu sehen bekaeme.
+		//
+		// Login(true) ist dabei nicht verhandelbar: Es steuert nicht nur den
+		// Anmelden-Eintrag, sondern den gesamten Profilbereich - und darin
+		// haengt der Zugang zum Admin-Center. Mit Login(false) war das
+		// Admin-Center unerreichbar, und ein selbstgebauter Abmelden-Knopf
+		// verdeckte den Verlust, statt ihn zu beheben.
 		cfg.SetDecorator(cfg.NewScaffold().
-			Login(false).
+			Login(true).
 			Logo(ui.Image().Embed(icons.Camera).Frame(ui.Frame{}.Size(ui.L48, ui.L48))).
 			MenuEntry().Title("Fotobox").Icon(icons.Photo).Forward(photobox.Pages.Booth).OneOf(cfgphotobox.PermConfigure).
 			MenuEntry().Title("Alle Fotos").Icon(icons.RectangleStack).Forward(photobox.Pages.Gallery).OneOf(cfgphotobox.PermConfigure).
 			MenuEntry().Title("Druckstatus").Icon(icons.Printer).Forward(photobox.Pages.Jobs).OneOf(cfgphotobox.PermConfigure).
 			MenuEntry().Title("Hochladen").Icon(icons.QrCode).Forward(photobox.Pages.Upload).OneOf(cfgphotobox.PermConfigure).
-			MenuEntry().Title("Abmelden").Icon(icons.LockClosed).Action(photobox.LockSession).OneOf(cfgphotobox.PermConfigure).
 			Breakpoint(1000).
 			Decorator())
 	}).Run()

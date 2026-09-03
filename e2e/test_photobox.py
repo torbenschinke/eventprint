@@ -105,7 +105,7 @@ def test_empty_booth_shows_nothing_but_the_booth(page: Page, server: str):
     # Texte zählt, sieht das nicht.
     expect(page.locator("nav")).to_have_count(0)
 
-    for label in ["Alle Fotos", "Druckstatus", "Hochladen", "Abmelden", "Anmelden"]:
+    for label in ["Alle Fotos", "Druckstatus", "Hochladen", "Anmelden"]:
         expect(page.get_by_text(label, exact=True)).to_have_count(0)
 
     # Die Fußzeile mit Impressum und Nutzungsbedingungen kostet auf 600 Punkten
@@ -205,7 +205,7 @@ def test_pin_unlocks_the_configuration_on_a_factory_new_box(page: Page, server: 
     # Jetzt erscheint der Rahmen mit der Menüleiste der Betreuung.
     expect(page.locator("nav")).not_to_have_count(0, timeout=30_000)
 
-    for label in ["Alle Fotos", "Druckstatus", "Abmelden"]:
+    for label in ["Alle Fotos", "Druckstatus"]:
         expect(page.get_by_text(label, exact=True).first).to_be_visible(timeout=30_000)
 
     # Und die Einrichtung ist offen, auch nach einem echten Seitenwechsel.
@@ -234,10 +234,13 @@ def test_pin_unlocks_the_configuration_on_a_factory_new_box(page: Page, server: 
     page.goto(server)
     expect(page.get_by_text(neuer_titel)).to_be_visible(timeout=30_000)
 
-    # Abmelden nimmt die Rechte wieder.
-    page.goto(server)
-    page.get_by_text("Abmelden", exact=True).first.click()
-    expect(page.get_by_text("Druckstatus", exact=True)).to_have_count(0, timeout=30_000)
+    # Das Admin-Center muss erreichbar sein.
+    #
+    # Es haengt am Profilbereich des Scaffolds, den Login(false) mitentfernte.
+    # Ein selbstgebauter Abmelden-Knopf verdeckte den Verlust damals, statt ihn
+    # zu beheben - deshalb steht die Pruefung jetzt hier.
+    page.goto(f"{server}/admin")
+    expect(page.get_by_text("Funkverbindung")).to_be_visible(timeout=30_000)
 
 
 def test_operator_keeps_access_after_login(page: Page, server: str):

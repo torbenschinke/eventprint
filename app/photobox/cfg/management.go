@@ -85,14 +85,6 @@ type Management struct {
 	Photos   photo.UseCases
 	Printing printing.UseCases
 	Pages    uiphotobox.Pages
-
-	// LockSession meldet den Betreuer wieder ab.
-	//
-	// Ohne diesen Weg bliebe er bis zum Ablauf der Freischaltung angemeldet,
-	// und wer die Fotobox danach bedient, haette dessen Rechte. Auf einem
-	// Geraet, das unbeaufsichtigt herumsteht, muss das Abmelden ein Handgriff
-	// sein.
-	LockSession func(wnd core.Window)
 }
 
 // Enable installiert die Fotobox in der übergebenen Konfiguration.
@@ -302,9 +294,6 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 			Tap: func(sessionID string) bool {
 				return tapGates.Tap(sessionID)
 			},
-			Lock: func(sessionID string) {
-				pinLock.Lock(sessionID)
-			},
 		},
 		UploadURL: func() string {
 			if relay.UploadURL() != "" {
@@ -341,21 +330,31 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	// Für die Veranstaltung reicht die Seite selbst: Fotos ansehen, antippen,
 	// drucken. Erst wer sich mit der PIN angemeldet hat, bekommt den Rahmen
 	// mit Menü und Admin-Center.
-	boothDecorated := cfg.DecorateRootView(func(wnd core.Window) core.View {
-		return uiphotobox.PageBooth(wnd, uiOpts)
-	})
+	// boothPage haengt den Rahmen nur fuer die Betreuung an.
+	//
+	// Fuer Gaeste bleibt die nackte Seite ueber die volle Breite. Die
+	// Menueeintraege auf eine Berechtigung zu stellen genuegte nicht: Nago
+	// zeichnet die Leiste auch dann, wenn kein einziger Eintrag uebrig bleibt,
+	// und uebrig blieb ein leerer Balken.
+	boothPage := func(page func(wnd core.Window) core.View) func(wnd core.Window) core.View {
+		decorated := cfg.DecorateRootView(page)
 
-	cfg.RootView(pages.Booth, func(wnd core.Window) core.View {
-		if wnd.Subject().HasPermission(PermConfigure) {
-			return boothDecorated(wnd)
+		return func(wnd core.Window) core.View {
+			if wnd.Subject().HasPermission(PermConfigure) {
+				return decorated(wnd)
+			}
+
+			return page(wnd)
 		}
+	}
 
+	cfg.RootView(pages.Booth, boothPage(func(wnd core.Window) core.View {
 		return uiphotobox.PageBooth(wnd, uiOpts)
-	})
+	}))
 
-	cfg.RootViewWithDecoration(pages.Gallery, func(wnd core.Window) core.View {
+	cfg.RootView(pages.Gallery, boothPage(func(wnd core.Window) core.View {
 		return uiphotobox.PageGallery(wnd, uiOpts)
-	})
+	}))
 
 	wifiUseCases := wifi.NewUseCases()
 
@@ -379,9 +378,9 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		}
 	})
 
-	cfg.RootViewWithDecoration(pages.Jobs, func(wnd core.Window) core.View {
+	cfg.RootView(pages.Jobs, boothPage(func(wnd core.Window) core.View {
 		return uiphotobox.PageJobs(wnd, uiOpts)
-	})
+	}))
 
 	// Die Upload-Seite bewusst ohne Scaffold: Auf dem Smartphone eines Gastes
 	// stört ein Menü nur, er soll genau eine Sache tun können.
@@ -427,18 +426,6 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		Photos:   photos,
 		Printing: prints,
 		Pages:    pages,
-		LockSession: func(wnd core.Window) {
-			pinLock.Lock(string(wnd.Session().ID()))
-
-			// Logout raeumt die Anmeldung aus der Sitzung und setzt das Fenster
-			// auf den Gast zurueck. Ohne das behielte die naechste Seite die
-			// Betreuerrechte.
-			if err := wnd.Logout(); err != nil {
-				slog.Error("cannot sign out the operator", "err", err)
-			}
-
-			wnd.Navigation().ForwardTo(pages.Booth, nil)
-		},
 	}
 
 	cfg.AddContextValue(core.ContextValue("eventprint.photobox", management))
