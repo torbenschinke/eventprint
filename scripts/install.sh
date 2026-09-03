@@ -378,17 +378,27 @@ KIOSK_USER="${KIOSK_USER:-fotobox}"
 KIOSK_URL="${KIOSK_URL:-http://localhost:3000}"
 
 setup_kiosk() {
+  # Die Shell ist /bin/bash und ausdruecklich nicht /usr/sbin/nologin.
+  #
+  # Das war ein Fehlschlag beim ersten Versuch: lightdm startet die grafische
+  # Sitzung ueber die Login-Shell des Nutzers. Mit nologin bricht das sofort ab,
+  # lightdm faellt auf den Anmeldebildschirm zurueck, und von der Fotobox ist
+  # nichts zu sehen.
+  #
+  # Der Schutz haengt nicht an der Shell, sondern an dreierlei: Das Passwort ist
+  # gesperrt, das Konto hat kein sudo, und openbox kennt keine Tastenbindung,
+  # ueber die man ein Terminal oeffnen koennte.
   if id -u "${KIOSK_USER}" >/dev/null 2>&1; then
     log "Kiosk-Nutzer ${KIOSK_USER} existiert bereits"
+    run usermod --shell /bin/bash "${KIOSK_USER}"
   else
     log "Kiosk-Nutzer ${KIOSK_USER} anlegen"
-    run useradd --create-home --shell /usr/sbin/nologin "${KIOSK_USER}"
-
-    # Kein Passwort, aber auch keine passwortlose Anmeldung: Das Konto ist
-    # gesperrt und kommt nur ueber die automatische Anmeldung von lightdm
-    # hinein. Von aussen ist es damit kein Einfallstor.
-    run passwd --lock "${KIOSK_USER}"
+    run useradd --create-home --shell /bin/bash "${KIOSK_USER}"
   fi
+
+  # Gesperrtes Passwort: Das Konto kommt nur ueber die automatische Anmeldung
+  # hinein, nicht ueber die Konsole und nicht ueber SSH.
+  run passwd --lock "${KIOSK_USER}"
 
   # video und input fuer Bildschirm und Touch, sonst nichts. Insbesondere
   # nicht sudo.
@@ -424,6 +434,37 @@ EOF
   fi
 
   configure_autologin
+  disable_console_autologin
+}
+
+# disable_console_autologin schliesst eine Tuer neben dem Kiosk.
+#
+# Raspberry Pi OS meldet den Erstbenutzer auf tty1 automatisch an. Auf einem
+# Arbeitsplatzrechner ist das bequem; an einer unbeaufsichtigten Fotobox mit
+# eingebauter Tastatur ist es ein offenes Scheunentor: Strg+Alt+F1 fuehrt an
+# eine bereits angemeldete Shell - mit den sudo-Rechten des Betreibers und ohne
+# jede Passwortabfrage. Der ganze Aufwand am Kiosk waere damit umsonst.
+#
+# Die Anmeldung selbst bleibt moeglich, sie verlangt nur wieder ein Passwort.
+disable_console_autologin() {
+  local dir=/etc/systemd/system/getty@tty1.service.d
+  local conf="${dir}/autologin.conf"
+
+  [[ -f "${conf}" ]] || return 0
+
+  if [[ ${DRY_RUN} -eq 1 ]]; then
+    printf '   \033[2m[dry-run]\033[0m %s\n' "schalte die automatische Konsolenanmeldung ab (${conf})"
+    return 0
+  fi
+
+  # Verschieben statt loeschen, damit sich der frühere Zustand nachvollziehen
+  # und wiederherstellen laesst.
+  mv "${conf}" "${conf}.vor-eventprint"
+  systemctl daemon-reload
+
+  log "automatische Konsolenanmeldung auf tty1 abgeschaltet"
+  warn "Strg+Alt+F1 verlangt jetzt wieder ein Passwort. Die frühere Einstellung"
+  warn "liegt unter ${conf}.vor-eventprint"
 }
 
 # configure_autologin traegt die automatische Anmeldung ein.
