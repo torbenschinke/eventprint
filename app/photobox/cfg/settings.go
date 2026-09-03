@@ -47,6 +47,28 @@ type Settings struct {
 	AutoCrop bool `section:"Bildausschnitt" json:"autoCrop" label:"Automatischer Polaroid-Bildausschnitt" supportingText:"Erkennt Gesichter und richtet den Polaroid-Ausschnitt darauf aus. Ohne Treffer wird der mittige Standardausschnitt verwendet."`
 
 	AutoCropDefaultsApplied bool `json:"autoCropDefaultsApplied,omitempty" visible:"false"`
+
+	// PinSalt und PinHash sind die Betreuer-PIN in gespeicherter Form.
+	//
+	// Sie stehen unsichtbar in den Einstellungen, weil sie niemand von Hand
+	// pflegen kann und auch nicht soll: Eine im Formular lesbare Ableitung
+	// nützt niemandem, und ein Eingabefeld dafür lüde nur dazu ein, dort die
+	// PIN im Klartext einzutragen. Gesetzt wird sie über die Fotobox selbst.
+	PinSalt []byte `json:"pinSalt,omitempty" visible:"false"`
+	PinHash []byte `json:"pinHash,omitempty" visible:"false"`
+}
+
+// Pin liefert die hinterlegte PIN in prüfbarer Form.
+func (s Settings) Pin() PinHash {
+	return PinHash{Salt: s.PinSalt, Hash: s.PinHash}
+}
+
+// WithPin legt eine neue PIN ab.
+func (s Settings) WithPin(h PinHash) Settings {
+	s.PinSalt = h.Salt
+	s.PinHash = h.Hash
+
+	return s
 }
 
 func (Settings) GlobalSettings() bool { return true }

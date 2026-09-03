@@ -188,6 +188,30 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		Jobs:    "print/status",
 	}
 
+	// Freischaltungen und Berührungszähler leben nur im Speicher. Ein Neustart
+	// sperrt damit jede offene Sitzung wieder zu - das ist die gewünschte
+	// Richtung, denn danach weiß niemand mehr, wer vor dem Bildschirm steht.
+	pinLock := NewPinLock()
+	tapGates := newTapGates()
+
+	loadPin := func() PinHash {
+		return loadBoothSettings().Pin()
+	}
+
+	storePin := func(h PinHash) error {
+		return settingsMgmt.UseCases.StoreGlobal(user.SU(), loadBoothSettings().WithPin(h))
+	}
+
+	// Nago baut das Subject bei jedem neuen Fenster aus der Sitzung neu auf und
+	// setzt es dabei auf den Gast zurück. Ohne diesen Beobachter wäre der
+	// Betreuer nach jedem Seitenwechsel wieder abgemeldet. Er wird nach der
+	// Sitzungsverwaltung registriert und gewinnt deshalb.
+	cfg.AddOnWindowCreatedObserver(func(wnd core.Window) {
+		if pinLock.Unlocked(string(wnd.Session().ID())) {
+			wnd.UpdateSubject(newUnlockedSubject(wnd.Subject()))
+		}
+	})
+
 	uiOpts := uiphotobox.Options{
 		Pages:      pages,
 		Photos:     photos,
@@ -203,6 +227,31 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		BoothSettings: settingsMgmt.Pages.PageSettings,
 		BoothSettingsParams: core.Values{
 			"type": settings.TypeIdent(reflect.TypeFor[Settings]()),
+		},
+		CanConfigure: func(wnd core.Window) bool {
+			return wnd.Subject().HasPermission(PermConfigure)
+		},
+		Pin: uiphotobox.PinAccess{
+			Configured: func() bool {
+				return loadPin().Configured()
+			},
+			Verify: func(sessionID string, pin string) error {
+				return pinLock.Verify(sessionID, pin, loadPin())
+			},
+			Configure: func(sessionID string, pin string) error {
+				next, err := pinLock.Configure(sessionID, pin, loadPin())
+				if err != nil {
+					return err
+				}
+
+				return storePin(next)
+			},
+			Tap: func(sessionID string) bool {
+				return tapGates.Tap(sessionID)
+			},
+			Lock: func(sessionID string) {
+				pinLock.Lock(sessionID)
+			},
 		},
 		UploadURL: func() string {
 			if relay.UploadURL() != "" {
@@ -601,11 +650,17 @@ func guestPermissions() []permission.ID {
 }
 
 // operatorPermissions sind die Rechte der Bedienung: alles, was ein Gast
-// darf, zuzüglich des Löschens und des Wiederholens von Druckaufträgen.
+// darf, zuzüglich des Löschens, des Wiederholens von Druckaufträgen und des
+// Einrichtens.
 func operatorPermissions() []permission.ID {
 	return append(guestPermissions(),
 		photo.PermDelete,
 		printing.PermRetry,
+
+		// Erst diese Berechtigung öffnet die Einstellungen. Vorher fragte die
+		// Oberfläche `Subject().Valid()` und meinte damit dasselbe – nur sperrte
+		// das jede Anmeldung aus, die ohne Benutzerkonto auskommt.
+		PermConfigure,
 	)
 }
 

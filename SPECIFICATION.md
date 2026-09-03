@@ -155,7 +155,7 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-19 packages in 5 bounded contexts, and 34 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+19 packages in 5 bounded contexts, and 35 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
 4 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
@@ -185,7 +185,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-34 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+35 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/photo
 
@@ -267,6 +267,13 @@ _permission_ — `app/photo/perm.go:57`
 _aggregate_ — `app/photo/model.go:57`
 
 **Answers to** [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE)
+
+### app/photobox/cfg
+
+<a id="req-code-de-torbenschinke-eventprint-booth-configure"></a>
+#### de.torbenschinke.eventprint.booth.configure
+
+_permission_ — `app/photobox/cfg/pin_subject.go:27`
 
 ### app/printing
 

@@ -85,7 +85,7 @@ func testModeHint(wnd core.Window, opts Options) core.View {
 	// Die Einstellungsseite liegt im Admin-Center. Gästen wird sie nicht
 	// angeboten, sie könnten sie ohnehin nicht öffnen.
 	var action core.View
-	if wnd.Subject().Valid() && opts.PrinterSettings != "" {
+	if canConfigure(wnd, opts) && opts.PrinterSettings != "" {
 		action = ui.PrimaryButton(func() {
 			wnd.Navigation().ForwardTo(opts.PrinterSettings, opts.PrinterSettingsParams)
 		}).Title("Drucker einrichten")

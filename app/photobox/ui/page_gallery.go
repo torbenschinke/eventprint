@@ -69,7 +69,7 @@ func PageGallery(wnd core.Window, opts Options) core.View {
 // nur nach Anmeldung. Er benennt auch die Folge des Löschens: Die Kachel
 // verschwindet aus der Historie, die Datei im Archiv bleibt.
 func archiveHint(wnd core.Window, opts Options) core.View {
-	if opts.ArchiveDir == "" || !wnd.Subject().Valid() {
+	if opts.ArchiveDir == "" || !canConfigure(wnd, opts) {
 		return nil
 	}
 

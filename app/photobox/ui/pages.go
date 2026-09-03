@@ -59,6 +59,17 @@ type Options struct {
 	// Feier findet, ohne die Anwendung zu befragen.
 	ArchiveDir string
 
+	// Pin ist der Zugang zur Einrichtung ueber das Tastenfeld.
+	Pin PinAccess
+
+	// CanConfigure meldet, ob die aktuelle Sitzung einrichten darf.
+	//
+	// Frueher stand hier ueberall Subject().Valid(), also "ist angemeldet?".
+	// Das ist der falsche Massstab: Gefragt ist, ob jemand einrichten DARF.
+	// Die Verwechslung sperrte jede Anmeldeart aus, die ohne Benutzerkonto
+	// auskommt - und genau so eine ist die PIN.
+	CanConfigure func(wnd core.Window) bool
+
 	// UploadURL liefert die absolute, von außen erreichbare Adresse der
 	// Upload-Seite. Sie wird erst zur Laufzeit gebildet, weil Nago den
 	// öffentlichen Hostnamen aus der ersten Verbindung ableitet.

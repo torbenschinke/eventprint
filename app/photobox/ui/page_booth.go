@@ -27,6 +27,7 @@ const boothRefreshRate = 3 * time.Second
 // öffnet die Layout-Auswahl und druckt es erneut.
 func PageBooth(wnd core.Window, opts Options) core.View {
 	dialog := newPrintDialog(wnd, opts)
+	pad := newPinPad(wnd, opts.Pin)
 
 	photos, err := opts.Photos.FindLatest(wnd.Subject(), boothLatestCount)
 	if err != nil {
@@ -45,12 +46,13 @@ func PageBooth(wnd core.Window, opts Options) core.View {
 	content := ui.VStack(
 		alert.BannerMessages(wnd),
 		dialog.View(),
+		pad.View(),
 
 		ui.Text(title).Font(ui.DisplaySmall),
 		ui.Text("Tippe auf ein Bild, um es noch einmal zu drucken.").Font(ui.BodyLarge),
 
 		ui.HStack(
-			uploadInvitation(wnd, opts),
+			uploadInvitation(wnd, opts, pad),
 			latestPhotos(photos, dialog),
 		).
 			Gap(ui.L40).
@@ -66,7 +68,7 @@ func PageBooth(wnd core.Window, opts Options) core.View {
 }
 
 // uploadInvitation zeigt den QR-Code, über den Gäste eigene Bilder beisteuern.
-func uploadInvitation(wnd core.Window, opts Options) core.View {
+func uploadInvitation(wnd core.Window, opts Options, pad pinPad) core.View {
 	url := ""
 	if opts.UploadURL != nil {
 		url = opts.UploadURL()
@@ -76,9 +78,11 @@ func uploadInvitation(wnd core.Window, opts Options) core.View {
 		ui.Text("Eigene Fotos drucken").Font(ui.TitleMedium),
 		ui.Text("Code scannen, Bild auswählen, fertig.").Font(ui.BodyMedium).
 			TextAlignment(ui.TextAlignCenter),
-		ui.QrCode(url).
-			AccessibilityLabel("QR-Code zum Hochladen eigener Fotos").
-			Frame(ui.Frame{}.Size(ui.L256, ui.L256)),
+		configureGate(wnd, opts, pad,
+			ui.QrCode(url).
+				AccessibilityLabel("QR-Code zum Hochladen eigener Fotos").
+				Frame(ui.Frame{}.Size(ui.L256, ui.L256)),
+		),
 		ui.Text(url).Font(ui.MonoSmall).
 			TextAlignment(ui.TextAlignCenter),
 		unreachableURLHint(wnd, opts, url),
@@ -103,7 +107,7 @@ var localHosts = []string{"localhost", "127.0.0.1", "[::1]", "0.0.0.0"}
 // der ersten Verbindung ab. Der Hinweis richtet sich an die Bedienung, nicht
 // an die Gäste, und erscheint deshalb nur für angemeldete Nutzer.
 func unreachableURLHint(wnd core.Window, opts Options, url string) core.View {
-	if !wnd.Subject().Valid() || opts.BoothSettings == "" {
+	if !canConfigure(wnd, opts) || opts.BoothSettings == "" {
 		return nil
 	}
 
@@ -149,4 +153,32 @@ func latestPhotos(photos []photo.Photo, dialog printDialog) core.View {
 		Columns(4).
 		Gap(ui.L16).
 		FullWidth()
+}
+
+// configureGate macht den QR-Code zur verborgenen Tuer in die Einrichtung.
+//
+// Fuenfmal zuegig antippen oeffnet das Tastenfeld. Ein sichtbarer Knopf waere
+// ehrlicher, aber er stuende den ganzen Abend vor Gaesten, und jeder
+// neugierige Fehlversuch sperrte den Betreuer fuer Sekunden aus. Der QR-Code
+// ist die richtige Flaeche dafuer: Gaeste scannen ihn, sie tippen ihn nicht.
+func configureGate(wnd core.Window, opts Options, pad pinPad, content core.View) core.View {
+	if opts.Pin.Tap == nil {
+		return content
+	}
+
+	return ui.VStack(content).
+		Action(func() {
+			if opts.Pin.Tap(string(wnd.Session().ID())) {
+				pad.Open()
+			}
+		})
+}
+
+// canConfigure beantwortet die Frage, um die es wirklich geht.
+func canConfigure(wnd core.Window, opts Options) bool {
+	if opts.CanConfigure == nil {
+		return false
+	}
+
+	return opts.CanConfigure(wnd)
 }

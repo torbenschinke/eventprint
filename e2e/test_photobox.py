@@ -146,6 +146,60 @@ def test_guest_upload_print_and_reprint(page: Page, server: str):
     expect(page.get_by_text("Passepartout")).to_be_visible(timeout=30_000)
 
 
+def tap_qr_code(page: Page, times: int) -> None:
+    """Tippt den QR-Code an, um die verborgene Einrichtung zu öffnen."""
+    qr = page.get_by_role("img", name="QR-Code zum Hochladen eigener Fotos")
+    for _ in range(times):
+        qr.click()
+
+
+def enter_pin(page: Page, pin: str) -> None:
+    """Tippt eine PIN auf dem Tastenfeld der Fotobox."""
+    for digit in pin:
+        page.get_by_text(digit, exact=True).last.click()
+
+
+def test_pin_unlocks_the_configuration_on_a_factory_new_box(page: Page, server: str):
+    """Fünf Berührungen des QR-Codes, PIN vergeben, Betreuer sein.
+
+    Das ist die eine Kette, die kein Go-Test abdecken kann: die verborgene
+    Geste, das Tastenfeld und die Frage, ob die Freischaltung einen
+    Seitenwechsel überlebt. Die Regeln dahinter – Sperre, Ablauf, Form der PIN –
+    prüfen die Go-Tests in `app/photobox/cfg/`.
+
+    Der Testlauf startet mit leerem Datenverzeichnis, die Fotobox ist also
+    fabrikneu und hat noch keine PIN.
+    """
+    pin = "481902"
+
+    page.goto(server)
+
+    # Ohne die Geste ist von der Einrichtung nichts zu sehen.
+    expect(page.get_by_text("PIN festlegen")).to_have_count(0)
+
+    # Vier Berührungen dürfen noch nichts öffnen.
+    tap_qr_code(page, 4)
+    expect(page.get_by_text("PIN festlegen")).to_have_count(0)
+
+    # Die fünfte öffnet das Tastenfeld im Vergabemodus.
+    tap_qr_code(page, 1)
+    expect(page.get_by_text("PIN festlegen")).to_be_visible(timeout=30_000)
+    expect(page.get_by_text("Diese Fotobox hat noch keine PIN.")).to_be_visible()
+
+    # Zweimal dieselbe PIN, sonst wäre ein Vertipper nicht zu bemerken.
+    enter_pin(page, pin)
+    expect(page.get_by_text("Zur Sicherheit noch einmal dieselbe PIN eingeben.")).to_be_visible()
+    enter_pin(page, pin)
+
+    # Wer die PIN vergeben hat, ist damit Betreuer.
+    expect(page.get_by_text("PIN festlegen")).to_have_count(0, timeout=30_000)
+
+    # Der Nachweis: Die Einrichtung ist offen, und zwar nach einem echten
+    # Seitenwechsel. Ohne den Beobachter in Enable() wäre sie hier wieder zu.
+    page.goto(f"{server}/print/status")
+    expect(page.get_by_role("button", name="Drucker einrichten")).to_be_visible(timeout=30_000)
+
+
 def test_operator_keeps_access_after_login(page: Page, server: str):
     """Anmelden darf den Zugriff auf die Fotobox nicht entziehen."""
     login_as_operator(page, server)
