@@ -21,6 +21,7 @@ const RelayRole role.ID = "de.torbenschinke.photoupld.relay"
 type Management struct {
 	UploadPage core.NavigationPath
 	Registry   *upld.Registry
+	UseCases   upld.UseCases
 }
 
 func Enable(cfg *application.Configurator) (Management, error) {
@@ -74,7 +75,9 @@ func Enable(cfg *application.Configurator) (Management, error) {
 	if err != nil {
 		return Management{}, err
 	}
-	ConfigureAPI(apiMgmt.API, tokens, images.UseCases, registry, uploadURL)
+	uploads := upld.NewUseCases(registry, images.UseCases)
+
+	ConfigureAPI(apiMgmt.API, tokens, uploads, uploadURL)
 
 	const uploadPage core.NavigationPath = "upload"
 	cfg.RootView(uploadPage, func(wnd core.Window) core.View {
@@ -82,7 +85,7 @@ func Enable(cfg *application.Configurator) (Management, error) {
 	})
 	go reap(cfg.Context(), registry)
 
-	management := Management{UploadPage: uploadPage, Registry: registry}
+	management := Management{UploadPage: uploadPage, Registry: registry, UseCases: uploads}
 	cfg.AddContextValue(core.ContextValue("eventprint.photoupld", management))
 	return management, nil
 }

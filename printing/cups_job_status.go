@@ -56,7 +56,7 @@ func CancelJob(ctx context.Context, jobID string) error {
 // Ein wartender Auftrag ist etwas grundlegend anderes als ein verschwundener,
 // und nur diese Liste unterscheidet die beiden Fälle.
 func PendingJobs(ctx context.Context, queue string) ([]string, error) {
-	out, err := exec.CommandContext(ctx, "lpstat", "-W", "not-completed", "-o", queue).Output()
+	out, err := exec.CommandContext(ctx, lpstatExecutable, "-W", "not-completed", "-o", queue).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ const reasonCompleted = "job-completed-successfully"
 // IPP-Grund als auch die Klartextmeldung des Druckers enthält. Solange der
 // Auftrag noch läuft, taucht er dort nicht auf; dann ist Done falsch.
 func JobStatus(ctx context.Context, queue, jobID string) (Outcome, error) {
-	out, err := exec.CommandContext(ctx, "lpstat", "-l", "-W", "completed", "-o", queue).Output()
+	out, err := exec.CommandContext(ctx, lpstatExecutable, "-l", "-W", "completed", "-o", queue).Output()
 	if err != nil {
 		return Outcome{}, err
 	}

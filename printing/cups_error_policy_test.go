@@ -61,6 +61,7 @@ func TestEnforceAbortPolicyIgnoresEmptyQueue(t *testing.T) {
 // Weg ist auf einer Feier der einzige, der zählt.
 func TestPolicyGuardRunsOncePerQueue(t *testing.T) {
 	count := countingLpadmin(t)
+	stubQueues(t, "CZ01 akzeptiert Anfragen\nCZ02 akzeptiert Anfragen")
 
 	var guard policyGuard
 
@@ -77,6 +78,43 @@ func TestPolicyGuardRunsOncePerQueue(t *testing.T) {
 
 	if got := count(); got != 2 {
 		t.Fatalf("lpadmin lief %dx, erwartet 2x – die neue Warteschlange wurde übergangen", got)
+	}
+}
+
+// TestPolicyGuardRetriesAfterFailure deckt den Drucker ab, der erst nach dem
+// Start der Fotobox in CUPS eingerichtet wird.
+//
+// Würde der Wächter auch den Fehlschlag vermerken, bliebe die Absicherung bis
+// zum nächsten Neustart aus – und genau dann druckt CUPS gescheiterte Aufträge
+// wieder von sich aus nach.
+func TestPolicyGuardRetriesAfterFailure(t *testing.T) {
+	count := countingLpadmin(t)
+	stubQueues(t, "CZ99 akzeptiert Anfragen")
+
+	var guard policyGuard
+
+	// Die Warteschlange gibt es noch nicht: kein Aufruf, kein Vermerk.
+	guard.ensure(context.Background(), "CZ01")
+	guard.ensure(context.Background(), "CZ01")
+
+	if got := count(); got != 0 {
+		t.Fatalf("lpadmin lief %dx für eine unbekannte Warteschlange, erwartet 0x", got)
+	}
+
+	// Jetzt wird der Drucker eingerichtet.
+	stubQueues(t, "CZ01 akzeptiert Anfragen")
+
+	guard.ensure(context.Background(), "CZ01")
+
+	if got := count(); got != 1 {
+		t.Fatalf("lpadmin lief %dx nach dem Einrichten, erwartet 1x", got)
+	}
+
+	// Und danach nicht mehr.
+	guard.ensure(context.Background(), "CZ01")
+
+	if got := count(); got != 1 {
+		t.Fatalf("lpadmin lief %dx, erwartet 1x – der Erfolg wurde nicht vermerkt", got)
 	}
 }
 
@@ -131,4 +169,41 @@ func writeScript(t *testing.T, dir, body string) {
 	old := lpadminExecutable
 	lpadminExecutable = path
 	t.Cleanup(func() { lpadminExecutable = old })
+}
+
+// TestEnforceAbortPolicyRefusesUnknownQueue sichert die Falle ab, in die die
+// erste Fassung gelaufen ist.
+//
+// "lpadmin -p <name> -o …" legt eine Warteschlange an, wenn sie fehlt. Bei
+// einem Tippfehler in den Einstellungen entstand dadurch ein Phantomdrucker –
+// und die Meldung "Warteschlange nicht eingerichtet", die den Tippfehler
+// aufdecken soll, verschwand mit ihm.
+func TestEnforceAbortPolicyRefusesUnknownQueue(t *testing.T) {
+	read := recordingLpadmin(t, 0)
+
+	// lpstat liefert eine Liste, in der die gesuchte Warteschlange fehlt.
+	stubQueues(t, "CZ99 akzeptiert Anfragen")
+
+	if err := EnforceAbortPolicy(context.Background(), "gibt-es-nicht"); err == nil {
+		t.Fatal("eine unbekannte Warteschlange wurde stillschweigend angelegt")
+	}
+
+	if got := read(); got != "" {
+		t.Fatalf("lpadmin wurde mit %q aufgerufen, erwartet gar nicht", got)
+	}
+}
+
+// stubQueues ersetzt lpstat durch ein Skript, das die übergebenen Zeilen
+// ausgibt.
+func stubQueues(t *testing.T, lines string) {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "lpstat")
+
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '%s\\n' '"+lines+"'\n"), 0o755); err != nil {
+		t.Fatalf("cannot write script: %v", err)
+	}
+
+	t.Cleanup(SetLpstatExecutableForTest(path))
 }

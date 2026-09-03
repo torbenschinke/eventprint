@@ -15,6 +15,7 @@ import (
 
 var (
 	lpExecutable                 = "lp"
+	lpstatExecutable             = "lpstat"
 	rastertogutenprintExecutable = "/usr/lib/cups/filter/rastertogutenprint.5.3"
 	cupsPPDDirectory             = "/etc/cups/ppd"
 )

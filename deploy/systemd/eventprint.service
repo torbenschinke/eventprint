@@ -1,0 +1,43 @@
+[Unit]
+Description=eventprint Fotobox
+Documentation=file:/opt/eventprint/README.md
+After=network.target cups.service eventprint-update.service
+
+# Wants, nicht Requires: Scheitert die Aktualisierung – etwa ohne Netz –, muss
+# die Fotobox trotzdem mit dem vorhandenen Stand starten. Genau dafür endet
+# update.sh immer mit Erfolg.
+Wants=eventprint-update.service cups.service
+
+[Service]
+Type=simple
+User=eventprint
+Group=eventprint
+
+# lp und lpadmin: Aufträge übergeben und die Fehlerbehandlung der
+# Warteschlange auf abort-job stellen. Ohne lpadmin wiederholt CUPS
+# gescheiterte Aufträge von sich aus und druckt Bilder ein zweites Mal.
+# plugdev und video: Zugriff auf die Kamera am USB.
+SupplementaryGroups=lp lpadmin plugdev video
+
+WorkingDirectory=/opt/eventprint
+EnvironmentFile=-/etc/default/eventprint
+ExecStart=/opt/eventprint/dist/photobox
+
+# nago legt seine Daten unter STATE_DIRECTORY ab, das systemd hier setzt:
+# /var/lib/eventprint. Dort liegen auch die gesicherten Originale.
+StateDirectory=eventprint
+Environment=HOME=/var/lib/eventprint
+Environment=HOST=0.0.0.0
+
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+
+[Install]
+WantedBy=multi-user.target

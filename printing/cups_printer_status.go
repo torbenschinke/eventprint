@@ -71,8 +71,8 @@ func QueryPrinter(ctx context.Context, queue string) PrinterStatus {
 	// "lpstat -p" meldet Freigabe und Gerätemeldung, "-a" die Annahme. Beide
 	// Ausgaben sind übersetzt, weshalb ausschließlich der Rückgabewert und
 	// die maschinenlesbaren Anteile ausgewertet werden.
-	printerOut, printerErr := exec.CommandContext(ctx, "lpstat", "-p", queue).CombinedOutput()
-	acceptOut, acceptErr := exec.CommandContext(ctx, "lpstat", "-a", queue).CombinedOutput()
+	printerOut, printerErr := exec.CommandContext(ctx, lpstatExecutable, "-p", queue).CombinedOutput()
+	acceptOut, acceptErr := exec.CommandContext(ctx, lpstatExecutable, "-a", queue).CombinedOutput()
 
 	if printerErr != nil && len(printerOut) == 0 {
 		status.Err = printerErr

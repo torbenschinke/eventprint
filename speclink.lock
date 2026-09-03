@@ -1,0 +1,304 @@
+{
+  "version": 8,
+  "types": {},
+  "requirements": {
+    "R-DRUCK-AUFTRAG": {
+      "text": "e98df295903b9b2055f622465a81ce8182ab8a58ce5cf15b72d86cae691b3b3d",
+      "title": "Druckauftrag annehmen und im Hintergrund abarbeiten",
+      "from": "requirements/_sources/druck.md#druckauftrag-erteilen"
+    },
+    "R-DRUCK-DIAGNOSE": {
+      "text": "7f14c77f1a019734d23e247aa3feadfd5828d981481f93bf88e15eb74ea84223",
+      "title": "Zustand des Druckers ohne Terminal erkennen",
+      "from": "requirements/_sources/druck.md#zustand-des-druckers"
+    },
+    "R-DRUCK-KEIN-NACHDRUCK": {
+      "text": "71e4efd188e744403ba5af4d591fe92d8c401270aafd075dc60620613d6e1b17",
+      "title": "Kein Ausdruck ohne Auslösung",
+      "from": "requirements/_sources/druck.md#kein-ungewollter-ausdruck"
+    },
+    "R-DRUCK-STATUS": {
+      "text": "33e3436f456961ade6356fa5c47de28c7ed1f393b4979ba9a5b5948c52214c99",
+      "title": "Zustand der Druckaufträge einsehen",
+      "from": "requirements/_sources/druck.md#zustand-der-aufträge"
+    },
+    "R-DRUCK-VORSCHAU": {
+      "text": "8b863665c9f1c095f3e2591613d960f0b7b3b9e323e8bc888a0cd98a2acc671b",
+      "title": "Vorschau vor dem Druck",
+      "from": "requirements/_sources/druck.md#vorschau-des-ergebnisses"
+    },
+    "R-DRUCK-WIEDERHOLUNG": {
+      "text": "9144386e8aedcd373f4705cedd245883fd746b24f07f10f53caf7bab0efb7d31",
+      "title": "Gescheiterten Auftrag wiederholen",
+      "from": "requirements/_sources/druck.md#auftrag-wiederholen"
+    },
+    "R-FOTO-DRUCKVORLAGE": {
+      "text": "f4b886c350d70a8a2519fcbaae19b39e8a02e7746d7be781367cd54e23a90af5",
+      "title": "Originaldaten als Vorlage für den Druck",
+      "from": "requirements/_sources/foto.md#vorlage-für-den-druck"
+    },
+    "R-FOTO-EINZELBILD": {
+      "text": "68adc8a49b73bc0f3f4e5c897e97de50ca040d6378898326f8df3a804946c906",
+      "title": "Einzelnes Bild anhand seiner Kennung finden",
+      "from": "requirements/_sources/foto.md#einzelnes-bild"
+    },
+    "R-FOTO-HISTORIE": {
+      "text": "2da0540539fe43308789a3d87b73875247b43583f904e414b86a3843010ffdb0",
+      "title": "Historie der Bilder, die neuesten zuerst",
+      "from": "requirements/_sources/foto.md#historie"
+    },
+    "R-FOTO-IMPORT": {
+      "text": "6ac50331554e9c916e72e8f62b1f7717020f8fc501883adca984a49dc3945986",
+      "title": "Eingehende Bilder aufnehmen und im Original sichern",
+      "from": "requirements/_sources/foto.md#bilder-aufnehmen"
+    },
+    "R-FOTO-LOESCHEN": {
+      "text": "cb8d3cab10b8d5b1a047661c23a020ba14c7b407482003c8848d89d284034e2a",
+      "title": "Bild aus der Historie entfernen",
+      "from": "requirements/_sources/foto.md#bilder-entfernen"
+    },
+    "R-UPLOAD-ABHOLUNG": {
+      "text": "1238916c3927fb9ffe15dd4d140ebdae723c2b294d2cd5ee47e82be1cb5ef325",
+      "title": "Wartende Aufträge abholen",
+      "from": "requirements/_sources/upload.md#wartende-aufträge-abholen"
+    },
+    "R-UPLOAD-BESTAETIGUNG": {
+      "text": "9ac903c471956966c591381ce48d911fc7f658470fe34e5ed1d8530d8c9f6bbc",
+      "title": "Auftrag erst nach Bestätigung löschen",
+      "from": "requirements/_sources/upload.md#übernahme-bestätigen"
+    },
+    "R-UPLOAD-BILD": {
+      "text": "47ac06d00ed54c9f288a051eb27372d1fa8eaa260e868a128dc9b33a72a30118",
+      "title": "Originalbild eines wartenden Auftrags laden",
+      "from": "requirements/_sources/upload.md#bild-eines-auftrags-laden"
+    },
+    "R-UPLOAD-SITZUNG": {
+      "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3",
+      "title": "Kurzlebige Upload-Adresse je Fotobox",
+      "from": "requirements/_sources/upload.md#upload-sitzung"
+    }
+  },
+  "sources": {
+    "requirements/_sources/druck.md#auftrag-wiederholen": {
+      "fingerprint": "a27e20ea5a8011aa31e16b59d95a11690e1d93d5bf00d402599b4737d3b4541d",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#druckauftrag-erteilen": {
+      "fingerprint": "b00eb7136633cf2d170fd0c2f3d3db415c8f1d0120ea2a09798a77f97523b233",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#drucken": {
+      "fingerprint": "a84716b4cb054c2f860000fd0d89d2762e37aea1cd84bee8f38925aa16e3efad",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#kein-ungewollter-ausdruck": {
+      "fingerprint": "01cd19cc96b26ee19d3d139af927c8aa2e3ffa81d0ea1823af093812f8fe4248",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#vorschau-des-ergebnisses": {
+      "fingerprint": "00eb745d574c859c077eda6ce6ea7f2e09f5a0e5813694e69aeee5bdfd9032c8",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#zustand-der-aufträge": {
+      "fingerprint": "da7afc29b4905091581f62719896e668b1f050d2142c8687aefb6149496e5c79",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#zustand-des-druckers": {
+      "fingerprint": "6121b4e8cb18b070bba1197dd4add384f942c96228fcc08685268bbe5248fe68",
+      "kind": "markdown"
+    },
+    "requirements/_sources/foto.md#bilder-aufnehmen": {
+      "fingerprint": "be649aad97932d22732714dfa49c4f651a8659f8112644c1fe0ff36edf21142b",
+      "kind": "markdown"
+    },
+    "requirements/_sources/foto.md#bilder-entfernen": {
+      "fingerprint": "01022bbd31474cb7001249c9647768032b71d747afccf185f330f3a583d87798",
+      "kind": "markdown"
+    },
+    "requirements/_sources/foto.md#einzelnes-bild": {
+      "fingerprint": "c69fe647bc4ec5780037b29f4200025494e0ef28c34bc84e2abbe2da871639e4",
+      "kind": "markdown"
+    },
+    "requirements/_sources/foto.md#fotos": {
+      "fingerprint": "f0f9dd6b12498b66876d9df78a699d40e49176f0bdc088a90f1f7a380d7039f7",
+      "kind": "markdown"
+    },
+    "requirements/_sources/foto.md#historie": {
+      "fingerprint": "fda76b9ac3f16e0ed8b70dd131696d9d3e8e134f0ef994732bc7507a039fd2bc",
+      "kind": "markdown"
+    },
+    "requirements/_sources/foto.md#vorlage-für-den-druck": {
+      "fingerprint": "9472b0a00f6db8a66043391cbbfd65a7b62740add7aafe368a11c0a996e33480",
+      "kind": "markdown"
+    },
+    "requirements/_sources/upload.md#bild-eines-auftrags-laden": {
+      "fingerprint": "fba8c392630c07df7a538c04bd0298b87c8a38d1ac3fc57f3f320f73e0d4d035",
+      "kind": "markdown"
+    },
+    "requirements/_sources/upload.md#upload-sitzung": {
+      "fingerprint": "f38ea4e6e42e1fdcf5d04d8a0457fceea00bc1540c51720ada336fc112653853",
+      "kind": "markdown"
+    },
+    "requirements/_sources/upload.md#uploads-aus-dem-internet": {
+      "fingerprint": "a22b15111ae067e5b98a70e86619bd3d6a0afbb3d527821549ce076b2f7f11f3",
+      "kind": "markdown"
+    },
+    "requirements/_sources/upload.md#wartende-aufträge-abholen": {
+      "fingerprint": "27818fb3da0878b88dbf44b41d31cc55a3a65df605bb88566d6d36d0fcc7d21d",
+      "kind": "markdown"
+    },
+    "requirements/_sources/upload.md#übernahme-bestätigen": {
+      "fingerprint": "80891c9fa6092a41bc9a477dea3657305f087da88f56f960962707cc4d4958e3",
+      "kind": "markdown"
+    }
+  },
+  "verifications": {
+    "R-DRUCK-AUFTRAG": [
+      {
+        "test": "TestWorkerReportsSuccess",
+        "text": "e98df295903b9b2055f622465a81ce8182ab8a58ce5cf15b72d86cae691b3b3d"
+      }
+    ],
+    "R-DRUCK-DIAGNOSE": [
+      {
+        "test": "TestDiagnoseReportsPrinterState",
+        "text": "7f14c77f1a019734d23e247aa3feadfd5828d981481f93bf88e15eb74ea84223"
+      }
+    ],
+    "R-DRUCK-KEIN-NACHDRUCK": [
+      {
+        "test": "TestAwaitJobCancelsAbandonedJob",
+        "text": "71e4efd188e744403ba5af4d591fe92d8c401270aafd075dc60620613d6e1b17"
+      }
+    ],
+    "R-DRUCK-STATUS": [
+      {
+        "test": "TestJobsAreListedNewestFirst",
+        "text": "33e3436f456961ade6356fa5c47de28c7ed1f393b4979ba9a5b5948c52214c99"
+      }
+    ],
+    "R-DRUCK-VORSCHAU": [
+      {
+        "test": "TestPreviewRendersWithoutPrinting",
+        "text": "8b863665c9f1c095f3e2591613d960f0b7b3b9e323e8bc888a0cd98a2acc671b"
+      }
+    ],
+    "R-DRUCK-WIEDERHOLUNG": [
+      {
+        "test": "TestRetryCancelsPreviousPrinterJob",
+        "text": "9144386e8aedcd373f4705cedd245883fd746b24f07f10f53caf7bab0efb7d31"
+      }
+    ],
+    "R-FOTO-DRUCKVORLAGE": [
+      {
+        "test": "TestOpenOriginalDeliversThePrintSource",
+        "text": "f4b886c350d70a8a2519fcbaae19b39e8a02e7746d7be781367cd54e23a90af5"
+      }
+    ],
+    "R-FOTO-EINZELBILD": [
+      {
+        "test": "TestFindByIDReturnsTheImportedPhoto",
+        "text": "68adc8a49b73bc0f3f4e5c897e97de50ca040d6378898326f8df3a804946c906"
+      }
+    ],
+    "R-FOTO-HISTORIE": [
+      {
+        "test": "TestHistoryListsNewestFirst",
+        "text": "2da0540539fe43308789a3d87b73875247b43583f904e414b86a3843010ffdb0"
+      }
+    ],
+    "R-FOTO-IMPORT": [
+      {
+        "test": "TestImportArchivesUntouchedOriginal",
+        "text": "6ac50331554e9c916e72e8f62b1f7717020f8fc501883adca984a49dc3945986"
+      }
+    ],
+    "R-FOTO-LOESCHEN": [
+      {
+        "test": "TestDeleteRemovesPhotoFromHistory",
+        "text": "cb8d3cab10b8d5b1a047661c23a020ba14c7b407482003c8848d89d284034e2a"
+      }
+    ],
+    "R-UPLOAD-ABHOLUNG": [
+      {
+        "test": "TestFindPendingJobsShowsOnlyOwnJobs",
+        "text": "1238916c3927fb9ffe15dd4d140ebdae723c2b294d2cd5ee47e82be1cb5ef325"
+      }
+    ],
+    "R-UPLOAD-BESTAETIGUNG": [
+      {
+        "test": "TestAckJobKeepsTheJobUntilConfirmed",
+        "text": "9ac903c471956966c591381ce48d911fc7f658470fe34e5ed1d8530d8c9f6bbc"
+      }
+    ],
+    "R-UPLOAD-BILD": [
+      {
+        "test": "TestOpenJobImageDeliversTheOriginal",
+        "text": "47ac06d00ed54c9f288a051eb27372d1fa8eaa260e868a128dc9b33a72a30118"
+      }
+    ],
+    "R-UPLOAD-SITZUNG": [
+      {
+        "test": "TestOpenSessionGivesEachBoxExactlyOneAddress",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      }
+    ]
+  },
+  "endpoints": {
+    "DELETE /api/v1/job": {
+      "useCases": [
+        "github.com/torbenschinke/eventprint/upld.AckJob"
+      ],
+      "package": "github.com/torbenschinke/eventprint/photoupld",
+      "response": {
+        "type": "github.com/torbenschinke/eventprint/photoupld.AckResponse",
+        "shape": "{acknowledged:bool}",
+        "fields": [
+          {
+            "name": "Acknowledged",
+            "wire": "acknowledged",
+            "shape": "bool"
+          }
+        ]
+      }
+    },
+    "GET /api/v1/job/image": {
+      "useCases": [
+        "github.com/torbenschinke/eventprint/upld.OpenJobImage"
+      ],
+      "package": "github.com/torbenschinke/eventprint/photoupld"
+    },
+    "GET /api/v1/jobs": {
+      "useCases": [
+        "github.com/torbenschinke/eventprint/upld.FindPendingJobs"
+      ],
+      "package": "github.com/torbenschinke/eventprint/photoupld",
+      "response": {
+        "type": "[]github.com/torbenschinke/eventprint/photoupld.JobResponse",
+        "shape": "[]{id:string,template:string,filename:string,createdAt:string}"
+      }
+    },
+    "POST /api/v1/session": {
+      "useCases": [
+        "github.com/torbenschinke/eventprint/upld.OpenSession"
+      ],
+      "package": "github.com/torbenschinke/eventprint/photoupld",
+      "response": {
+        "type": "github.com/torbenschinke/eventprint/photoupld.SessionResponse",
+        "shape": "{uploadId:string,uploadUrl:string}",
+        "fields": [
+          {
+            "name": "UploadID",
+            "wire": "uploadId",
+            "shape": "string"
+          },
+          {
+            "name": "UploadURL",
+            "wire": "uploadUrl",
+            "shape": "string"
+          }
+        ]
+      }
+    }
+  }
+}

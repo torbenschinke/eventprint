@@ -1,14 +1,11 @@
 package photoupld
 
 import (
-	"fmt"
 	"io"
 	"time"
 
 	"go.wdy.de/nago/application"
 	"go.wdy.de/nago/application/hapi"
-	"go.wdy.de/nago/application/image"
-	"go.wdy.de/nago/application/user"
 	"go.wdy.de/nago/auth"
 
 	"github.com/torbenschinke/eventprint/upld"
@@ -36,7 +33,13 @@ type AckResponse struct {
 	Acknowledged bool `json:"acknowledged"`
 }
 
-func ConfigureAPI(api *hapi.API, tokens application.TokenManagement, images image.UseCases, registry *upld.Registry, uploadURL func(upld.UploadID) string) {
+// ConfigureAPI hängt die Anwendungsfälle des Relais an HTTP-Adressen.
+//
+// Die Handler übersetzen ausschließlich zwischen Transport und Anwendungsfall:
+// Sie prüfen keine Berechtigung, greifen nicht auf die Registry zu und treffen
+// keine Entscheidung. Läge die Fachlichkeit hier, gäbe es sie zweimal, sobald
+// dieselbe Sache auch über die Oberfläche erreichbar sein soll.
+func ConfigureAPI(api *hapi.API, tokens application.TokenManagement, uc upld.UseCases, uploadURL func(upld.UploadID) string) {
 	authenticate := func(dst *authenticated, subject auth.Subject) error {
 		dst.Subject = subject
 		return nil
@@ -53,54 +56,43 @@ func ConfigureAPI(api *hapi.API, tokens application.TokenManagement, images imag
 	hapi.Post[authenticated](api, hapi.Operation{Path: "/api/v1/session", Summary: "Neue Upload-Sitzung"}).
 		Request(hapi.BearerAuth(tokens.UseCases.AuthenticateSubject, authenticate)).
 		Response(hapi.ToJSON[authenticated, SessionResponse](func(in authenticated) (SessionResponse, error) {
-			if err := in.Subject.Audit(upld.PermOpenSession); err != nil {
+			id, err := uc.OpenSession(in.Subject)
+			if err != nil {
 				return SessionResponse{}, err
 			}
-			id, err := registry.Open(upld.TokenID(in.Subject.ID()))
-			return SessionResponse{UploadID: id, UploadURL: uploadURL(id)}, err
+
+			return SessionResponse{UploadID: id, UploadURL: uploadURL(id)}, nil
 		}))
 
 	hapi.Get[authenticated](api, hapi.Operation{Path: "/api/v1/jobs", Summary: "Wartende Druckaufträge"}).
 		Request(hapi.BearerAuth(tokens.UseCases.AuthenticateSubject, authenticate)).
 		Response(hapi.ToJSON[authenticated, []JobResponse](func(in authenticated) ([]JobResponse, error) {
-			if err := in.Subject.Audit(upld.PermPollJobs); err != nil {
+			jobs, err := uc.FindPendingJobs(in.Subject)
+			if err != nil {
 				return nil, err
 			}
-			jobs, err := registry.Pending(upld.TokenID(in.Subject.ID()))
+
 			out := make([]JobResponse, 0, len(jobs))
 			for _, job := range jobs {
 				out = append(out, JobResponse{ID: job.ID, Template: string(job.Template), Filename: job.Filename, CreatedAt: job.CreatedAt})
 			}
-			return out, err
+
+			return out, nil
 		}))
 
 	hapi.Get[jobRequest](api, hapi.Operation{Path: "/api/v1/job/image", Summary: "Originalbild eines Druckauftrags"}).
 		Request(hapi.BearerAuth(tokens.UseCases.AuthenticateSubject, jobAuth), jobID).
 		Response(hapi.ToBinary[jobRequest](func(in jobRequest) (io.Reader, error) {
-			if err := in.Subject.Audit(upld.PermFetchImage); err != nil {
-				return nil, err
-			}
-			job, ok := registry.Find(upld.TokenID(in.Subject.ID()), in.ID)
-			if !ok {
-				return nil, fmt.Errorf("upload job not found")
-			}
-			reader, err := images.OpenReader(user.SU(), job.Image)
-			if err != nil || reader.IsNone() {
-				return nil, fmt.Errorf("upload image not found: %w", err)
-			}
-			return reader.Unwrap(), nil
+			return uc.OpenJobImage(in.Subject, in.ID)
 		}))
 
 	hapi.Delete[jobRequest](api, hapi.Operation{Path: "/api/v1/job", Summary: "Druckauftrag bestätigen"}).
 		Request(hapi.BearerAuth(tokens.UseCases.AuthenticateSubject, jobAuth), jobID).
 		Response(hapi.ToJSON[jobRequest, AckResponse](func(in jobRequest) (AckResponse, error) {
-			if err := in.Subject.Audit(upld.PermAckJob); err != nil {
+			if err := uc.AckJob(in.Subject, in.ID); err != nil {
 				return AckResponse{}, err
 			}
-			ok := registry.Ack(upld.TokenID(in.Subject.ID()), in.ID)
-			if !ok {
-				return AckResponse{}, fmt.Errorf("upload job not found")
-			}
+
 			return AckResponse{Acknowledged: true}, nil
 		}))
 }

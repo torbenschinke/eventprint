@@ -44,10 +44,10 @@ github.com/worldiety/material-color-utilities v0.0.0-20250324124753-a84b74640c16
 github.com/worldiety/material-color-utilities v0.0.0-20250324124753-a84b74640c16/go.mod h1:UX8Sb7OvGA+gh+NSJKqUsslZ7Ao7ftYVzutt70hcL9g=
 github.com/worldiety/option v0.0.0-20251007074526-863facc0bc83 h1:rJCMfQMxHh0R68EfoRG2SXyBXEKkDLRpnvGdwstsStA=
 github.com/worldiety/option v0.0.0-20251007074526-863facc0bc83/go.mod h1:teHsHBcwKGhykKggie4/SdJ+jLM6WlVt37dSP0lT7bU=
+github.com/worldiety/speclink v0.0.0-20260831090958-199319ad63d3 h1:YfDdjdERQ43touyTy8ATI1ouuMfqGqzOlF/fIuaKnE4=
+github.com/worldiety/speclink v0.0.0-20260831090958-199319ad63d3/go.mod h1:OK5N0yB6z+zcHiDi9z1ZhS/2RcQPqN7V6zmQFEQIcH4=
 github.com/yuin/goldmark v1.7.13 h1:GPddIs617DnBLFFVJFgpo1aBfe/4xcvMc3SB5t/D0pA=
 github.com/yuin/goldmark v1.7.13/go.mod h1:ip/1k0VRfGynBgxOz0yCqHrbZXhcjxyuS66Brc7iBKg=
-go.wdy.de/nago v0.0.0-20260811122601-eb0d2c67dfb5 h1:W+dxZaaLL7guo6L8YbpXYDoI3pMVmbrUaweDUJmPR7s=
-go.wdy.de/nago v0.0.0-20260811122601-eb0d2c67dfb5/go.mod h1:RA0w9018dxr/7ceBPhY3aeHahsf6MRyyWw3D1Grgbfg=
 go.wdy.de/nago v0.0.0-20260825122142-0bc1268bd119 h1:DybGkEoFgZy8uSZjVgxWSW5eJR/sC/mATHPwAcINRxY=
 go.wdy.de/nago v0.0.0-20260825122142-0bc1268bd119/go.mod h1:RA0w9018dxr/7ceBPhY3aeHahsf6MRyyWw3D1Grgbfg=
 gocv.io/x/gocv v0.43.0 h1:PFNpRUcV8fgBRDbVHHN+4BDZjjPnVveo5N/+e15BTuA=

@@ -1,6 +1,7 @@
 package printing
 
 import (
+	"cmp"
 	"fmt"
 	"iter"
 	"slices"
@@ -27,9 +28,12 @@ func NewFindAllJobs(repo Repository) FindAllJobs {
 			jobs = append(jobs, job)
 		}
 
-		// repo.All liefert lexikographisch aufsteigend, die JobID ist
-		// zeitlich sortierbar – umdrehen genügt.
-		slices.Reverse(jobs)
+		// Absteigend sortieren, nicht bloß umdrehen: In welcher Reihenfolge
+		// eine Ablage ihre Einträge hergibt, ist ihre Sache und bei einem
+		// Speicher über einer Map zufällig. Weil die [JobID] mit einem
+		// nullgefüllten Zeitstempel beginnt, ist die lexikographische
+		// Ordnung zugleich die zeitliche.
+		slices.SortFunc(jobs, func(a, b Job) int { return cmp.Compare(b.ID, a.ID) })
 
 		return func(yield func(Job, error) bool) {
 			for _, job := range jobs {

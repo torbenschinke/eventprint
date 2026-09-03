@@ -15,7 +15,7 @@ import (
 // auf jedem Linux-System mit CUPS vorhanden und liefert genau die Namen, die
 // auch lp erwartet.
 func ListQueues(ctx context.Context) ([]string, error) {
-	out, err := exec.CommandContext(ctx, "lpstat", "-a").Output()
+	out, err := exec.CommandContext(ctx, lpstatExecutable, "-a").Output()
 	if err != nil {
 		return nil, err
 	}

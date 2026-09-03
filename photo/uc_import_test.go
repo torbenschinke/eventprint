@@ -17,7 +17,10 @@ import (
 	"go.wdy.de/nago/pkg/data/json"
 	"go.wdy.de/nago/pkg/events"
 
+	"github.com/worldiety/speclink/spec"
+
 	"github.com/torbenschinke/eventprint/orient"
+	"github.com/torbenschinke/eventprint/requirements/fun/foto"
 )
 
 // TestImportArchivesUntouchedOriginal ist die eigentliche Zusage des Archivs.
@@ -77,6 +80,8 @@ func TestImportArchivesUntouchedOriginal(t *testing.T) {
 	if bytes.Equal(stored, raw) {
 		t.Fatal("Voraussetzung entfallen: der Import hat das Bild gar nicht verändert")
 	}
+
+	spec.Verified(t, foto.RFotoImport)
 }
 
 // TestImportSurvivesBrokenArchive hält fest, dass ein nicht beschreibbares

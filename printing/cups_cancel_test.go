@@ -8,7 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/worldiety/speclink/spec"
+
 	"github.com/torbenschinke/eventprint/printing"
+	"github.com/torbenschinke/eventprint/requirements/fun/druck"
 )
 
 // TestAwaitJobCancelsAbandonedJob sichert die Ursache des Doppeldrucks ab.
@@ -29,6 +32,8 @@ func TestAwaitJobCancelsAbandonedJob(t *testing.T) {
 	if got := record(); got != "-x CZ01-31" {
 		t.Fatalf("Storno = %q, erwartet '-x CZ01-31'", got)
 	}
+
+	spec.Verified(t, druck.RDruckKeinNachdruck)
 }
 
 // TestAwaitJobCancelsOnShutdown deckt den zweiten Weg ab, auf dem ein Auftrag

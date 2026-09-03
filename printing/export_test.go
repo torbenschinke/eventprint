@@ -12,3 +12,12 @@ func SetCancelExecutableForTest(name string) func() {
 
 	return func() { cancelExecutable = old }
 }
+
+// SetLpstatExecutableForTest ersetzt die Abfrage von CUPS und liefert die
+// Funktion zum Zurücksetzen.
+func SetLpstatExecutableForTest(name string) func() {
+	old := lpstatExecutable
+	lpstatExecutable = name
+
+	return func() { lpstatExecutable = old }
+}

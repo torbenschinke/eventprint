@@ -49,6 +49,119 @@ HOST=0.0.0.0 NAGO_COOKIES_INSECURE=true go run ./cmd/photobox
 Danach unter <http://localhost:3000> als Betreuer anmelden
 (`admin@localhost`, Kennwort siehe `cmd/photobox/main.go`) und einrichten.
 
+## Bauen und prüfen
+
+```bash
+./scripts/build.sh
+```
+
+Das ist die vollständige Schleife und die einzige, deren Reihenfolge feststeht:
+
+```
+go build  ->  go test | speclink evidence  ->  speclink verify  ->  speclink generate
+```
+
+Der Nachweis läuft **vor** der Prüfung, weil `speclink verify` wissen will,
+welche Tests tatsächlich durchgelaufen sind. Umgekehrt prüfte es einen Nachweis
+von gestern. Am Ende stehen die Binärdateien in `dist/` und die abgeleitete
+Spezifikation in [SPECIFICATION.md](SPECIFICATION.md).
+
+| Variable | Wirkung |
+|---|---|
+| `FACECROP=0` | ohne Gesichtserkennung bauen, also ohne OpenCV und gocv |
+| `SKIP_TESTS=1` | nur bauen; die Spezifikation entsteht dann nicht |
+| `TARGETS` | z. B. `"linux/arm64 linux/amd64"` |
+
+`photobox` braucht cgo und OpenCV, `photoupld` nicht. Für eine fremde
+Architektur wird `photobox` deshalb übersprungen statt in einer Binärdatei zu
+enden, die auf dem Zielgerät nicht startet.
+
+### speclink
+
+Die Anforderungen liegen als Go-Quelltext in `requirements/`, die
+Quelldokumente darunter in `requirements/_sources/`. Jeder Anwendungsfall nennt
+in einer `*.annotation.go` neben sich die Anforderung, für die er geschrieben
+wurde; jeder Test endet mit `spec.Verified(t, …)`. Vier Zahlen müssen alle 100 %
+erreichen, sonst schlägt der Bau fehl:
+
+```
+15 source segments (100% accounted), 30 constructs (100% bound),
+15 normative requirements (100% covered, 100% verified), 0 findings
+```
+
+*accounted* fragt, ob jeder Abschnitt der Quelldokumente zu einer Anforderung
+geworden ist. *bound* fragt, ob jeder Anwendungsfall eine Anforderung nennt.
+*covered* fragt die Gegenrichtung. *verified* ist die einzige, die danach
+fragt, ob überhaupt etwas gezeigt hat, dass der Quelltext tut, was die
+Anforderung verlangt.
+
+`speclink.lock` gehört ins Repository: Darin steht, welcher Test welche
+Anforderung wann gezeigt hat und in welchem Wortlaut. Wird eine Anforderung
+umformuliert, verfällt der Nachweis und muss neu erbracht werden.
+
+## Installation auf einem Raspberry Pi
+
+Auf einem frischen Raspberry Pi OS oder Debian, als root:
+
+```bash
+git clone https://github.com/torbenschinke/eventprint.git
+cd eventprint
+sudo ./scripts/install.sh --dry-run     # zeigt nur, was geschähe
+sudo ./scripts/install.sh
+```
+
+Danach liegen dort:
+
+| Ort | Inhalt |
+|---|---|
+| `/opt/eventprint` | Arbeitskopie des Repositories |
+| `/var/lib/eventprint` | Daten: Fotos, Druckaufträge, Archiv der Originale |
+| `/etc/default/eventprint` | Umgebung der Dienste, von Hand änderbar |
+| `eventprint.service` | die Fotobox |
+| `eventprint-update.service` | holt beim Hochfahren den aktuellen Stand |
+
+Der Dienst läuft als eigener Nutzer `eventprint` in den Gruppen `lp`,
+`lpadmin`, `plugdev` und `video`. `lpadmin` ist die SystemGroup von CUPS und
+nicht verzichtbar: nur damit darf die Fotobox die Fehlerbehandlung ihrer
+Warteschlange auf `abort-job` stellen. Seine Daten legt der Dienst unter
+`StateDirectory` ab, das systemd auf `/var/lib/eventprint` setzt und das nago
+von sich aus auswertet.
+
+Das Einrichten des Druckers gehört **nicht** dazu — das hängt am Gerät und an
+seiner Seriennummer, siehe [DRUCKER.md](DRUCKER.md).
+
+Scheitert der Bau an gocv, ist fast immer die OpenCV-Fassung der Distribution
+älter als die, gegen die gocv übersetzt. Dann hilft:
+
+```bash
+sudo ./scripts/install.sh --no-facecrop
+```
+
+Die Fotobox läuft damit ohne Gesichtserkennung; der Bildausschnitt ist dann
+durchgehend mittig, also genau das Verhalten, das auch die Erkennung ohne
+Treffer zeigt.
+
+### Aktuell bleiben
+
+`eventprint-update.service` läuft vor der Fotobox und holt den Stand von
+`origin/<branch>`. Hat sich nichts geändert, endet er sofort; sonst baut er neu.
+
+Zwei Regeln bestimmen das Verhalten:
+
+* **Der Dienst startet immer.** `update.sh` endet grundsätzlich mit Erfolg, und
+  die Unit ist über `Wants=` verknüpft, nicht über `Requires=`. Kein Netz auf
+  einer Feier ist der Normalfall, kein Fehlerfall.
+* **Es bleibt immer eine lauffähige Binärdatei da.** Gebaut wird neben den
+  laufenden Stand und erst nach Erfolg umgehängt.
+
+Geprüft wird beim Hochfahren nicht. Ein roter Testlauf um 18 Uhr auf einem
+Raspberry Pi stünde niemandem zur Verfügung, und die Feier begänne trotzdem.
+Dafür ist `scripts/build.sh` da.
+
+Das Gerät ist ein Abbild des Repositories, keine Arbeitskopie: `update.sh`
+setzt mit `git reset --hard` auf den Stand der Gegenseite. Lokale Änderungen
+unter `/opt/eventprint` gehen dabei verloren.
+
 ## Einrichten
 
 Beides geschieht in der Oberfläche, wirkt sofort und überlebt einen Neustart.

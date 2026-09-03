@@ -1,9 +1,11 @@
 module github.com/torbenschinke/eventprint
 
-go 1.26.0
+go 1.27.0
 
 require (
+	github.com/worldiety/enum v0.0.0-20250415071812-195794096336
 	github.com/worldiety/option v0.0.0-20251007074526-863facc0bc83
+	github.com/worldiety/speclink v0.0.0-20260831090958-199319ad63d3
 	go.wdy.de/nago v0.0.0-20260825122142-0bc1268bd119
 	gocv.io/x/gocv v0.43.0
 	golang.org/x/image v0.33.0
@@ -23,7 +25,6 @@ require (
 	github.com/tidwall/btree v1.8.1 // indirect
 	github.com/vearutop/statigz v1.5.0 // indirect
 	github.com/wagslane/go-password-validator v0.3.0 // indirect
-	github.com/worldiety/enum v0.0.0-20250415071812-195794096336 // indirect
 	github.com/worldiety/i18n v0.0.0-20260303170444-ecc6fa6bdd7a // indirect
 	github.com/worldiety/material-color-utilities v0.0.0-20250324124753-a84b74640c16 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect

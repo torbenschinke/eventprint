@@ -1,0 +1,38 @@
+[Unit]
+Description=eventprint: Stand aus dem Git-Repository aktualisieren
+Documentation=file:/opt/eventprint/README.md
+After=network-online.target
+Wants=network-online.target
+Before=eventprint.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=eventprint
+Group=eventprint
+WorkingDirectory=/opt/eventprint
+EnvironmentFile=-/etc/default/eventprint
+ExecStart=/opt/eventprint/scripts/update.sh
+
+# Ein Bau auf einem Raspberry Pi dauert. Lieber lange warten als einen halben
+# Stand übernehmen; das Skript räumt selbst auf und endet immer mit Erfolg.
+TimeoutStartSec=3600
+
+# Der Go-Werkzeugkasten braucht einen Zwischenspeicher mit Schreibrecht.
+Environment=HOME=/var/lib/eventprint
+Environment=GOCACHE=/var/lib/eventprint/.cache/go-build
+Environment=GOMODCACHE=/var/lib/eventprint/go/pkg/mod
+Environment=GOTOOLCHAIN=auto
+Environment=PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+StateDirectory=eventprint
+ReadWritePaths=/opt/eventprint
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+
+[Install]
+WantedBy=multi-user.target
