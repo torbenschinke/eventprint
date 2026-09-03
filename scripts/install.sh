@@ -583,6 +583,11 @@ else
     queue_value="${PRINT_QUEUE}"
   fi
 
+  no_ssl_value="true"
+  if [[ ${NO_SSL:-1} -eq 0 ]]; then
+    no_ssl_value="false"
+  fi
+
   cat >/etc/default/eventprint <<EOF
 # Umgebung der eventprint-Dienste. Wird von install.sh angelegt und darf von
 # Hand geändert werden.
@@ -595,6 +600,20 @@ FACECROP=${FACECROP}
 
 # Adresse, auf der die Oberfläche lauscht.
 HOST=0.0.0.0
+
+# Sitzungscookies ohne Secure-Flag ausliefern.
+#
+# Die Fotobox spricht reines HTTP; ein Cookie mit Secure-Flag ist dort gar nicht
+# zustellbar. Browser machen nur für localhost eine Ausnahme - deshalb
+# funktioniert die Anmeldung auf dem Touchscreen, bricht aber sofort ab, wenn
+# jemand die Box zur Fehlersuche über ihre IP-Adresse aufruft.
+#
+# Das Cookie läuft damit im Klartext über das Netz. Neu ist das nicht: Die
+# gesamte Oberfläche tut das ohnehin, weil kein TLS im Spiel ist.
+#
+# Auf 0 setzen, wenn die Fotobox hinter einem HTTPS-Proxy steht. Dann ist das
+# Secure-Flag zustellbar und gehört gesetzt.
+NO_SSL=${no_ssl_value}
 
 # CUPS-Warteschlange. Leer bedeutet Testbetrieb: Die Fotobox nimmt Aufträge an,
 # druckt aber nichts. Ohne diese Zeile lief die Box selbst mit fertig

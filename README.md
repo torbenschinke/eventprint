@@ -206,6 +206,7 @@ steht. Danach hat die Oberfläche Vorrang.
 |---|---|
 | `EVENTPRINT_TITLE` | Überschrift auf dem Startbildschirm |
 | `EVENTPRINT_PRINTER` | CUPS-Warteschlange, z. B. `CZ01` |
+| `NO_SSL` | `true` liefert Sitzungscookies ohne `Secure`-Flag aus |
 | `HOST` | Bind-Adresse. Für Gäste im WLAN `0.0.0.0` |
 | `NAGO_COOKIES_INSECURE` | `true`, solange ohne HTTPS betrieben |
 
@@ -494,6 +495,24 @@ selbst eine Tastatur, ein Gast hat sie also immer in der Hand.
 die *beide* Geräte können. Ein Fernseher mit 4K würde sonst das Layout des
 Touchscreens verschieben und die Bedienflächen unerreichbar machen. Er darf
 beim Hochfahren fehlen und später dazukommen.
+
+### Anmeldung bricht ab, wenn man die Box über ihre IP aufruft
+
+Ein Sitzungscookie mit `Secure`-Flag ist über reines HTTP nicht zustellbar.
+Browser machen für `localhost` eine Ausnahme – deshalb funktioniert die
+Anmeldung auf dem Touchscreen, während sie bei einem Zugriff über
+`http://<ip>:3000` sofort wieder weg ist.
+
+`install.sh` setzt deshalb `NO_SSL=true` in `/etc/default/eventprint`. Das
+Cookie läuft damit im Klartext über das Netz; neu ist das nicht, denn die
+gesamte Oberfläche tut das ohnehin, solange kein TLS im Spiel ist.
+
+Steht die Fotobox hinter einem HTTPS-Proxy, gehört das Flag gesetzt. Dann
+installieren mit:
+
+```bash
+sudo NO_SSL=0 ./scripts/install.sh
+```
 
 ### Wenn der Bildschirm schwarz bleibt
 
