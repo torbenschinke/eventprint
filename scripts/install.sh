@@ -78,6 +78,8 @@ PACKAGES=(
   cups cups-client                # Druckdienst und lp/lpstat/lpadmin
   printer-driver-gutenprint       # Treiber und Backend für den CZ-01
   gphoto2                         # Tethering der Kamera
+  network-manager                 # Funknetz vor Ort wechseln (nmcli)
+  polkitd                         # Freigabe dafuer, siehe deploy/polkit/
 
   # Kioskbetrieb auf dem Touchscreen
   xserver-xorg xinit              # X11; Wayland kann den Fernseher nicht spiegeln
@@ -366,6 +368,27 @@ PRINTER_READY=0
 if setup_printer_queue; then
   PRINTER_READY=1
 fi
+
+# ------------------------------------------------------------------- polkit ---
+# Damit die Fotobox das Funknetz vor Ort wechseln kann.
+#
+# Ohne diese Regel kann der Dienst zwar Netze suchen und den Zustand lesen, aber
+# keine Verbindung aufbauen: NetworkManager laesst Aenderungen nur nach einer
+# polkit-Freigabe zu. Die mitgelieferte Regel von Raspberry Pi OS greift hier
+# nicht, weil sie eine angemeldete lokale Sitzung verlangt - die ein Dienst
+# nicht hat.
+install_polkit_rule() {
+  local dst=/etc/polkit-1/rules.d/50-eventprint-networkmanager.rules
+
+  if [[ ! -d /etc/polkit-1/rules.d ]]; then
+    warn "polkit ist nicht eingerichtet; der Funknetz-Wechsel bleibt gesperrt."
+    return 0
+  fi
+
+  run install -m 0644 "${PREFIX}/deploy/polkit/50-eventprint-networkmanager.rules" "${dst}"
+}
+
+install_polkit_rule
 
 # -------------------------------------------------------------------- Kiosk ---
 # Ein eigenes, eingeschraenktes Konto fuer den Bildschirm vor Ort.

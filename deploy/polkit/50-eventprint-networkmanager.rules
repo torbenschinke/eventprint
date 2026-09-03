@@ -1,0 +1,26 @@
+// Erlaubt dem Dienstnutzer der Fotobox, das Funknetz zu wechseln.
+//
+// Raspberry Pi OS bringt bereits eine Regel mit, die das den Gruppen sudo und
+// netdev gestattet. Sie verlangt aber `subject.local && subject.active`, also
+// eine angemeldete lokale Sitzung. Ein systemd-Dienst hat keine: Er hat weder
+// Sitz noch Sitzung, und `active` ist für ihn immer falsch. Den Dienstnutzer
+// in die Gruppe netdev zu stecken hilft deshalb nicht - ein Irrweg, der beim
+// Suchen naheliegt.
+//
+// Diese Regel prüft deshalb den Benutzernamen und verzichtet auf local/active.
+//
+// Vergeben werden genau die drei Aktionen, die `nmcli device wifi connect`
+// braucht, und keine weitere. Insbesondere NICHT settings.modify.hostname oder
+// enable-disable-network: Wer nur das Funknetz wechseln soll, braucht nicht
+// die Möglichkeit, das Netz ganz abzuschalten.
+polkit.addRule(function (action, subject) {
+    if (subject.user !== "eventprint") {
+        return;
+    }
+
+    if (action.id === "org.freedesktop.NetworkManager.wifi.scan" ||
+        action.id === "org.freedesktop.NetworkManager.network-control" ||
+        action.id === "org.freedesktop.NetworkManager.settings.modify.system") {
+        return polkit.Result.YES;
+    }
+});
