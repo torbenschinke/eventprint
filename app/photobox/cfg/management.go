@@ -331,7 +331,25 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	cfg.NoFooter(pages.Booth, pages.Gallery, pages.Jobs)
 	cfg.BodyFullSize(pages.Booth, pages.Gallery, pages.Jobs)
 
-	cfg.RootViewWithDecoration(pages.Booth, func(wnd core.Window) core.View {
+	// Der Startbildschirm bekommt für Gäste GAR KEINEN Rahmen.
+	//
+	// Die Menüeinträge auf eine Berechtigung zu stellen genügte nicht: Nago
+	// zeichnet die Leiste auch dann, wenn kein einziger Eintrag übrig bleibt.
+	// Übrig blieb ein leerer Balken, der auf 1024x600 Platz kostet und Gäste
+	// zum Suchen einlädt.
+	//
+	// Für die Veranstaltung reicht die Seite selbst: Fotos ansehen, antippen,
+	// drucken. Erst wer sich mit der PIN angemeldet hat, bekommt den Rahmen
+	// mit Menü und Admin-Center.
+	boothDecorated := cfg.DecorateRootView(func(wnd core.Window) core.View {
+		return uiphotobox.PageBooth(wnd, uiOpts)
+	})
+
+	cfg.RootView(pages.Booth, func(wnd core.Window) core.View {
+		if wnd.Subject().HasPermission(PermConfigure) {
+			return boothDecorated(wnd)
+		}
+
 		return uiphotobox.PageBooth(wnd, uiOpts)
 	})
 

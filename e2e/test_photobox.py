@@ -97,7 +97,14 @@ def test_empty_booth_shows_nothing_but_the_booth(page: Page, server: str):
     # sonst läuft der Gast ins Leere.
     expect(page.get_by_text(f"{server}/upload")).to_be_visible()
 
-    # Für Gäste ist nichts davon da.
+    # Kein Rahmen: keine Menüleiste, keine Fußzeile.
+    #
+    # Auf das Element selbst prüfen und nicht auf die Beschriftungen. Genau
+    # dieser Test war zuvor grün, während auf dem Gerät ein leerer Balken
+    # stand: Die Einträge waren weg, die Leiste nicht. Ein Test, der nur die
+    # Texte zählt, sieht das nicht.
+    expect(page.locator("nav")).to_have_count(0)
+
     for label in ["Alle Fotos", "Druckstatus", "Hochladen", "Abmelden", "Anmelden"]:
         expect(page.get_by_text(label, exact=True)).to_have_count(0)
 
@@ -195,7 +202,9 @@ def test_pin_unlocks_the_configuration_on_a_factory_new_box(page: Page, server: 
     # Wer die PIN vergeben hat, ist damit Betreuer.
     expect(page.get_by_text("PIN festlegen")).to_have_count(0, timeout=30_000)
 
-    # Jetzt erscheint die Menüleiste der Betreuung.
+    # Jetzt erscheint der Rahmen mit der Menüleiste der Betreuung.
+    expect(page.locator("nav")).not_to_have_count(0, timeout=30_000)
+
     for label in ["Alle Fotos", "Druckstatus", "Abmelden"]:
         expect(page.get_by_text(label, exact=True).first).to_be_visible(timeout=30_000)
 
