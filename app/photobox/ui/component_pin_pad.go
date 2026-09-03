@@ -81,10 +81,7 @@ func (p pinPad) setupMode() bool {
 // View liefert den Dialog. Er rendert nur, solange er geöffnet ist, und gehört
 // unverändert in jede Seite, die den Zugang anbieten soll.
 func (p pinPad) View() core.View {
-	if !p.presented.Get() {
-		return nil
-	}
-
+	// Ohne eigene Abfrage auf presented: alert.TDialog.Render prueft das selbst.
 	title := "PIN eingeben"
 	if p.setupMode() {
 		title = "PIN festlegen"

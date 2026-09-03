@@ -9,6 +9,7 @@ import (
 	"go.wdy.de/nago/presentation/core"
 	"go.wdy.de/nago/presentation/ui"
 	"go.wdy.de/nago/presentation/ui/alert"
+	"go.wdy.de/nago/presentation/ui/progress"
 
 	"github.com/torbenschinke/eventprint/app/wifi"
 )
@@ -249,10 +250,9 @@ func (m *model) choose(n wifi.Network) {
 
 // passwordDialog fragt das WPA-Kennwort ab.
 func (m *model) passwordDialog() core.View {
-	if !m.askPass.Get() {
-		return nil
-	}
-
+	// Bewusst ohne eigene Abfrage auf askPass: alert.TDialog.Render prueft das
+	// selbst und liefert dann nil. Wer den Dialog stattdessen aus dem Baum
+	// nimmt, nimmt den Knoepfen ihre Verankerung.
 	body := ui.VStack(
 		ui.Text(fmt.Sprintf("Kennwort für %s", m.selected.Get())).Font(ui.BodyMedium),
 
@@ -264,7 +264,14 @@ func (m *model) passwordDialog() core.View {
 			ID("wifi-password").
 			FullWidth(),
 
-		m.connectError(),
+		m.connectStatus(),
+
+		// Der Hinweis gehört hierher, weil die Folge sonst wie ein Fehler
+		// aussieht: Wer die Fotobox über das Netz bedient, verliert beim
+		// Wechsel des Funknetzes genau die Verbindung, über die er gerade
+		// klickt. Die Oberfläche friert dann ein, obwohl alles geklappt hat.
+		ui.Text("Wird die Fotobox über das Netz bedient, bricht dabei die Verbindung zu dieser Seite ab. Das ist normal.").
+			Font(ui.BodySmall),
 	).Gap(ui.L12).Alignment(ui.Leading).Frame(ui.Frame{}.FullWidth())
 
 	return alert.Dialog(
@@ -284,7 +291,21 @@ func (m *model) passwordDialog() core.View {
 	)
 }
 
-func (m *model) connectError() core.View {
+// connectStatus zeigt, woran der Verbindungsaufbau gerade ist.
+//
+// Ohne diese Anzeige war der Bestätigen-Knopf bis zu 45 Sekunden lang ohne
+// jede sichtbare Wirkung: Der Aufbau läuft nebenläufig, der Dialog blieb
+// unverändert stehen, und ein zweiter Klick lief in die Sperre gegen
+// Doppelaufrufe. Von außen sah das aus wie ein toter Knopf.
+func (m *model) connectStatus() core.View {
+	if m.connecting.Get() {
+		return ui.VStack(
+			progress.LinearProgress().Frame(ui.Frame{}.FullWidth()),
+			ui.Text("Verbindung wird hergestellt. Das dauert einige Sekunden.").
+				Font(ui.BodySmall),
+		).Gap(ui.L4).Alignment(ui.Leading).Frame(ui.Frame{}.FullWidth())
+	}
+
 	msg := m.connErr.Get()
 	if msg == "" {
 		return nil
