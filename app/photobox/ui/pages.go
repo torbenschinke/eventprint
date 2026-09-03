@@ -25,6 +25,9 @@ type Pages struct {
 
 	// Jobs zeigt den Status aller Druckaufträge.
 	Jobs core.NavigationPath
+
+	// WiFi ist die Einrichtung der Funkverbindung.
+	WiFi core.NavigationPath
 }
 
 // Options bündelt alles, was die Seiten zur Arbeit brauchen.

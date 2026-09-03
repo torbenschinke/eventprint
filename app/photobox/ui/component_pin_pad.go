@@ -19,11 +19,15 @@ type PinAccess struct {
 	// steht das Gerät fabrikneu da und das Tastenfeld vergibt sie.
 	Configured func() bool
 
-	// Verify prüft eine eingegebene PIN und schaltet die Sitzung frei.
-	Verify func(sessionID string, pin string) error
+	// Verify prüft eine eingegebene PIN und meldet die Sitzung als Betreuer an.
+	//
+	// Das Fenster statt nur der Sitzungskennung, weil die Anmeldung im
+	// laufenden Fenster sofort wirken muss: Ohne das hätte die Seite die neuen
+	// Rechte erst nach einem Neuladen.
+	Verify func(wnd core.Window, pin string) error
 
-	// Configure legt eine neue PIN fest.
-	Configure func(sessionID string, pin string) error
+	// Configure legt eine neue PIN fest und meldet die Sitzung an.
+	Configure func(wnd core.Window, pin string) error
 
 	// Tap zählt eine Berührung des QR-Codes und meldet, ob das Tor aufgeht.
 	Tap func(sessionID string) bool
@@ -72,11 +76,6 @@ func (p pinPad) Open() {
 	p.presented.Set(true)
 }
 
-// sessionID ist der Schlüssel, unter dem die Freischaltung geführt wird.
-func (p pinPad) sessionID() string {
-	return string(p.wnd.Session().ID())
-}
-
 // setupMode meldet, ob gerade eine PIN vergeben statt geprüft wird.
 func (p pinPad) setupMode() bool {
 	return p.access.Configured == nil || !p.access.Configured()
@@ -94,11 +93,17 @@ func (p pinPad) View() core.View {
 		title = "PIN festlegen"
 	}
 
+	// Breite ausdruecklich gesetzt statt einer der Groessenstufen.
+	//
+	// Der Touchscreen der Fotobox misst 1024x600. Der Dialog war zuvor auf
+	// 320 Punkte eingeschnuert, das Tastenfeld passte nicht hinein und liess
+	// sich nur durch Scrollen erreichen - bei einer PIN-Eingabe die denkbar
+	// schlechteste Bedienung.
 	return alert.Dialog(
 		title,
 		p.body(),
 		p.presented,
-		alert.Large(),
+		alert.Width(ui.L480),
 		alert.Cancel(nil),
 	)
 }
@@ -114,18 +119,18 @@ func (p pinPad) body() core.View {
 		p.errorText(),
 		p.keys(),
 	).
-		Gap(ui.L16).
+		Gap(ui.L12).
 		Alignment(ui.Center).
-		Frame(ui.Frame{Width: ui.L320})
+		Frame(ui.Frame{}.FullWidth())
 }
 
 func (p pinPad) explanation() string {
 	if !p.setupMode() {
-		return "Bitte die sechsstellige Betreuer-PIN eingeben."
+		return "Betreuer-PIN eingeben."
 	}
 
 	if p.entered.Get() == "" || len(p.entered.Get()) < pinLength {
-		return "Diese Fotobox hat noch keine PIN. Bitte eine sechsstellige PIN vergeben und gut merken."
+		return "Noch keine PIN vergeben. Bitte sechs Ziffern wählen und merken."
 	}
 
 	return "Zur Sicherheit noch einmal dieselbe PIN eingeben."
@@ -228,9 +233,12 @@ func (p pinPad) actionKey(label string, action func()) core.View {
 
 // key ist die gemeinsame Fläche aller Tasten.
 //
-// 80 Punkte Kantenlänge: Kleinere Flächen trifft ein Finger auf einem
-// Touchscreen nicht zuverlässig, und ein Vertipper kostet hier einen
-// Fehlversuch.
+// 64 Punkte Kantenlänge.
+//
+// Ein Kompromiss gegen die Bildschirmhöhe: Vier Reihen zu 80 Punkten passen
+// samt Titel und Erklärung nicht in die 600 Punkte des Touchscreens, und der
+// Dialog begänne zu scrollen. 64 Punkte sind rund 17 Millimeter und damit
+// immer noch deutlich über dem, was ein Finger sicher trifft.
 func (p pinPad) key(label string, action func()) core.View {
 	return ui.VStack(
 		ui.Text(label).Font(ui.TitleLarge),
@@ -238,7 +246,7 @@ func (p pinPad) key(label string, action func()) core.View {
 		BackgroundColor(ui.M4).
 		Action(action).
 		Border(ui.Border{}.Radius(ui.L12)).
-		Frame(ui.Frame{}.Size(ui.L80, ui.L80))
+		Frame(ui.Frame{}.Size(ui.L64, ui.L64))
 }
 
 // complete wertet eine vollständige Eingabe aus.
@@ -248,7 +256,7 @@ func (p pinPad) complete() {
 		return
 	}
 
-	if err := p.access.Verify(p.sessionID(), p.entered.Get()); err != nil {
+	if err := p.access.Verify(p.wnd, p.entered.Get()); err != nil {
 		p.entered.Set("")
 		p.message.Set(pinErrorText(err))
 
@@ -276,7 +284,7 @@ func (p pinPad) completeSetup() {
 		return
 	}
 
-	if err := p.access.Configure(p.sessionID(), p.entered.Get()); err != nil {
+	if err := p.access.Configure(p.wnd, p.entered.Get()); err != nil {
 		p.entered.Set("")
 		p.repeat.Set("")
 		p.message.Set(pinErrorText(err))

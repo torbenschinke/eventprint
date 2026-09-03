@@ -54,13 +54,26 @@ func main() {
 		opts := cfgphotobox.OptionsFromEnv()
 		photobox := std.Must(cfgphotobox.Enable(cfg, opts))
 
+		// Die Menueleiste gehoert dem Betreuer, nicht den Gaesten.
+		//
+		// Fuer die Veranstaltung reicht der Startbildschirm: Fotos ansehen,
+		// antippen, drucken. Alles andere - Historie, Druckstatus - ist
+		// Betreuung und hat auf einem 1024x600-Bildschirm nichts verloren, den
+		// den ganzen Abend Gaeste bedienen. Jeder Eintrag verlangt deshalb
+		// PermConfigure und erscheint erst nach der PIN.
+		//
+		// Login(false): Auf dem Touchscreen gibt es keine Tastatur, mit der
+		// jemand Mail und Passwort eingeben koennte. Der Weg hinein ist die PIN
+		// - fuenfmal auf den QR-Code. Vom Smartphone aus bleibt die uebliche
+		// Anmeldung unter /account/login erreichbar.
 		cfg.SetDecorator(cfg.NewScaffold().
-			Login(true).
+			Login(false).
 			Logo(ui.Image().Embed(icons.Camera).Frame(ui.Frame{}.Size(ui.L48, ui.L48))).
-			MenuEntry().Title("Fotobox").Icon(icons.Photo).Forward(photobox.Pages.Booth).Public().
-			MenuEntry().Title("Alle Fotos").Icon(icons.RectangleStack).Forward(photobox.Pages.Gallery).Public().
-			MenuEntry().Title("Druckstatus").Icon(icons.Printer).Forward(photobox.Pages.Jobs).Public().
-			MenuEntry().Title("Hochladen").Icon(icons.QrCode).Forward(photobox.Pages.Upload).Public().
+			MenuEntry().Title("Fotobox").Icon(icons.Photo).Forward(photobox.Pages.Booth).OneOf(cfgphotobox.PermConfigure).
+			MenuEntry().Title("Alle Fotos").Icon(icons.RectangleStack).Forward(photobox.Pages.Gallery).OneOf(cfgphotobox.PermConfigure).
+			MenuEntry().Title("Druckstatus").Icon(icons.Printer).Forward(photobox.Pages.Jobs).OneOf(cfgphotobox.PermConfigure).
+			MenuEntry().Title("Hochladen").Icon(icons.QrCode).Forward(photobox.Pages.Upload).OneOf(cfgphotobox.PermConfigure).
+			MenuEntry().Title("Abmelden").Icon(icons.LockClosed).Action(photobox.LockSession).OneOf(cfgphotobox.PermConfigure).
 			Breakpoint(1000).
 			Decorator())
 	}).Run()

@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 16 | 100% |
-| Normative requirements covered | 16 | 100% |
-| … claimed by a test | 16 | 100% |
-| … demonstrated by a run | 16 | 100% |
-| … read by a person | 16 | 0% |
+| Source segments accounted for | 20 | 100% |
+| Normative requirements covered | 20 | 100% |
+| … claimed by a test | 20 | 100% |
+| … demonstrated by a run | 20 | 100% |
+| … read by a person | 20 | 0% |
 
 ## Gaps
 
@@ -49,6 +49,10 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 - R-FOTO-HISTORIE
 - R-FOTO-IMPORT
 - R-FOTO-LOESCHEN
+- R-NETZ-BETREUUNG
+- R-NETZ-SUCHE
+- R-NETZ-VERBINDEN
+- R-NETZ-ZUSTAND
 - R-UPLOAD-ABHOLUNG
 - R-UPLOAD-BESTAETIGUNG
 - R-UPLOAD-BILD
@@ -60,9 +64,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 16 |  |
-| … a test claims | 16 | 100% |
-| … a run demonstrated | 16 | 100% |
+| Normative requirements | 20 |  |
+| … a test claims | 20 | 100% |
+| … a run demonstrated | 20 | 100% |
 
 ### How much of the code a run went through
 
@@ -75,6 +79,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | `requirements/_sources/druck.md` | markdown | 6 | 6 | 0 | 0 |
 | `requirements/_sources/entscheidungen.md` | markdown | 1 | 1 | 0 | 0 |
 | `requirements/_sources/foto.md` | markdown | 5 | 5 | 0 | 0 |
+| `requirements/_sources/netz.md` | markdown | 4 | 4 | 0 | 0 |
 | `requirements/_sources/upload.md` | markdown | 4 | 4 | 0 | 0 |
 
 ## Themes
@@ -155,20 +160,22 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-19 packages in 5 bounded contexts, and 35 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+22 packages in 6 bounded contexts, and 40 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
-4 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
+5 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
 _No diagram is included in this document. Pass -figures to speclink generate, after rendering the sources written by speclink diagrams._
 
 ### Where one context reaches into another
 
-15 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
+17 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
 
 | From | To |
 |---|---|
 | `app/photobox/cfg` | `app/photo` |
 | `app/photobox/cfg` | `app/printing` |
+| `app/photobox/cfg` | `app/wifi` |
+| `app/photobox/cfg` | `app/wifi/ui` |
 | `app/photobox/cfg/camera` | `app/photo` |
 | `app/photobox/cfg/camera` | `app/printing` |
 | `app/photobox/cfg/remote` | `app/photo` |
@@ -185,7 +192,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-35 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+41 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/photo
 
@@ -273,7 +280,7 @@ _aggregate_ — `app/photo/model.go:57`
 <a id="req-code-de-torbenschinke-eventprint-booth-configure"></a>
 #### de.torbenschinke.eventprint.booth.configure
 
-_permission_ — `app/photobox/cfg/pin_subject.go:27`
+_permission_ — `app/photobox/cfg/perm_configure.go:20`
 
 ### app/printing
 
@@ -406,6 +413,44 @@ _permission_ — `app/upld/perm.go:24`
 
 _permission_ — `app/upld/perm.go:17`
 
+### app/wifi
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-wifi-connect"></a>
+#### Connect
+
+_use case_ — `app/wifi/uc_connect.go:15`
+
+**Answers to** [R-NETZ-BETREUUNG](#req-R-NETZ-BETREUUNG), [R-NETZ-VERBINDEN](#req-R-NETZ-VERBINDEN)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-wifi-current"></a>
+#### Current
+
+_query_ — `app/wifi/uc_current.go:11`
+
+**Answers to** [R-NETZ-BETREUUNG](#req-R-NETZ-BETREUUNG), [R-NETZ-ZUSTAND](#req-R-NETZ-ZUSTAND)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-wifi-scan"></a>
+#### Scan
+
+_query_ — `app/wifi/uc_scan.go:13`
+
+**Answers to** [R-NETZ-BETREUUNG](#req-R-NETZ-BETREUUNG), [R-NETZ-SUCHE](#req-R-NETZ-SUCHE)
+
+<a id="req-code-de-torbenschinke-eventprint-wifi-connect"></a>
+#### de.torbenschinke.eventprint.wifi.connect
+
+_permission_ — `app/wifi/perm.go:33`
+
+<a id="req-code-de-torbenschinke-eventprint-wifi-scan"></a>
+#### de.torbenschinke.eventprint.wifi.scan
+
+_permission_ — `app/wifi/perm.go:19`
+
+<a id="req-code-de-torbenschinke-eventprint-wifi-status"></a>
+#### de.torbenschinke.eventprint.wifi.status
+
+_permission_ — `app/wifi/perm.go:26`
+
 ## The boundary
 
 _No topology is declared, so what this system talks to is stated nowhere._
@@ -478,6 +523,10 @@ Every requirement that was read, and how far each one has got. A mark states wha
 | [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-IMPORT](#req-R-FOTO-IMPORT) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-LOESCHEN](#req-R-FOTO-LOESCHEN) | functional | business | normative | yes | yes | yes | no |
+| [R-NETZ-BETREUUNG](#req-R-NETZ-BETREUUNG) | functional | mixed | normative | yes | yes | yes | no |
+| [R-NETZ-SUCHE](#req-R-NETZ-SUCHE) | functional | mixed | normative | yes | yes | yes | no |
+| [R-NETZ-VERBINDEN](#req-R-NETZ-VERBINDEN) | functional | mixed | normative | yes | yes | yes | no |
+| [R-NETZ-ZUSTAND](#req-R-NETZ-ZUSTAND) | functional | mixed | normative | yes | yes | yes | no |
 | [R-UPLOAD-ABHOLUNG](#req-R-UPLOAD-ABHOLUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-BILD](#req-R-UPLOAD-BILD) | functional | business | normative | yes | yes | yes | no |
@@ -688,6 +737,56 @@ _functional, business, normative._
   - `github.com/torbenschinke/eventprint/app/photo.Delete`
 - **Demonstrated by** TestDeleteRemovesPhotoFromHistory
 
+<a id="req-R-NETZ-BETREUUNG"></a>
+### R-NETZ-BETREUUNG — Funknetz nur durch die Betreuung wechseln
+
+Das Suchen, Anzeigen und Wechseln des Funknetzes MUSS der Betreuung vorbehalten sein.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/netz.md#nur-für-die-betreuung
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/wifi.Connect`
+  - `github.com/torbenschinke/eventprint/app/wifi.Current`
+  - `github.com/torbenschinke/eventprint/app/wifi.Scan`
+- **Demonstrated by** TestGuestMayNotChangeTheNetwork
+
+<a id="req-R-NETZ-SUCHE"></a>
+### R-NETZ-SUCHE — Verfügbare Funknetze auflisten
+
+Die verfügbaren Funknetze MÜSSEN sich auflisten lassen. Ein Funknetz MUSS genau einmal erscheinen, auch wenn es über mehrere Zugangspunkte oder Frequenzbänder empfangen wird.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/netz.md#netze-finden
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/wifi.Scan`
+- **Demonstrated by** TestOneNetworkAppearsOnce
+
+<a id="req-R-NETZ-VERBINDEN"></a>
+### R-NETZ-VERBINDEN — Mit einem Funknetz verbinden
+
+Die Fotobox MUSS sich über die Oberfläche mit einem gewählten Funknetz verbinden lassen. Das Kennwort eines gesicherten Netzes MUSS verdeckt abgefragt werden, und ein abgelehntes Kennwort MUSS sich von einer sonst gescheiterten Verbindung unterscheiden lassen.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/netz.md#verbindung-herstellen
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/wifi.Connect`
+- **Demonstrated by** TestWrongPasswordIsToldApartFromOtherFailures
+
+<a id="req-R-NETZ-ZUSTAND"></a>
+### R-NETZ-ZUSTAND — Bestehende Funkverbindung erkennen
+
+Die Oberfläche MUSS zeigen, mit welchem Funknetz die Fotobox verbunden ist und wie gut der Empfang ist.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/netz.md#verbindung-erkennen
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/wifi.Current`
+- **Demonstrated by** TestStatusJoinsDeviceAndSignal
+
 <a id="req-R-UPLOAD-ABHOLUNG"></a>
 ### R-UPLOAD-ABHOLUNG — Wartende Aufträge abholen
 
@@ -773,6 +872,16 @@ What people wrote, and what became of each part of it.
 | Einzelnes Bild | R-FOTO-EINZELBILD |
 | Bilder entfernen | R-FOTO-LOESCHEN |
 | Vorlage für den Druck | R-FOTO-DRUCKVORLAGE |
+
+### requirements/\_sources/netz.md
+
+| section | became |
+|---|---|
+| Funkverbindung | _nothing, and says so_ |
+| Verbindung erkennen | R-NETZ-ZUSTAND |
+| Netze finden | R-NETZ-SUCHE |
+| Verbindung herstellen | R-NETZ-VERBINDEN |
+| Nur für die Betreuung | R-NETZ-BETREUUNG |
 
 ### requirements/\_sources/upload.md
 

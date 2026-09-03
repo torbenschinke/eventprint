@@ -61,29 +61,32 @@ def choose_template_and_print(page: Page, template: str) -> None:
 
 
 def login_as_operator(page: Page, base_url: str) -> None:
-    """Meldet den Bootstrap-Administrator an.
+    """Meldet den Bootstrap-Administrator über das Formular an.
 
-    Er trägt die Rolle "Fotobox-Betreuer" und darf damit einrichten. Ohne
-    diese Rolle zeigte die Anwendung nach dem Anmelden auf jeder Seite
-    "Zugriff verweigert", weil Nago dem Bootstrap-Konto bewusst nur
-    nago.*-Berechtigungen gibt.
+    Die Anmeldung ist auf dem Touchscreen bewusst nicht mehr im Menü: Dort gibt
+    es keine Tastatur, der Weg hinein ist die PIN. Vom Smartphone aus bleibt
+    das Formular unter /account/login erreichbar, und genau das prüft dieser
+    Weg.
     """
-    page.goto(base_url)
-    page.get_by_text("Anmelden").first.click()
+    page.goto(f"{base_url}/account/login")
 
     page.locator("input").nth(0).fill(ADMIN_MAIL)
     page.locator("input").nth(1).fill(ADMIN_PASSWORD)
     page.get_by_role("button", name="Anmelden").last.click()
 
-    # Nach erfolgreicher Anmeldung verschwindet der Anmelden-Eintrag.
-    expect(page.get_by_text("Anmelden")).to_have_count(0, timeout=30_000)
+    # Nach erfolgreicher Anmeldung erscheint die Menüleiste der Betreuung.
+    expect(page.get_by_text("Druckstatus").first).to_be_visible(timeout=30_000)
 
 
-def test_empty_booth_renders_and_every_page_is_reachable(page: Page, server: str):
-    """Die leere Fotobox: Startbildschirm, Menü, Hinweise im Testbetrieb.
+def test_empty_booth_shows_nothing_but_the_booth(page: Page, server: str):
+    """Die leere Fotobox: Startbildschirm, sonst nichts.
 
     Der wichtigste Test überhaupt, denn er beantwortet die Frage, ob die
     Oberfläche beim Aufbau erscheint. Alles Weitere setzt das voraus.
+
+    Dazu die Gegenprobe, dass ein Gast nichts weiter sieht: Der Touchscreen
+    misst 1024x600 und steht den Abend über zwischen Gästen. Menüleiste,
+    Anmeldung und Fußzeile wären dort nur Angebote, sich zu verlaufen.
     """
     page.goto(server)
 
@@ -94,19 +97,17 @@ def test_empty_booth_renders_and_every_page_is_reachable(page: Page, server: str
     # sonst läuft der Gast ins Leere.
     expect(page.get_by_text(f"{server}/upload")).to_be_visible()
 
-    # Die Menüeinträge des Scaffolds sind keine <a>-Elemente, sondern
-    # klickbare Container – daher über den Text ansteuern.
-    for label, marker in [
-        ("Alle Fotos", "Noch keine Fotos"),
-        ("Druckstatus", "Keine Druckaufträge"),
-    ]:
-        page.get_by_text(label, exact=True).first.click()
-        expect(page.get_by_text(marker).first).to_be_visible(timeout=30_000)
+    # Für Gäste ist nichts davon da.
+    for label in ["Alle Fotos", "Druckstatus", "Hochladen", "Abmelden", "Anmelden"]:
+        expect(page.get_by_text(label, exact=True)).to_have_count(0)
 
-    # Der Testlauf startet ohne EVENTPRINT_PRINTER. Wer die Fotobox so
-    # aufbaut, soll den Grund sofort sehen statt ihn beim Drucker zu suchen.
-    expect(page.get_by_text("Es ist kein Drucker eingerichtet")).to_be_visible()
-    # Gäste sollen die Einrichtung nicht angeboten bekommen.
+    # Die Fußzeile mit Impressum und Nutzungsbedingungen kostet auf 600 Punkten
+    # Höhe nur Platz und richtet sich an niemanden, der hier steht.
+    expect(page.get_by_text("Impressum")).to_have_count(0)
+
+    # Die Seiten selbst bleiben erreichbar, nur eben nicht über ein Menü.
+    page.goto(f"{server}/print/status")
+    expect(page.get_by_text("Es ist kein Drucker eingerichtet")).to_be_visible(timeout=30_000)
     expect(page.get_by_text("Zum Einrichten als Betreuer anmelden.")).to_be_visible()
 
 
@@ -184,20 +185,50 @@ def test_pin_unlocks_the_configuration_on_a_factory_new_box(page: Page, server: 
     # Die fünfte öffnet das Tastenfeld im Vergabemodus.
     tap_qr_code(page, 1)
     expect(page.get_by_text("PIN festlegen")).to_be_visible(timeout=30_000)
-    expect(page.get_by_text("Diese Fotobox hat noch keine PIN.")).to_be_visible()
+    expect(page.get_by_text("Noch keine PIN vergeben.")).to_be_visible()
 
     # Zweimal dieselbe PIN, sonst wäre ein Vertipper nicht zu bemerken.
     enter_pin(page, pin)
-    expect(page.get_by_text("Zur Sicherheit noch einmal dieselbe PIN eingeben.")).to_be_visible()
+    expect(page.get_by_text("Zur Sicherheit noch einmal dieselbe PIN eingeben.")).to_be_visible(timeout=30_000)
     enter_pin(page, pin)
 
     # Wer die PIN vergeben hat, ist damit Betreuer.
     expect(page.get_by_text("PIN festlegen")).to_have_count(0, timeout=30_000)
 
-    # Der Nachweis: Die Einrichtung ist offen, und zwar nach einem echten
-    # Seitenwechsel. Ohne den Beobachter in Enable() wäre sie hier wieder zu.
+    # Jetzt erscheint die Menüleiste der Betreuung.
+    for label in ["Alle Fotos", "Druckstatus", "Abmelden"]:
+        expect(page.get_by_text(label, exact=True).first).to_be_visible(timeout=30_000)
+
+    # Und die Einrichtung ist offen, auch nach einem echten Seitenwechsel.
     page.goto(f"{server}/print/status")
     expect(page.get_by_role("button", name="Drucker einrichten")).to_be_visible(timeout=30_000)
+
+    # Der eigentliche Nachweis: Die PIN meldet in ein echtes Konto an.
+    #
+    # Nagos Einstellungsseiten prüfen ihre eigenen Berechtigungen
+    # (nago.settings.global.*), nicht die dieser Anwendung. Mit einem
+    # selbstgebauten Subject öffnete sich die Seite zwar, aber das Speichern
+    # scheiterte an einer Rechteverletzung – die Fotobox liess sich nicht
+    # einrichten, obwohl die PIN stimmte.
+    neuer_titel = "Sommerfest 2026"
+
+    page.goto(server)
+    page.get_by_role("button", name="Öffentliche Adresse setzen").click()
+    expect(page.get_by_label("Titel der Veranstaltung")).to_be_visible(timeout=30_000)
+
+    page.get_by_label("Titel der Veranstaltung").fill(neuer_titel)
+    page.get_by_role("button", name="Speichern").click()
+
+    expect(page.get_by_text("Zugriff verweigert")).to_have_count(0, timeout=30_000)
+
+    # Gespeichert ist erst, was auch ankommt.
+    page.goto(server)
+    expect(page.get_by_text(neuer_titel)).to_be_visible(timeout=30_000)
+
+    # Abmelden nimmt die Rechte wieder.
+    page.goto(server)
+    page.get_by_text("Abmelden", exact=True).first.click()
+    expect(page.get_by_text("Druckstatus", exact=True)).to_have_count(0, timeout=30_000)
 
 
 def test_operator_keeps_access_after_login(page: Page, server: str):

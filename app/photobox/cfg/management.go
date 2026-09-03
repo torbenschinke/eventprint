@@ -32,6 +32,8 @@ import (
 	"github.com/torbenschinke/eventprint/app/photobox/cfg/remote"
 	uiphotobox "github.com/torbenschinke/eventprint/app/photobox/ui"
 	"github.com/torbenschinke/eventprint/app/printing"
+	"github.com/torbenschinke/eventprint/app/wifi"
+	uiwifi "github.com/torbenschinke/eventprint/app/wifi/ui"
 	"github.com/torbenschinke/eventprint/pkg/facecrop"
 )
 
@@ -83,6 +85,14 @@ type Management struct {
 	Photos   photo.UseCases
 	Printing printing.UseCases
 	Pages    uiphotobox.Pages
+
+	// LockSession meldet den Betreuer wieder ab.
+	//
+	// Ohne diesen Weg bliebe er bis zum Ablauf der Freischaltung angemeldet,
+	// und wer die Fotobox danach bedient, haette dessen Rechte. Auf einem
+	// Geraet, das unbeaufsichtigt herumsteht, muss das Abmelden ein Handgriff
+	// sein.
+	LockSession func(wnd core.Window)
 }
 
 // Enable installiert die Fotobox in der übergebenen Konfiguration.
@@ -107,6 +117,16 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	}
 
 	settingsMgmt, err := cfg.SettingsManagement()
+	if err != nil {
+		return Management{}, err
+	}
+
+	users, err := cfg.UserManagement()
+	if err != nil {
+		return Management{}, err
+	}
+
+	sessions, err := cfg.SessionManagement()
 	if err != nil {
 		return Management{}, err
 	}
@@ -186,6 +206,7 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		Upload:  "upload",
 		Gallery: "gallery",
 		Jobs:    "print/status",
+		WiFi:    "settings/wifi",
 	}
 
 	// Freischaltungen und Berührungszähler leben nur im Speicher. Ein Neustart
@@ -193,6 +214,11 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	// Richtung, denn danach weiß niemand mehr, wer vor dem Bildschirm steht.
 	pinLock := NewPinLock()
 	tapGates := newTapGates()
+
+	operatorUID, err := ensureOperatorUser(users)
+	if err != nil {
+		return Management{}, err
+	}
 
 	loadPin := func() PinHash {
 		return loadBoothSettings().Pin()
@@ -202,15 +228,33 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		return settingsMgmt.UseCases.StoreGlobal(user.SU(), loadBoothSettings().WithPin(h))
 	}
 
-	// Nago baut das Subject bei jedem neuen Fenster aus der Sitzung neu auf und
-	// setzt es dabei auf den Gast zurück. Ohne diesen Beobachter wäre der
-	// Betreuer nach jedem Seitenwechsel wieder abgemeldet. Er wird nach der
-	// Sitzungsverwaltung registriert und gewinnt deshalb.
-	cfg.AddOnWindowCreatedObserver(func(wnd core.Window) {
-		if pinLock.Unlocked(string(wnd.Session().ID())) {
-			wnd.UpdateSubject(newUnlockedSubject(wnd.Subject()))
+	// Ein eigener Beobachter ist nicht mehr nötig: Nago stellt die Sitzung bei
+	// jedem neuen Fenster selbst wieder her, weil die Anmeldung im
+	// Sitzungsspeicher steht und nicht bloß im Arbeitsspeicher dieser
+	// Anwendung.
+
+	// signIn meldet die Sitzung als Betreuer an.
+	//
+	// Beide Schritte sind nötig: LoginUser schreibt die Anmeldung in die
+	// Sitzung und überlebt damit einen Seitenwechsel; UpdateSubject wirkt
+	// sofort im laufenden Fenster, ohne das die Seite erst nach einem Neuladen
+	// die neuen Rechte hätte.
+	signIn := func(wnd core.Window) error {
+		if err := sessions.UseCases.LoginUser(wnd.Session().ID(), operatorUID); err != nil {
+			return fmt.Errorf("cannot sign in the operator: %w", err)
 		}
-	})
+
+		optSubject, err := users.UseCases.SubjectFromUser(user.SU(), operatorUID)
+		if err != nil {
+			return fmt.Errorf("cannot build the operator subject: %w", err)
+		}
+
+		if optSubject.IsSome() {
+			wnd.UpdateSubject(optSubject.Unwrap())
+		}
+
+		return nil
+	}
 
 	uiOpts := uiphotobox.Options{
 		Pages:      pages,
@@ -235,16 +279,25 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 			Configured: func() bool {
 				return loadPin().Configured()
 			},
-			Verify: func(sessionID string, pin string) error {
-				return pinLock.Verify(sessionID, pin, loadPin())
+			Verify: func(wnd core.Window, pin string) error {
+				if err := pinLock.Verify(string(wnd.Session().ID()), pin, loadPin()); err != nil {
+					return err
+				}
+
+				return signIn(wnd)
 			},
-			Configure: func(sessionID string, pin string) error {
-				next, err := pinLock.Configure(sessionID, pin, loadPin())
+			Configure: func(wnd core.Window, pin string) error {
+				next, err := pinLock.Configure(string(wnd.Session().ID()), pin, loadPin())
 				if err != nil {
 					return err
 				}
 
-				return storePin(next)
+				if err := storePin(next); err != nil {
+					return err
+				}
+
+				// Wer die PIN gerade vergeben hat, ist damit angemeldet.
+				return signIn(wnd)
 			},
 			Tap: func(sessionID string) bool {
 				return tapGates.Tap(sessionID)
@@ -266,12 +319,46 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		},
 	}
 
+	// Der Touchscreen der Fotobox misst 1024x600. Auf so wenig Hoehe ist jede
+	// Zeile, die nicht zur Sache gehoert, verlorener Platz: Der Fusszeile mit
+	// Impressum und Nutzungsbedingungen steht auf einem Geraet, das den Abend
+	// ueber Fotos zeigt, niemand gegenueber. Sie bleibt auf der Upload-Seite,
+	// denn die laeuft auf dem Smartphone eines Gastes.
+	//
+	// BodyFullSize dazu: Nago begrenzt den Inhalt sonst auf eine lesbare
+	// Spaltenbreite. Das ist bei Fliesstext richtig und bei einem Bilderraster
+	// auf einem kleinen Bildschirm verschenkte Flaeche.
+	cfg.NoFooter(pages.Booth, pages.Gallery, pages.Jobs)
+	cfg.BodyFullSize(pages.Booth, pages.Gallery, pages.Jobs)
+
 	cfg.RootViewWithDecoration(pages.Booth, func(wnd core.Window) core.View {
 		return uiphotobox.PageBooth(wnd, uiOpts)
 	})
 
 	cfg.RootViewWithDecoration(pages.Gallery, func(wnd core.Window) core.View {
 		return uiphotobox.PageGallery(wnd, uiOpts)
+	})
+
+	wifiUseCases := wifi.NewUseCases()
+
+	cfg.RootViewWithDecoration(pages.WiFi, func(wnd core.Window) core.View {
+		return uiwifi.PageWiFi(wnd, uiwifi.Options{WiFi: wifiUseCases})
+	})
+
+	// Die Karte erscheint im Admin-Center nur fuer Traeger der Berechtigung,
+	// also nach der PIN. Nago blendet sie sonst selbst aus.
+	cfg.AddAdminCenterGroup(func(subject auth.Subject) admin.Group {
+		return admin.Group{
+			Title: "Fotobox",
+			Entries: []admin.Card{
+				{
+					Title:      "Funkverbindung",
+					Text:       "Das Funknetz vor Ort auswaehlen und die Fotobox damit verbinden.",
+					Target:     pages.WiFi,
+					Permission: wifi.PermConnect,
+				},
+			},
+		}
 	})
 
 	cfg.RootViewWithDecoration(pages.Jobs, func(wnd core.Window) core.View {
@@ -322,6 +409,18 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		Photos:   photos,
 		Printing: prints,
 		Pages:    pages,
+		LockSession: func(wnd core.Window) {
+			pinLock.Lock(string(wnd.Session().ID()))
+
+			// Logout raeumt die Anmeldung aus der Sitzung und setzt das Fenster
+			// auf den Gast zurueck. Ohne das behielte die naechste Seite die
+			// Betreuerrechte.
+			if err := wnd.Logout(); err != nil {
+				slog.Error("cannot sign out the operator", "err", err)
+			}
+
+			wnd.Navigation().ForwardTo(pages.Booth, nil)
+		},
 	}
 
 	cfg.AddContextValue(core.ContextValue("eventprint.photobox", management))
@@ -657,10 +756,22 @@ func operatorPermissions() []permission.ID {
 		photo.PermDelete,
 		printing.PermRetry,
 
-		// Erst diese Berechtigung öffnet die Einstellungen. Vorher fragte die
-		// Oberfläche `Subject().Valid()` und meinte damit dasselbe – nur sperrte
-		// das jede Anmeldung aus, die ohne Benutzerkonto auskommt.
+		// Erst diese Berechtigung öffnet die Einstellungen in dieser Anwendung.
 		PermConfigure,
+
+		// Und diese beiden die Einstellungsseiten von Nago selbst. Ohne sie
+		// öffnet sich die Seite zwar, aber das Speichern scheitert mit einer
+		// Rechteverletzung: Nagos Anwendungsfälle prüfen ihre eigenen
+		// Berechtigungen, nicht unsere.
+		settings.PermLoadGlobal,
+		settings.PermStoreGlobal,
+
+		// Die Fotobox wird an fremden Orten aufgebaut, das Funknetz ist jedes
+		// Mal ein anderes. Ein Gast darf es nicht wechseln koennen: Das naehme
+		// der Box mitten auf der Feier die Verbindung.
+		wifi.PermScan,
+		wifi.PermStatus,
+		wifi.PermConnect,
 	)
 }
 

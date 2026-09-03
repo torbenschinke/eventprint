@@ -219,6 +219,30 @@
         "text": "cb8d3cab10b8d5b1a047661c23a020ba14c7b407482003c8848d89d284034e2a"
       }
     ],
+    "R-NETZ-BETREUUNG": [
+      {
+        "test": "TestGuestMayNotChangeTheNetwork",
+        "text": "bb02038fed1a14d444657a28ad840cb51fb778a47df13ec3a85f79b376aecd2d"
+      }
+    ],
+    "R-NETZ-SUCHE": [
+      {
+        "test": "TestOneNetworkAppearsOnce",
+        "text": "ec734947b6659dc91b10a58fee00aae34781abe579e1be21fea8eeb6dd177273"
+      }
+    ],
+    "R-NETZ-VERBINDEN": [
+      {
+        "test": "TestWrongPasswordIsToldApartFromOtherFailures",
+        "text": "db307d57c1d852f22191b8ba094193cbb478c55af4cc01a261af33b93be1faae"
+      }
+    ],
+    "R-NETZ-ZUSTAND": [
+      {
+        "test": "TestStatusJoinsDeviceAndSignal",
+        "text": "aa7a3fe53a03831ea0cf4f8bfd4ebe64cbb008227f485c54a77a71774000f8e3"
+      }
+    ],
     "R-UPLOAD-ABHOLUNG": [
       {
         "test": "TestFindPendingJobsShowsOnlyOwnJobs",
