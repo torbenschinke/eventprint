@@ -20,7 +20,16 @@ PRIMARY="${EVENTPRINT_PRIMARY_OUTPUT:-}"
 # meldet das Anstecken nicht von sich aus an ein Skript.
 INTERVAL="${EVENTPRINT_DISPLAY_POLL:-5}"
 
-log() { printf '[kiosk-display] %s\n' "$*"; }
+# Ins Journal, damit die Spiegelung im Stoerungsfall nachvollziehbar ist. Die
+# Ausgabe landete sonst im Heimverzeichnis des Kiosk-Nutzers und war fuer
+# niemanden lesbar.
+log() {
+  if command -v logger >/dev/null 2>&1; then
+    logger -t eventprint-kiosk-display "$*"
+  fi
+
+  printf '[kiosk-display] %s\n' "$*"
+}
 
 # connected_outputs listet die Ausgaenge mit angeschlossenem Geraet.
 connected_outputs() {
