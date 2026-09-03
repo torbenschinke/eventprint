@@ -19,11 +19,15 @@ type LoadSettings func() Settings
 // ohne die laufende Anwendung neu starten zu müssen.
 type settingsPrinter struct {
 	load LoadSettings
+
+	// policy stellt die gewählte Warteschlange einmalig auf abort-job um.
+	// Zeiger, damit die Merkliste auch über Kopien des Werts hinweg gilt.
+	policy *policyGuard
 }
 
 // NewSettingsPrinter erzeugt einen Drucker, der seiner Konfiguration folgt.
 func NewSettingsPrinter(load LoadSettings) Printer {
-	return settingsPrinter{load: load}
+	return settingsPrinter{load: load, policy: &policyGuard{}}
 }
 
 func (p settingsPrinter) Name() string {
@@ -31,7 +35,27 @@ func (p settingsPrinter) Name() string {
 }
 
 func (p settingsPrinter) Print(ctx context.Context, jpg []byte, name string) (Result, error) {
-	return p.target().Print(ctx, jpg, name)
+	target := p.target()
+
+	// Vor dem ersten Auftrag an eine Warteschlange deren Fehlerbehandlung
+	// absichern. Hier und nicht in target(): Die Oberfläche fragt den Zustand
+	// im Sekundentakt ab, ein lpadmin-Aufruf gehört dort nicht hin.
+	p.EnsureErrorPolicy(ctx)
+
+	return target.Print(ctx, jpg, name)
+}
+
+// EnsureErrorPolicy stellt die eingestellte Warteschlange auf [AbortPolicy] um.
+//
+// Im Testbetrieb gibt es nichts umzustellen.
+func (p settingsPrinter) EnsureErrorPolicy(ctx context.Context) {
+	if p.policy == nil {
+		return
+	}
+
+	if cups, ok := p.target().(CUPSPrinter); ok {
+		p.policy.ensure(ctx, cups.Queue)
+	}
 }
 
 // Await verfolgt den Auftrag über denselben Kanal, an den er übergeben wurde.
@@ -93,4 +117,13 @@ func (p settingsPrinter) TestMode() bool {
 func IsTestMode(p Printer) bool {
 	t, ok := p.(TestPrinter)
 	return ok && t.TestMode()
+}
+
+// ErrorPolicyEnforcer wird von Druckern implementiert, die die Fehlerbehandlung
+// ihrer Warteschlange beim Druckdienst absichern können.
+//
+// Die Verdrahtung nutzt das, um die Umstellung schon beim Start anzustoßen,
+// statt auf den ersten Auftrag zu warten.
+type ErrorPolicyEnforcer interface {
+	EnsureErrorPolicy(ctx context.Context)
 }

@@ -154,13 +154,26 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 	slog.Info("photo archive ready", "dir", archiveDir)
 
 	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases, archive)
+
+	printer := printing.NewSettingsPrinter(loadPrinterSettings)
+
 	prints := printing.NewUseCases(cfg.Context(), cfg.EventBus(), jobRepo,
-		printing.NewSettingsPrinter(loadPrinterSettings), photos.OpenOriginal, func() printing.RenderOptions {
+		printer, photos.OpenOriginal, func() printing.RenderOptions {
 			return printing.RenderOptions{
 				AutoCrop:    loadBoothSettings().AutoCrop,
 				DetectFaces: facecrop.Detect,
 			}
 		})
+
+	// Die Fehlerbehandlung der Warteschlange gleich beim Start absichern,
+	// damit ein fehlendes Recht im Protokoll steht, bevor der erste Gast da
+	// ist – und nicht erst beim ersten Auftrag mitten auf der Feier.
+	//
+	// Wird die Warteschlange später umgestellt, holt der Drucker das vor dem
+	// ersten Auftrag an das neue Ziel selbst nach.
+	if enforcer, ok := printer.(printing.ErrorPolicyEnforcer); ok {
+		enforcer.EnsureErrorPolicy(cfg.Context())
+	}
 
 	relay := remote.NewManager(func() remote.Options {
 		booth := loadBoothSettings()

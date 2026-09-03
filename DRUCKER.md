@@ -144,23 +144,67 @@ nichts. Vorher immer `cancel -a` ausführen.
 Ein bis drei Minuten später kommt dasselbe Bild noch einmal, nach einer
 weiteren Pause erneut. Die Fotobox meldet für den Auftrag "Fehler / timeout".
 
-**Ursache:** Der Auftrag wurde gedruckt, aber der Backend meldete danach einen
-Fehler — nach einem Replug ist das die Regel. CUPS setzt ihn mit
-`ErrorPolicy=retry-job` zurück auf *pending* und startet ihn nach
-`JobRetryInterval` erneut. Er gilt dabei nie als abgeschlossen, weshalb die
-Fotobox ihn nach fünf Minuten aufgibt — der Auftrag in CUPS bleibt davon
-unberührt.
+**Ursache:** Der Backend verliert beim Wiederanstecken mitten in der
+Übertragung das USB-Gerät. Aus `/var/log/cups/error_log` vom 31.08.2026:
 
-**Lösung:** Die Fotobox storniert einen aufgegebenen Auftrag inzwischen selbst
-(`cancel -x`). Zusätzlich empfiehlt sich, das Wiederholen ganz abzuschalten:
-
-```bash
-lpstat -W not-completed -o CZ01                             # Rückstau prüfen
-sudo lpadmin -p CZ01 -o printer-error-policy=abort-job      # kein Nachdruck
+```
+20:42:51 [Job 31] Failure to send data to printer (libusb error -4: (0/32 to 0x01))
+20:42:52 [Job 31] Backend gutenprint53+usb returned status 1 (failed)
+20:47:59 [Job 31] Failure to send data to printer (libusb error -4: (0/32 to 0x01))
+20:48:00 [Job 31] Backend gutenprint53+usb returned status 1 (failed)
 ```
 
-Ein Ausdruck, der ausbleibt, ist auf einer Feier harmlos — man drückt erneut.
-Ein Ausdruck, der Stunden später von selbst kommt, ist es nicht.
+Zweimal derselbe Auftrag, fünf Minuten auseinander. `libusb error -4` ist
+`LIBUSB_ERROR_NO_DEVICE`. Ein Blatt entsteht bei jedem Versuch trotzdem, weil
+das Gerät den Großteil der Daten schon hatte.
+
+Wiederholt wird der Auftrag, weil CUPS ihn nach `ErrorPolicy=retry-job` in die
+Warteschlange zurückstellt. Das ist die **globale Vorgabe** in `cupsd.conf` und
+für einen Dye-Sublimation-Drucker die falsche Annahme: Das Papier ist bereits
+verbraucht.
+
+**Lösung:** Die Fotobox stellt die Warteschlange beim Start selbst auf
+`abort-job` um (`printing.EnforceAbortPolicy`) und storniert zusätzlich jeden
+Auftrag, den sie nach dem Timeout aufgibt. Zum Umstellen genügt die
+Mitgliedschaft in der CUPS-SystemGroup, root ist nicht nötig:
+
+```bash
+groups | tr ' ' '\n' | grep lpadmin     # Voraussetzung
+sudo lpadmin -p CZ01 -o printer-error-policy=abort-job   # von Hand
+```
+
+Fehlt das Recht, steht im Protokoll `cannot enforce abort-job error policy`
+samt dem Befehl zum Nachholen.
+
+**Prüfen — Vorsicht, `lpstat` führt hier in die Irre.** `lpstat -l -p CZ01`
+meldet unverändert "Nach einem Fehler: fortfahren"; das ist ein festverdrahtetes
+Alt-Feld aus der System-V-Kompatibilität und keine Abfrage. `lpoptions -p CZ01`
+gibt die Policy gar nicht aus. Verlässlich sind nur zwei Wege:
+
+```bash
+sudo grep -A3 CZ01 /etc/cups/printers.conf     # ErrorPolicy abort-job
+```
+
+oder über IPP, ohne root:
+
+```bash
+cat > /tmp/errpol.test <<'TEST'
+{
+    OPERATION Get-Printer-Attributes
+    GROUP operation-attributes-tag
+    ATTR charset attributes-charset utf-8
+    ATTR language attributes-natural-language en
+    ATTR uri printer-uri $uri
+    ATTR keyword requested-attributes printer-error-policy
+    STATUS successful-ok
+}
+TEST
+ipptool -tv ipp://localhost/printers/CZ01 /tmp/errpol.test | grep error-policy
+```
+
+Die Einstellung ist **dauerhaft**: CUPS legt sie in `/etc/cups/printers.conf`
+ab, sie übersteht Neustart und Reboot. Sie hängt aber an der Warteschlange —
+wird diese gelöscht und neu angelegt, gilt wieder die globale `retry-job`.
 
 ### 2. Script bricht still ab (Bash-Falle)
 
