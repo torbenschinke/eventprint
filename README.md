@@ -495,6 +495,36 @@ die *beide* Geräte können. Ein Fernseher mit 4K würde sonst das Layout des
 Touchscreens verschieben und die Bedienflächen unerreichbar machen. Er darf
 beim Hochfahren fehlen und später dazukommen.
 
+### Wenn der Bildschirm schwarz bleibt
+
+Zuerst ins Journal sehen – die Kiosk-Sitzung schreibt dorthin:
+
+```bash
+journalctl -b -t eventprint-kiosk -t eventprint-kiosk-display
+```
+
+Nach dem Einschalten dauert es rund **eine Minute**, bis die Oberfläche steht:
+Erst holt `eventprint-update.service` den aktuellen Stand, dann startet der
+Dienst. Die Sitzung wartet darauf und startet Chromium erst danach. Ein
+schwarzer Bildschirm in der ersten Minute ist also normal.
+
+Zwei Fallen, die beim Einrichten Zeit gekostet haben und beide nur beim echten
+Kaltstart auffallen – ein Probelauf zeigt sie nicht, weil er nichts startet:
+
+* **lightdm liest `/etc/lightdm/lightdm.conf` zuletzt.** Eine Datei in
+  `lightdm.conf.d` wird davon überschrieben, nicht umgekehrt. Raspberry Pi OS
+  trägt dort ab Werk den Erstbenutzer und eine Wayland-Sitzung ein. Was
+  tatsächlich gilt, verrät `sudo lightdm --show-config` – es nennt zu jedem
+  Wert die Quelle.
+* **`install -d -o nutzer a/b` setzt den Besitzer nur auf `b`.** Ein dabei neu
+  angelegtes `a` gehört weiter root. So gehörte `~/.config` root, Chromium
+  konnte sein Profil nicht anlegen und starb mit `--database is required` –
+  sichtbar war nur der Mauszeiger auf schwarzem Grund.
+
+Stirbt Chromium im Betrieb, startet die Sitzung ihn neu; die Wartezeit steigt
+bis auf 30 Sekunden. Ein dauerhaft kaputter Browser belegt so nicht die
+Maschine, eine vorübergehende Ursache heilt sich selbst.
+
 ### Betreuer-PIN
 
 Die Fotobox hat ab Werk **keine** PIN. Wer davorsteht, vergibt sie:
