@@ -23,16 +23,21 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 15 | 100% |
-| Normative requirements covered | 15 | 100% |
-| … claimed by a test | 15 | 100% |
-| … demonstrated by a run | 15 | 100% |
-| … read by a person | 15 | 0% |
+| Source segments accounted for | 16 | 100% |
+| Normative requirements covered | 16 | 100% |
+| … claimed by a test | 16 | 100% |
+| … demonstrated by a run | 16 | 100% |
+| … read by a person | 16 | 0% |
 
 ## Gaps
 
+### Requirements no test claims
+
+- R-DEC-ZUSTANDSABLAGE — _accepted:_ Die Entscheidung gegen eine Ereignisfolge ist die Abwesenheit einer Sache; ein Test kann sie nicht zeigen.
+
 ### Requirements nobody has read
 
+- R-DEC-ZUSTANDSABLAGE
 - R-DRUCK-AUFTRAG
 - R-DRUCK-DIAGNOSE
 - R-DRUCK-KEIN-NACHDRUCK
@@ -55,9 +60,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 15 |  |
-| … a test claims | 15 | 100% |
-| … a run demonstrated | 15 | 100% |
+| Normative requirements | 16 |  |
+| … a test claims | 16 | 100% |
+| … a run demonstrated | 16 | 100% |
 
 ### How much of the code a run went through
 
@@ -68,6 +73,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | Document | Kind | Segments | Cited | Read | Drifted |
 |---|---|---:|---:|---:|---:|
 | `requirements/_sources/druck.md` | markdown | 6 | 6 | 0 | 0 |
+| `requirements/_sources/entscheidungen.md` | markdown | 1 | 1 | 0 | 0 |
 | `requirements/_sources/foto.md` | markdown | 5 | 5 | 0 | 0 |
 | `requirements/_sources/upload.md` | markdown | 4 | 4 | 0 | 0 |
 
@@ -89,6 +95,8 @@ Command photobox ist die Fotobox-Anwendung für Hochzeiten, Jubiläen und ähnli
 
 Built from `cmd/photobox`.
 
+**Assembles** `photobox`
+
 _How this program is invoked could not be read from the source. That is a limit of the reading, not a statement that it takes no arguments._
 
 ### photoupld
@@ -96,6 +104,8 @@ _How this program is invoked could not be read from the source. That is a limit 
 Command photoupld exposes the public upload relay for a private photobox. #\[go.permission.generateTable\]
 
 Built from `cmd/photoupld`.
+
+**Assembles** `photoupld`
 
 _How this program is invoked could not be read from the source. That is a limit of the reading, not a statement that it takes no arguments._
 
@@ -145,207 +155,249 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-17 packages in 0 bounded contexts, and 28 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+19 packages in 5 bounded contexts, and 34 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
-3 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
+4 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
 _No diagram is included in this document. Pass -figures to speclink generate, after rendering the sources written by speclink diagrams._
 
 ### Where one context reaches into another
 
-No package of one bounded context imports a package of another. The contexts are separate in the only sense a compiler can hold them to.
+15 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
+
+| From | To |
+|---|---|
+| `app/photobox/cfg` | `app/photo` |
+| `app/photobox/cfg` | `app/printing` |
+| `app/photobox/cfg/camera` | `app/photo` |
+| `app/photobox/cfg/camera` | `app/printing` |
+| `app/photobox/cfg/remote` | `app/photo` |
+| `app/photobox/cfg/remote` | `app/printing` |
+| `app/photobox/ui` | `app/photo` |
+| `app/photobox/ui` | `app/printing` |
+| `app/photobox/ui/preview` | `app/printing` |
+| `app/photoupld/cfg` | `app/upld` |
+| `app/photoupld/ui` | `app/photobox/ui/preview` |
+| `app/photoupld/ui` | `app/printing` |
+| `app/photoupld/ui` | `app/upld` |
+| `app/printing` | `app/photo` |
+| `app/upld` | `app/printing` |
 
 ## What the code declares
 
-30 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+34 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
-### photo
+### app/photo
 
-<a id="req-code-github-com-torbenschinke-eventprint-photo-delete"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-delete"></a>
 #### Delete
 
-_use case_ — `photo/usecases.go:36`
+_use case_ — `app/photo/uc_delete.go:11`
 
 **Answers to** [R-FOTO-LOESCHEN](#req-R-FOTO-LOESCHEN)
 
-<a id="req-code-github-com-torbenschinke-eventprint-photo-findall"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-findall"></a>
 #### FindAll
 
-_use case_ — `photo/usecases.go:30`
+_query_ — `app/photo/uc_find_all.go:13`
 
 **Answers to** [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE)
 
-<a id="req-code-github-com-torbenschinke-eventprint-photo-findbyid"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-findbyid"></a>
 #### FindByID
 
-_query_ — `photo/usecases.go:27`
+_query_ — `app/photo/uc_find_by_id.go:9`
 
 **Answers to** [R-FOTO-EINZELBILD](#req-R-FOTO-EINZELBILD)
 
-<a id="req-code-github-com-torbenschinke-eventprint-photo-findlatest"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-findlatest"></a>
 #### FindLatest
 
-_query_ — `photo/usecases.go:33`
+_query_ — `app/photo/uc_find_latest.go:6`
 
 **Answers to** [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE)
 
-<a id="req-code-github-com-torbenschinke-eventprint-photo-import"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-import"></a>
 #### Import
 
-_query_ — `photo/usecases.go:24`
+_query_ — `app/photo/uc_import.go:25`
 
 **Answers to** [R-FOTO-IMPORT](#req-R-FOTO-IMPORT)
 
-<a id="req-code-github-com-torbenschinke-eventprint-photo-openoriginal"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-openoriginal"></a>
 #### OpenOriginal
 
-_query_ — `photo/usecases.go:40`
+_query_ — `app/photo/uc_open_original.go:13`
 
 **Answers to** [R-FOTO-DRUCKVORLAGE](#req-R-FOTO-DRUCKVORLAGE)
 
 <a id="req-code-de-torbenschinke-eventprint-photo-delete"></a>
 #### de.torbenschinke.eventprint.photo.delete
 
-_permission_ — `photo/perm.go:24`
+_permission_ — `app/photo/perm.go:50`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-find-all"></a>
 #### de.torbenschinke.eventprint.photo.find\_all
 
-_permission_ — `photo/perm.go:18`
+_permission_ — `app/photo/perm.go:36`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-find-by-id"></a>
 #### de.torbenschinke.eventprint.photo.find\_by\_id
 
-_permission_ — `photo/perm.go:12`
+_permission_ — `app/photo/perm.go:29`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-find-latest"></a>
+#### de.torbenschinke.eventprint.photo.find\_latest
+
+_permission_ — `app/photo/perm.go:43`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-import"></a>
 #### de.torbenschinke.eventprint.photo.import
 
-_permission_ — `photo/perm.go:6`
+_permission_ — `app/photo/perm.go:22`
 
-<a id="req-code-github-com-torbenschinke-eventprint-photo-photo"></a>
+<a id="req-code-de-torbenschinke-eventprint-photo-open-original"></a>
+#### de.torbenschinke.eventprint.photo.open\_original
+
+_permission_ — `app/photo/perm.go:57`
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-photo"></a>
 #### Photo
 
-_aggregate_ — `photo/model.go:57`
+_aggregate_ — `app/photo/model.go:57`
 
-### printing
+**Answers to** [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE)
 
-<a id="req-code-github-com-torbenschinke-eventprint-printing-diagnose"></a>
+### app/printing
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-diagnose"></a>
 #### Diagnose
 
-_use case_ — `printing/usecases.go:40`
+_query_ — `app/printing/uc_diagnose.go:19`
 
 **Answers to** [R-DRUCK-DIAGNOSE](#req-R-DRUCK-DIAGNOSE)
 
-<a id="req-code-github-com-torbenschinke-eventprint-printing-findalljobs"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-findalljobs"></a>
 #### FindAllJobs
 
-_use case_ — `printing/usecases.go:23`
+_query_ — `app/printing/uc_find_all_jobs.go:13`
 
 **Answers to** [R-DRUCK-STATUS](#req-R-DRUCK-STATUS)
 
-<a id="req-code-github-com-torbenschinke-eventprint-printing-findjobbyid"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-findjobbyid"></a>
 #### FindJobByID
 
-_query_ — `printing/usecases.go:26`
+_query_ — `app/printing/uc_find_job_by_id.go:9`
 
 **Answers to** [R-DRUCK-STATUS](#req-R-DRUCK-STATUS)
 
-<a id="req-code-github-com-torbenschinke-eventprint-printing-preview"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-preview"></a>
 #### Preview
 
-_query_ — `printing/usecases.go:33`
+_query_ — `app/printing/uc_preview.go:14`
 
 **Answers to** [R-DRUCK-VORSCHAU](#req-R-DRUCK-VORSCHAU)
 
-<a id="req-code-github-com-torbenschinke-eventprint-printing-print"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-print"></a>
 #### Print
 
-_query_ — `printing/usecases.go:20`
+_query_ — `app/printing/uc_print.go:19`
 
 **Answers to** [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG), [R-DRUCK-KEIN-NACHDRUCK](#req-R-DRUCK-KEIN-NACHDRUCK)
 
-<a id="req-code-github-com-torbenschinke-eventprint-printing-retry"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-retry"></a>
 #### Retry
 
-_use case_ — `printing/usecases.go:29`
+_use case_ — `app/printing/uc_retry.go:15`
 
 **Answers to** [R-DRUCK-WIEDERHOLUNG](#req-R-DRUCK-WIEDERHOLUNG)
+
+<a id="req-code-de-torbenschinke-eventprint-printing-diagnose"></a>
+#### de.torbenschinke.eventprint.printing.diagnose
+
+_permission_ — `app/printing/perm.go:54`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-find-all-jobs"></a>
 #### de.torbenschinke.eventprint.printing.find\_all\_jobs
 
-_permission_ — `printing/perm.go:12`
+_permission_ — `app/printing/perm.go:26`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-find-job-by-id"></a>
 #### de.torbenschinke.eventprint.printing.find\_job\_by\_id
 
-_permission_ — `printing/perm.go:18`
+_permission_ — `app/printing/perm.go:33`
+
+<a id="req-code-de-torbenschinke-eventprint-printing-preview"></a>
+#### de.torbenschinke.eventprint.printing.preview
+
+_permission_ — `app/printing/perm.go:47`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-print"></a>
 #### de.torbenschinke.eventprint.printing.print
 
-_permission_ — `printing/perm.go:6`
+_permission_ — `app/printing/perm.go:19`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-retry"></a>
 #### de.torbenschinke.eventprint.printing.retry
 
-_permission_ — `printing/perm.go:24`
+_permission_ — `app/printing/perm.go:40`
 
-<a id="req-code-github-com-torbenschinke-eventprint-printing-job"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-job"></a>
 #### Job
 
-_aggregate_ — `printing/model.go:63`
+_aggregate_ — `app/printing/model.go:63`
 
-### upld
+**Answers to** [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE)
 
-<a id="req-code-github-com-torbenschinke-eventprint-upld-ackjob"></a>
+### app/upld
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-upld-ackjob"></a>
 #### AckJob
 
-_use case_ — `upld/usecases.go:34`
+_use case_ — `app/upld/uc_ack_job.go:9`
 
 **Answers to** [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG)
 
-<a id="req-code-github-com-torbenschinke-eventprint-upld-findpendingjobs"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-upld-findpendingjobs"></a>
 #### FindPendingJobs
 
-_query_ — `upld/usecases.go:23`
+_query_ — `app/upld/uc_find_pending_jobs.go:7`
 
 **Answers to** [R-UPLOAD-ABHOLUNG](#req-R-UPLOAD-ABHOLUNG)
 
-<a id="req-code-github-com-torbenschinke-eventprint-upld-openjobimage"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-upld-openjobimage"></a>
 #### OpenJobImage
 
-_query_ — `upld/usecases.go:28`
+_query_ — `app/upld/uc_open_job_image.go:15`
 
 **Answers to** [R-UPLOAD-BILD](#req-R-UPLOAD-BILD)
 
-<a id="req-code-github-com-torbenschinke-eventprint-upld-opensession"></a>
+<a id="req-code-github-com-torbenschinke-eventprint-app-upld-opensession"></a>
 #### OpenSession
 
-_query_ — `upld/usecases.go:19`
+_query_ — `app/upld/uc_open_session.go:11`
 
 **Answers to** [R-UPLOAD-SITZUNG](#req-R-UPLOAD-SITZUNG)
 
 <a id="req-code-de-torbenschinke-photoupld-ack"></a>
 #### de.torbenschinke.photoupld.ack
 
-_permission_ — `upld/perm.go:12`
+_permission_ — `app/upld/perm.go:38`
 
 <a id="req-code-de-torbenschinke-photoupld-fetch"></a>
 #### de.torbenschinke.photoupld.fetch
 
-_permission_ — `upld/perm.go:11`
+_permission_ — `app/upld/perm.go:31`
 
 <a id="req-code-de-torbenschinke-photoupld-poll"></a>
 #### de.torbenschinke.photoupld.poll
 
-_permission_ — `upld/perm.go:10`
+_permission_ — `app/upld/perm.go:24`
 
 <a id="req-code-de-torbenschinke-photoupld-session"></a>
 #### de.torbenschinke.photoupld.session
 
-_permission_ — `upld/perm.go:9`
+_permission_ — `app/upld/perm.go:17`
 
 ## The boundary
 
@@ -355,10 +407,10 @@ _No topology is declared, so what this system talks to is stated nowhere._
 
 | Address | Takes | Returns | Serves | Asked for by |
 |---|---|---|---|---|
-| `DELETE /api/v1/job` | — | `AckResponse` | [AckJob](#req-code-github-com-torbenschinke-eventprint-upld-ackjob) | R-UPLOAD-BESTAETIGUNG |
-| `GET /api/v1/job/image` | — | — | [OpenJobImage](#req-code-github-com-torbenschinke-eventprint-upld-openjobimage) | R-UPLOAD-BILD |
-| `GET /api/v1/jobs` | — | `JobResponse` | [FindPendingJobs](#req-code-github-com-torbenschinke-eventprint-upld-findpendingjobs) | R-UPLOAD-ABHOLUNG |
-| `POST /api/v1/session` | — | `SessionResponse` | [OpenSession](#req-code-github-com-torbenschinke-eventprint-upld-opensession) | R-UPLOAD-SITZUNG |
+| `DELETE /api/v1/job` | — | `AckResponse` | [AckJob](#req-code-github-com-torbenschinke-eventprint-app-upld-ackjob) | R-UPLOAD-BESTAETIGUNG |
+| `GET /api/v1/job/image` | — | — | [OpenJobImage](#req-code-github-com-torbenschinke-eventprint-app-upld-openjobimage) | R-UPLOAD-BILD |
+| `GET /api/v1/jobs` | — | `JobResponse` | [FindPendingJobs](#req-code-github-com-torbenschinke-eventprint-app-upld-findpendingjobs) | R-UPLOAD-ABHOLUNG |
+| `POST /api/v1/session` | — | `SessionResponse` | [OpenSession](#req-code-github-com-torbenschinke-eventprint-app-upld-opensession) | R-UPLOAD-SITZUNG |
 
 ### What crosses each address
 
@@ -407,6 +459,7 @@ Every requirement that was read, and how far each one has got. A mark states wha
 
 | Requirement | Kind | Field | Status | Built | Tested | Run | Read |
 |---|---|---|---|---:|---:|---:|---:|
+| [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE) | decision | technical | normative | yes | no | n/a | no |
 | [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-DIAGNOSE](#req-R-DRUCK-DIAGNOSE) | functional | mixed | normative | yes | yes | yes | no |
 | [R-DRUCK-KEIN-NACHDRUCK](#req-R-DRUCK-KEIN-NACHDRUCK) | functional | mixed | normative | yes | yes | yes | no |
@@ -438,6 +491,31 @@ Every requirement that was read, and how far each one has got. A mark states wha
 
 ## Requirements
 
+<a id="req-R-DEC-ZUSTANDSABLAGE"></a>
+### R-DEC-ZUSTANDSABLAGE — Aggregate werden als Zustand abgelegt, nicht als Ereignisfolge
+
+Foto und Druckauftrag MÜSSEN als aktueller Zustand gespeichert werden; ihr Verlauf wird nicht als Folge von Ereignissen aufbewahrt.
+
+_decision, technical, normative._
+
+**Why.** Eine Fotobox läuft einen Abend lang. Gefragt ist, ob das Bild auf Papier
+ist, nicht, in welcher Reihenfolge ein Auftrag seine Zustände durchlaufen hat.
+Der Zustand passt in eine JSON-Ablage, die sich ohne Werkzeug lesen und im
+Zweifel von Hand reparieren lässt – auf einer Feier um Mitternacht ist das der
+entscheidende Vorteil.
+
+**What it costs.** Der Verlauf ist unwiederbringlich verloren: Warum ein Auftrag zweimal
+gescheitert ist, lässt sich hinterher nicht mehr rekonstruieren, und genau das
+hat die Suche nach den ungewollten Nachdrucken erschwert. Eine spätere
+Auswertung über mehrere Veranstaltungen hinweg ist aus diesen Daten nicht zu
+gewinnen. Die Umstellung wäre nachträglich teuer, weil bestehende Daten keine
+Ereignisse enthalten, aus denen sich ein Verlauf bilden ließe.
+
+- **Asked for in** requirements/\_sources/entscheidungen.md#form-der-ablage
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/photo.Photo`
+  - `github.com/torbenschinke/eventprint/app/printing.Job`
+
 <a id="req-R-DRUCK-AUFTRAG"></a>
 ### R-DRUCK-AUFTRAG — Druckauftrag annehmen und im Hintergrund abarbeiten
 
@@ -447,7 +525,10 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#druckauftrag-erteilen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/printing.Print`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Photo`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Template`
+  - `github.com/torbenschinke/eventprint/app/printing.Print`
+  - `github.com/torbenschinke/eventprint/app/printing.Print`
 - **Demonstrated by** TestWorkerReportsSuccess
 
 <a id="req-R-DRUCK-DIAGNOSE"></a>
@@ -459,7 +540,8 @@ _functional, mixed, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#zustand-des-druckers
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/printing.Diagnose`
+  - `github.com/torbenschinke/eventprint/app/printing.Diagnose`
+  - `github.com/torbenschinke/eventprint/app/printing.Diagnose`
 - **Demonstrated by** TestDiagnoseReportsPrinterState
 
 <a id="req-R-DRUCK-KEIN-NACHDRUCK"></a>
@@ -471,7 +553,9 @@ _functional, mixed, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#kein-ungewollter-ausdruck
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/printing.Print`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.PrinterJob`
+  - `github.com/torbenschinke/eventprint/app/printing.Print`
+  - `github.com/torbenschinke/eventprint/app/printing.Print`
 - **Demonstrated by** TestAwaitJobCancelsAbandonedJob
 
 <a id="req-R-DRUCK-STATUS"></a>
@@ -483,8 +567,18 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#zustand-der-aufträge
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/printing.FindAllJobs`
-  - `github.com/torbenschinke/eventprint/printing.FindJobByID`
+  - `github.com/torbenschinke/eventprint/app/printing.FindAllJobs`
+  - `github.com/torbenschinke/eventprint/app/printing.FindAllJobs`
+  - `github.com/torbenschinke/eventprint/app/printing.FindJobByID`
+  - `github.com/torbenschinke/eventprint/app/printing.FindJobByID`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.CreatedAt`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.FinishedAt`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.ID`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Message`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Printer`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Reason`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.RequestedBy`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.State`
 - **Demonstrated by** TestJobsAreListedNewestFirst
 
 <a id="req-R-DRUCK-VORSCHAU"></a>
@@ -496,7 +590,10 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#vorschau-des-ergebnisses
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/printing.Preview`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Height`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Width`
+  - `github.com/torbenschinke/eventprint/app/printing.Preview`
+  - `github.com/torbenschinke/eventprint/app/printing.Preview`
 - **Demonstrated by** TestPreviewRendersWithoutPrinting
 
 <a id="req-R-DRUCK-WIEDERHOLUNG"></a>
@@ -508,7 +605,8 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#auftrag-wiederholen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/printing.Retry`
+  - `github.com/torbenschinke/eventprint/app/printing.Retry`
+  - `github.com/torbenschinke/eventprint/app/printing.Retry`
 - **Demonstrated by** TestRetryCancelsPreviousPrinterJob
 
 <a id="req-R-FOTO-DRUCKVORLAGE"></a>
@@ -520,7 +618,9 @@ _functional, mixed, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#vorlage-für-den-druck
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/photo.OpenOriginal`
+  - `github.com/torbenschinke/eventprint/app/photo.OpenOriginal`
+  - `github.com/torbenschinke/eventprint/app/photo.OpenOriginal`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Image`
 - **Demonstrated by** TestOpenOriginalDeliversThePrintSource
 
 <a id="req-R-FOTO-EINZELBILD"></a>
@@ -532,7 +632,9 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#einzelnes-bild
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/photo.FindByID`
+  - `github.com/torbenschinke/eventprint/app/photo.FindByID`
+  - `github.com/torbenschinke/eventprint/app/photo.FindByID`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.ID`
 - **Demonstrated by** TestFindByIDReturnsTheImportedPhoto
 
 <a id="req-R-FOTO-HISTORIE"></a>
@@ -544,8 +646,11 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#historie
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/photo.FindAll`
-  - `github.com/torbenschinke/eventprint/photo.FindLatest`
+  - `github.com/torbenschinke/eventprint/app/photo.FindAll`
+  - `github.com/torbenschinke/eventprint/app/photo.FindAll`
+  - `github.com/torbenschinke/eventprint/app/photo.FindLatest`
+  - `github.com/torbenschinke/eventprint/app/photo.FindLatest`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.CreatedAt`
 - **Demonstrated by** TestHistoryListsNewestFirst
 
 <a id="req-R-FOTO-IMPORT"></a>
@@ -557,7 +662,10 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#bilder-aufnehmen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/photo.Import`
+  - `github.com/torbenschinke/eventprint/app/photo.Import`
+  - `github.com/torbenschinke/eventprint/app/photo.Import`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Name`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Source`
 - **Demonstrated by** TestImportArchivesUntouchedOriginal
 
 <a id="req-R-FOTO-LOESCHEN"></a>
@@ -569,7 +677,8 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#bilder-entfernen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/photo.Delete`
+  - `github.com/torbenschinke/eventprint/app/photo.Delete`
+  - `github.com/torbenschinke/eventprint/app/photo.Delete`
 - **Demonstrated by** TestDeleteRemovesPhotoFromHistory
 
 <a id="req-R-UPLOAD-ABHOLUNG"></a>
@@ -581,7 +690,8 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/upload.md#wartende-aufträge-abholen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/upld.FindPendingJobs`
+  - `github.com/torbenschinke/eventprint/app/upld.FindPendingJobs`
+  - `github.com/torbenschinke/eventprint/app/upld.FindPendingJobs`
 - **Demonstrated by** TestFindPendingJobsShowsOnlyOwnJobs
 
 <a id="req-R-UPLOAD-BESTAETIGUNG"></a>
@@ -593,7 +703,8 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/upload.md#übernahme-bestätigen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/upld.AckJob`
+  - `github.com/torbenschinke/eventprint/app/upld.AckJob`
+  - `github.com/torbenschinke/eventprint/app/upld.AckJob`
 - **Demonstrated by** TestAckJobKeepsTheJobUntilConfirmed
 
 <a id="req-R-UPLOAD-BILD"></a>
@@ -605,7 +716,8 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/upload.md#bild-eines-auftrags-laden
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/upld.OpenJobImage`
+  - `github.com/torbenschinke/eventprint/app/upld.OpenJobImage`
+  - `github.com/torbenschinke/eventprint/app/upld.OpenJobImage`
 - **Demonstrated by** TestOpenJobImageDeliversTheOriginal
 
 <a id="req-R-UPLOAD-SITZUNG"></a>
@@ -617,7 +729,8 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/upload.md#upload-sitzung
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/upld.OpenSession`
+  - `github.com/torbenschinke/eventprint/app/upld.OpenSession`
+  - `github.com/torbenschinke/eventprint/app/upld.OpenSession`
 - **Demonstrated by** TestOpenSessionGivesEachBoxExactlyOneAddress
 
 ## Source documents
@@ -635,6 +748,13 @@ What people wrote, and what became of each part of it.
 | Auftrag wiederholen | R-DRUCK-WIEDERHOLUNG |
 | Vorschau des Ergebnisses | R-DRUCK-VORSCHAU |
 | Zustand des Druckers | R-DRUCK-DIAGNOSE |
+
+### requirements/\_sources/entscheidungen.md
+
+| section | became |
+|---|---|
+| Entscheidungen | _nothing, and says so_ |
+| Form der Ablage | R-DEC-ZUSTANDSABLAGE |
 
 ### requirements/\_sources/foto.md
 

@@ -72,7 +72,8 @@ log "System: ${PRETTY_NAME:-unbekannt}"
 # ------------------------------------------------------------------ Pakete ---
 # Jede Zeile mit dem Grund, sonst weiß in einem Jahr niemand mehr, wozu.
 PACKAGES=(
-  git ca-certificates curl        # Quelltext holen, TLS, Download des Go-Archivs
+  git ca-certificates             # Quelltext holen und TLS
+  golang-go                       # nur als Bootstrap; go.mod verlangt mehr und holt es selbst
   build-essential pkg-config      # cgo braucht einen C-Übersetzer
   cups cups-client                # Druckdienst und lp/lpstat/lpadmin
   printer-driver-gutenprint       # Treiber und Backend für den CZ-01
@@ -90,44 +91,56 @@ run apt-get update -qq
 run env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${PACKAGES[@]}"
 
 # --------------------------------------------------------------------- Go ---
-# Die benötigte Fassung steht in go.mod und nirgends sonst.
+# Es wird nur ein Bootstrap-Compiler gebraucht, kein aktueller.
+#
+# Seit Go 1.21 holt sich der Werkzeugkasten die in go.mod verlangte Fassung
+# selbst (GOTOOLCHAIN=auto, die Voreinstellung). Das Paket der Distribution
+# genügt daher, solange es diese Grenze erreicht – eine zweite Go-Installation
+# neben der des Systems wäre nur eine weitere Sache, die altert.
+readonly GO_BOOTSTRAP_MIN="1.21"
+
 required_go="$(sed -n 's/^go \([0-9][0-9.]*\).*/\1/p' "${SCRIPT_DIR}/../go.mod" 2>/dev/null | head -1)"
 required_go="${required_go:-1.27.0}"
-GO_VERSION="${GO_VERSION:-${required_go}}"
 
 version_ge() {
   # sort -V ist hier genau richtig: Es vergleicht 1.10 korrekt gegen 1.9.
   [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]
 }
 
-installed_go=""
-if command -v go >/dev/null 2>&1; then
-  installed_go="$(go env GOVERSION 2>/dev/null | sed 's/^go//')"
-elif [[ -x /usr/local/go/bin/go ]]; then
-  installed_go="$(/usr/local/go/bin/go env GOVERSION 2>/dev/null | sed 's/^go//')"
+go_version_of() {
+  command -v "$1" >/dev/null 2>&1 || return 1
+  "$1" env GOVERSION 2>/dev/null | sed 's/^go//'
+}
+
+installed_go="$(go_version_of go || true)"
+
+if [[ -z "${installed_go}" ]]; then
+  log "Go aus der Distribution installieren"
+  run env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends golang-go
+  installed_go="$(go_version_of go || true)"
+
+  if [[ ${DRY_RUN} -eq 1 && -z "${installed_go}" ]]; then
+    installed_go="${GO_BOOTSTRAP_MIN}"
+  fi
 fi
 
-if [[ -n "${installed_go}" ]] && version_ge "${installed_go}" "${required_go}"; then
-  log "Go ${installed_go} ist vorhanden und ausreichend"
+if [[ -z "${installed_go}" ]]; then
+  die "Nach der Installation von golang-go ist kein go auffindbar."
+fi
+
+if version_ge "${installed_go}" "${GO_BOOTSTRAP_MIN}"; then
+  log "Go ${installed_go} genügt als Bootstrap; go.mod verlangt ${required_go} und der Werkzeugkasten holt das selbst"
 else
-  case "$(dpkg --print-architecture 2>/dev/null || echo unknown)" in
-    arm64)  go_arch="arm64"  ;;
-    armhf)  go_arch="armv6l" ;;
-    amd64)  go_arch="amd64"  ;;
-    *)      die "Unbekannte Architektur; Go bitte von Hand installieren (mindestens ${required_go})." ;;
-  esac
-
-  tarball="go${GO_VERSION}.linux-${go_arch}.tar.gz"
-  log "Go ${GO_VERSION} (${go_arch}) wird installiert${installed_go:+, vorhanden war ${installed_go}}"
-
-  run curl -fsSL --retry 3 -o "/tmp/${tarball}" "https://go.dev/dl/${tarball}"
-  run rm -rf /usr/local/go
-  run tar -C /usr/local -xzf "/tmp/${tarball}"
-  run rm -f "/tmp/${tarball}"
-  run install -m 0644 /dev/stdin /etc/profile.d/go.sh <<<'export PATH=$PATH:/usr/local/go/bin'
+  warn "Go ${installed_go} aus der Distribution ist zu alt."
+  warn "Erst ab ${GO_BOOTSTRAP_MIN} holt sich der Werkzeugkasten die in go.mod"
+  warn "verlangte Fassung (${required_go}) selbstständig nach."
+  warn ""
+  warn "Zwei Wege:"
+  warn "  - eine neuere Fassung des Betriebssystems verwenden, oder"
+  warn "  - Go von https://go.dev/dl/ nach /usr/local/go entpacken und"
+  warn "    /usr/local/go/bin in PATH aufnehmen"
+  die "Kein brauchbarer Bootstrap-Compiler."
 fi
-
-export PATH="/usr/local/go/bin:${PATH}"
 
 # ------------------------------------------------------------------ Nutzer ---
 if id -u "${SERVICE_USER}" >/dev/null 2>&1; then
@@ -173,7 +186,7 @@ log "Anwendungen bauen (das dauert auf einem Raspberry Pi einige Minuten)"
 
 build_env=(
   "HOME=${STATE_DIR}"
-  "PATH=/usr/local/go/bin:/usr/bin:/bin"
+  "PATH=/usr/bin:/bin"
   "GOCACHE=${STATE_DIR}/.cache/go-build"
   "GOMODCACHE=${STATE_DIR}/go/pkg/mod"
   "GOTOOLCHAIN=auto"

@@ -10,7 +10,7 @@ import (
 	"go.wdy.de/nago/pkg/std"
 	"go.wdy.de/nago/web/vuejs"
 
-	"github.com/torbenschinke/eventprint/photoupld"
+	"github.com/torbenschinke/eventprint/app/photoupld/cfg"
 )
 
 func main() {

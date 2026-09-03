@@ -23,7 +23,7 @@ Environment=HOME=/var/lib/eventprint
 Environment=GOCACHE=/var/lib/eventprint/.cache/go-build
 Environment=GOMODCACHE=/var/lib/eventprint/go/pkg/mod
 Environment=GOTOOLCHAIN=auto
-Environment=PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 StateDirectory=eventprint
 ReadWritePaths=/opt/eventprint

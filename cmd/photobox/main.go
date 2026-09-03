@@ -29,7 +29,7 @@ import (
 	"go.wdy.de/nago/presentation/ui"
 	"go.wdy.de/nago/web/vuejs"
 
-	cfgphotobox "github.com/torbenschinke/eventprint/cfg"
+	cfgphotobox "github.com/torbenschinke/eventprint/app/photobox/cfg"
 )
 
 func main() {

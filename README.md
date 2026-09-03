@@ -321,21 +321,44 @@ Zwei Eigenschaften sind bewusst so gewählt:
 
 ## Aufbau
 
-Die Anwendung folgt dem Nago-Use-Case-Muster: Fachlichkeit in eigenständigen
-Paketen, ein Anwendungsfall je Datei, Verdrahtung an genau einer Stelle.
+Die Anwendung folgt dem Layout, das speclink unter dem Profil `go_nago_ddd1`
+prüft: Fachlichkeit unter `app/<kontext>/`, ein Anwendungsfall je Datei mit dem
+Namen des Anwendungsfalls, Verdrahtung an genau einer Stelle.
 
 ```
-photo/       Domäne der Fotos (Import, Historie, Originaldaten)
-printing/    Layouts, Rendering, Druckaufträge, CUPS-Anbindung
-camera/      Übernahme der Kamerabilder aus dem Tethering-Verzeichnis
-remote/      Ausgehender photoupld-Client und Polling
-upld/        Transiente Sessions und Upload-Warteschlangen
-photoupld/   Öffentliche Nago-Anwendung, REST-API und Upload-UI
-ui/          Oberfläche (Fotobox, Upload, Galerie, Druckstatus)
-cfg/         Enable() – verdrahtet alles mit dem Nago-Configurator
-cmd/photobox Startpunkt inkl. Scaffold-Menü
-cmd/photoupld Startpunkt des öffentlichen Upload-Relays
+app/photo/                  Domäne der Fotos (Import, Historie, Originaldaten)
+app/printing/               Layouts, Rendering, Druckaufträge, CUPS-Anbindung
+app/upld/                   Transiente Sitzungen und Upload-Warteschlangen
+
+app/photobox/cfg/           Enable() – verdrahtet die Fotobox
+app/photobox/cfg/camera/    Übernahme der Kamerabilder aus dem Tethering-Ordner
+app/photobox/cfg/remote/    Ausgehender photoupld-Client und Abfrage
+app/photobox/ui/            Oberfläche der Fotobox (Paket uiphotobox)
+
+app/photoupld/cfg/          Enable() und REST-API des Upload-Relais
+app/photoupld/ui/           Upload-Seite für das Smartphone (Paket uiphotoupld)
+
+pkg/orient/                 EXIF-Ausrichtung, ohne Bezug zur Domäne
+pkg/facecrop/               Gesichtserkennung, ohne Bezug zur Domäne
+pkg/permtext/               Übersetzbare Texte für Berechtigungen
+
+requirements/               Anforderungen und ihre Quelldokumente
+cmd/photobox/               Startpunkt inkl. Scaffold-Menü
+cmd/photoupld/              Startpunkt des öffentlichen Upload-Relais
 ```
+
+Drei Regeln daraus, die beim Lesen sonst überraschen:
+
+* **Ein Anwendungsfall je Datei, benannt nach ihm.** `FindAllJobs` steht in
+  `uc_find_all_jobs.go`, samt Typ, Konstruktor und der Anmerkung
+  `uc_find_all_jobs.annotation.go`, die ihn an eine Anforderung bindet.
+* **Je Anwendungsfall genau eine Berechtigung**, geprüft in seiner
+  Umsetzung. Das macht Rechte zuteilbar, statt sie in der Oberfläche zu
+  verstecken.
+* **`camera` und `remote` liegen unter `cfg/`**, nicht unter `pkg/`. Sie rufen
+  Anwendungsfälle auf und sind damit Verdrahtung, keine Infrastruktur. Was
+  unter `pkg/` liegt, kennt die Domäne nicht – das ist prüfbar und wird
+  geprüft.
 
 Einige Entwurfsentscheidungen, die beim Lesen sonst überraschen:
 

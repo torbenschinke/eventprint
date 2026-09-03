@@ -247,11 +247,11 @@
   "endpoints": {
     "DELETE /api/v1/job": {
       "useCases": [
-        "github.com/torbenschinke/eventprint/upld.AckJob"
+        "github.com/torbenschinke/eventprint/app/upld.AckJob"
       ],
-      "package": "github.com/torbenschinke/eventprint/photoupld",
+      "package": "github.com/torbenschinke/eventprint/app/photoupld/cfg",
       "response": {
-        "type": "github.com/torbenschinke/eventprint/photoupld.AckResponse",
+        "type": "github.com/torbenschinke/eventprint/app/photoupld/cfg.AckResponse",
         "shape": "{acknowledged:bool}",
         "fields": [
           {
@@ -264,27 +264,27 @@
     },
     "GET /api/v1/job/image": {
       "useCases": [
-        "github.com/torbenschinke/eventprint/upld.OpenJobImage"
+        "github.com/torbenschinke/eventprint/app/upld.OpenJobImage"
       ],
-      "package": "github.com/torbenschinke/eventprint/photoupld"
+      "package": "github.com/torbenschinke/eventprint/app/photoupld/cfg"
     },
     "GET /api/v1/jobs": {
       "useCases": [
-        "github.com/torbenschinke/eventprint/upld.FindPendingJobs"
+        "github.com/torbenschinke/eventprint/app/upld.FindPendingJobs"
       ],
-      "package": "github.com/torbenschinke/eventprint/photoupld",
+      "package": "github.com/torbenschinke/eventprint/app/photoupld/cfg",
       "response": {
-        "type": "[]github.com/torbenschinke/eventprint/photoupld.JobResponse",
+        "type": "[]github.com/torbenschinke/eventprint/app/photoupld/cfg.JobResponse",
         "shape": "[]{id:string,template:string,filename:string,createdAt:string}"
       }
     },
     "POST /api/v1/session": {
       "useCases": [
-        "github.com/torbenschinke/eventprint/upld.OpenSession"
+        "github.com/torbenschinke/eventprint/app/upld.OpenSession"
       ],
-      "package": "github.com/torbenschinke/eventprint/photoupld",
+      "package": "github.com/torbenschinke/eventprint/app/photoupld/cfg",
       "response": {
-        "type": "github.com/torbenschinke/eventprint/photoupld.SessionResponse",
+        "type": "github.com/torbenschinke/eventprint/app/photoupld/cfg.SessionResponse",
         "shape": "{uploadId:string,uploadUrl:string}",
         "fields": [
           {

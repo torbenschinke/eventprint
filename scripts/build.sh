@@ -134,17 +134,22 @@ go vet "${tagflag[@]+"${tagflag[@]}"}" ./...
 # go test liefert bei fehlgeschlagenen Tests einen Fehlercode. Der darf nicht
 # in der Pipe verlorengehen, deshalb wird der Strom erst vollständig
 # geschrieben und danach ausgewertet.
-log "go test -json ./..."
+#
+# -count=1 schaltet den Testcache ab. Der Nachweis ist die Aussage, dass ein
+# Test in diesem Lauf durchgelaufen ist; ein Ergebnis aus dem Cache trägt die
+# Zeilen nicht, die speclink dafür liest, und die Prüfung meldete dann
+# wahrheitsgemäß, dass nichts die Anforderung gezeigt hat.
+log "go test -json -count=1 ./..."
 test_log="$(mktemp)"
 trap 'rm -f "${test_log}"' EXIT
 
 test_status=0
-go test -json "${tagflag[@]+"${tagflag[@]}"}" ./... >"${test_log}" || test_status=$?
+go test -json -count=1 "${tagflag[@]+"${tagflag[@]}"}" ./... >"${test_log}" || test_status=$?
 
 if [[ ${test_status} -ne 0 ]]; then
   # Die lesbare Fassung nachreichen: Der JSON-Strom taugt für speclink, nicht
   # für einen Menschen um Mitternacht.
-  go test "${tagflag[@]+"${tagflag[@]}"}" ./... || true
+  go test -count=1 "${tagflag[@]+"${tagflag[@]}"}" ./... || true
   die "Tests fehlgeschlagen."
 fi
 
