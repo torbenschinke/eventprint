@@ -129,18 +129,6 @@ def server(binary):
     yield from _start(binary)
 
 
-@pytest.fixture
-def server_with_printer(binary):
-    """Eine Fotobox mit vorbelegter Warteschlange.
-
-    Der Name ist frei erfunden: Geprüft wird, dass die Vorbelegung aus der
-    Umgebung in den Einstellungen ankommt und die Oberfläche das Ziel meldet.
-    Ob die Warteschlange existiert, ist dafür unerheblich – so läuft der Test
-    auch auf einem Rechner ohne CUPS.
-    """
-    yield from _start(binary, {"EVENTPRINT_PRINTER": "CZ01-e2e"})
-
-
 @pytest.fixture(scope="session")
 def browser():
     with sync_playwright() as pw:
@@ -166,10 +154,3 @@ def page(browser, server):
     yield page
     context.close()
 
-
-@pytest.fixture
-def page_with_printer(browser, server_with_printer):
-    """Wie [page], nur gegen die Fotobox mit vorbelegter Warteschlange."""
-    context, page = _new_page(browser)
-    yield page
-    context.close()

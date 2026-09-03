@@ -477,6 +477,21 @@ sudo cupsenable CZ01               # angehaltenen Drucker freigeben
 
 ## Tests
 
+Die Aufteilung folgt einer Regel: **Im Browser steht nur, was ein Browser
+beweisen muss.** Alles, was eine Aussage über Go-Werte ist, gehört in
+`go test` – dort kostet es Millisekunden statt einen Anwendungsstart.
+
+| Frage | Wo sie beantwortet wird |
+|---|---|
+| Erscheint die Oberfläche überhaupt? | Browser |
+| Sind alle Seiten über das Menü erreichbar? | Browser |
+| Funktioniert der Ablauf eines Abends im Zusammenspiel? | Browser |
+| Kommt eine Vorbelegung aus der Umgebung an? | Go |
+| Ist jede Berechtigung einer Rolle zugeteilt? | Go |
+| Was meldet eine unbekannte CUPS-Warteschlange? | Go |
+| Wird aus einem Import ein fertiger Druckauftrag? | Go |
+| Wie sieht ein Layout auf dem Papier aus? | Go, am Pixel |
+
 ### Fachlichkeit (Go)
 
 ```bash
@@ -487,20 +502,31 @@ Die Tests des Renderers prüfen die Kernanforderung direkt am Pixel: exakte
 Papiergeometrie (1200x1800 @ 300 dpi), keine weißen Ecken beim formatfüllenden
 Layout, ringsum exakt gleich breiter Rahmen beim Passepartout, breiterer Steg
 unten beim Polaroid.
-Dazu kommen Tests für die Druckerauswahl, das Auswerten von `lpstat -a`, den
-Aufbau der öffentlichen Adresse und die eindeutigen Einstellungs-Diskriminatoren.
 
-Zum Ansehen der Ergebnisse:
+Dazu kommen die Prüfungen, die früher nur der Browser abdeckte:
+
+* `app/photobox/cfg/perm_test.go` – jede deklarierte Berechtigung erreicht eine
+  Rolle. Ohne das bleibt eine Seite im Betrieb leer, und zwar erst dann, wenn
+  ein Gast davorsteht.
+* `app/photobox/cfg/defaults_test.go` – eine Vorbelegung aus der Umgebung
+  überschreibt nie eine getroffene Wahl, und eine abgeschaltete Automatik
+  springt beim nächsten Start nicht wieder an.
+* `app/photobox/cfg/flow_test.go` – der Weg vom Import über den Druck bis in
+  die Historie, beide Kontexte verdrahtet wie im Betrieb.
+* `app/printing/cups_printer_status_test.go` – was eine fehlende oder
+  angehaltene Warteschlange meldet, gegen ein vorgetäuschtes `lpstat`.
+
+Zum Ansehen der gerenderten Layouts:
 
 ```bash
-EVENTPRINT_TEST_OUTPUT=/tmp/tpl go test ./printing/
+EVENTPRINT_TEST_OUTPUT=/tmp/tpl go test ./app/printing/
 ```
 
 ### Oberfläche (Playwright)
 
-Die Nago-Oberfläche ist eine Single-Page-Anwendung, die ihren gesamten Zustand
-über eine WebSocket-Verbindung bezieht. Ein HTTP-Abruf sagt daher nichts über
-die Funktion aus – die Tests steuern einen echten Browser.
+Nago ist eine Single-Page-Anwendung, die ihren gesamten Zustand über eine
+WebSocket-Verbindung bezieht. Ein HTTP-Abruf sagt darüber nichts – diese Tests
+steuern einen echten Browser.
 
 ```bash
 python3 -m venv .venv
@@ -510,12 +536,11 @@ python3 -m venv .venv
 .venv/bin/python -m pytest
 ```
 
-Die Tests starten die Anwendung selbst in einem leeren Datenverzeichnis auf
-einem freien Port – je Test eine eigene Instanz, weil Fotos und Druckaufträge
-dauerhaft gespeichert werden und die Tests sonst voneinander abhingen. Geprüft
-wird der echte Ablauf: Upload über die QR-Code-Seite, Layout-Auswahl im Dialog,
-Druck, Druckstatus, Historie und Startbildschirm, dazu das Einrichten als
-Betreuer.
+Es sind bewusst nur vier Tests. Jeder startet die Anwendung in einem leeren
+Datenverzeichnis auf einem freien Port, denn Fotos und Druckaufträge bleiben
+gespeichert und die Tests hingen sonst voneinander ab. Ein Test kostet damit
+rund acht Sekunden, und das ist der Grund, warum hier nichts steht, was auch
+in Go stehen könnte.
 
 > **Stolperfalle:** Nago mountet die SPA nicht, wenn der User-Agent als Crawler
 > erkannt wird – der Bundle prüft ihn gegen eine Bot-Liste und ruft

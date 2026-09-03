@@ -289,72 +289,118 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 // möglich, ohne dass die Umgebung die Oberfläche dauerhaft überstimmt: Sobald
 // eine Warteschlange gespeichert ist, hat die Einstellung Vorrang.
 func applyPrinterDefaults(mgmt application.SettingsManagement, opts Options, load func() printing.Settings) error {
-	queue := strings.TrimSpace(opts.PrinterQueue)
-	if queue == "" {
+	next, changed := withPrinterDefault(opts, load())
+	if !changed {
 		return nil
 	}
 
-	current := load()
-	if current.Queue != "" {
-		return nil
-	}
-
-	current.Queue = queue
-	if err := mgmt.UseCases.StoreGlobal(user.SU(), current); err != nil {
+	if err := mgmt.UseCases.StoreGlobal(user.SU(), next); err != nil {
 		return fmt.Errorf("cannot apply printer default: %w", err)
 	}
 
-	slog.Info("applied printer queue from environment", "queue", queue)
+	slog.Info("applied printer queue from environment", "queue", next.Queue)
 
 	return nil
 }
 
-// applyBoothDefaults übernimmt den Veranstaltungstitel aus der Umgebung, so
-// lange in den Einstellungen noch keiner steht. Siehe [applyPrinterDefaults].
+// withPrinterDefault übernimmt die Warteschlange aus der Umgebung, solange in
+// den Einstellungen noch keine steht.
+//
+// Die Entscheidung steht getrennt vom Speichern, damit sie ohne eine laufende
+// Nago-Anwendung prüfbar ist. Sie ist der Teil, der falsch sein kann; das
+// Schreiben ist es nicht.
+func withPrinterDefault(opts Options, current printing.Settings) (printing.Settings, bool) {
+	queue := strings.TrimSpace(opts.PrinterQueue)
+	if queue == "" || current.Queue != "" {
+		return current, false
+	}
+
+	current.Queue = queue
+
+	return current, true
+}
+
+// applyBoothDefaults übernimmt den Veranstaltungstitel aus der Umgebung.
+// Siehe [applyPrinterDefaults].
 func applyBoothDefaults(mgmt application.SettingsManagement, opts Options, load func() Settings) error {
-	title := strings.TrimSpace(opts.EventTitle)
-	if title == "" {
+	next, changed := withBoothDefault(opts, load())
+	if !changed {
 		return nil
 	}
 
-	current := load()
-	if current.EventTitle != "" {
-		return nil
-	}
-
-	current.EventTitle = title
-	if err := mgmt.UseCases.StoreGlobal(user.SU(), current); err != nil {
+	if err := mgmt.UseCases.StoreGlobal(user.SU(), next); err != nil {
 		return fmt.Errorf("cannot apply event title default: %w", err)
 	}
 
 	return nil
 }
 
+// withBoothDefault übernimmt den Titel aus der Umgebung, solange keiner steht.
+func withBoothDefault(opts Options, current Settings) (Settings, bool) {
+	title := strings.TrimSpace(opts.EventTitle)
+	if title == "" || current.EventTitle != "" {
+		return current, false
+	}
+
+	current.EventTitle = title
+
+	return current, true
+}
+
 func applyCameraDefaults(mgmt application.SettingsManagement, load func() Settings) error {
-	current := load()
-	if current.CameraDefaultsApplied {
+	next, changed := withCameraDefaults(load())
+	if !changed {
 		return nil
 	}
-	current.CameraAutoPrint = true
-	current.CameraTemplate = printing.TemplatePolaroid
-	current.CameraDefaultsApplied = true
-	if err := mgmt.UseCases.StoreGlobal(user.SU(), current); err != nil {
+
+	if err := mgmt.UseCases.StoreGlobal(user.SU(), next); err != nil {
 		return fmt.Errorf("cannot apply camera defaults: %w", err)
 	}
+
 	return nil
 }
 
+// withCameraDefaults setzt die Erstbelegung der Kamera.
+//
+// Der Merker verhindert, dass eine bewusst abgeschaltete Automatik beim
+// nächsten Start wieder anspringt. Ohne ihn wäre "aus" nicht von "noch nie
+// eingestellt" zu unterscheiden.
+func withCameraDefaults(current Settings) (Settings, bool) {
+	if current.CameraDefaultsApplied {
+		return current, false
+	}
+
+	current.CameraAutoPrint = true
+	current.CameraTemplate = printing.TemplatePolaroid
+	current.CameraDefaultsApplied = true
+
+	return current, true
+}
+
 func applyAutoCropDefaults(mgmt application.SettingsManagement, load func() Settings) error {
-	current := load()
-	if current.AutoCropDefaultsApplied {
+	next, changed := withAutoCropDefaults(load())
+	if !changed {
 		return nil
 	}
-	current.AutoCrop = true
-	current.AutoCropDefaultsApplied = true
-	if err := mgmt.UseCases.StoreGlobal(user.SU(), current); err != nil {
+
+	if err := mgmt.UseCases.StoreGlobal(user.SU(), next); err != nil {
 		return fmt.Errorf("cannot apply auto-crop defaults: %w", err)
 	}
+
 	return nil
+}
+
+// withAutoCropDefaults setzt die Erstbelegung des Bildausschnitts.
+// Siehe [withCameraDefaults] zum Merker.
+func withAutoCropDefaults(current Settings) (Settings, bool) {
+	if current.AutoCropDefaultsApplied {
+		return current, false
+	}
+
+	current.AutoCrop = true
+	current.AutoCropDefaultsApplied = true
+
+	return current, true
 }
 
 // warnAboutMissingQueue meldet beim Start, wenn die eingestellte
