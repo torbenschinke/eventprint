@@ -423,28 +423,76 @@ EOF
     chmod 0644 "${home}/.config/openbox/autostart"
   fi
 
-  # Automatische Anmeldung in die X11-Sitzung.
-  #
-  # X11 und nicht Wayland, und das ist keine Geschmacksfrage: labwc und wlroots
-  # kennen keinen Clone-Modus. Ein Fernseher als zweiter Bildschirm zeigt dort
-  # zwangslaeufig einen anderen Ausschnitt. xrandr --same-as spiegelt.
+  configure_autologin
+}
+
+# configure_autologin traegt die automatische Anmeldung ein.
+#
+# Und zwar in /etc/lightdm/lightdm.conf selbst, nicht nur in lightdm.conf.d.
+# Der Grund ist eine Reihenfolge, die man leicht falsch herum erwartet: lightdm
+# liest die Hauptdatei ZULETZT, sie gewinnt also gegen alles in conf.d. Raspberry
+# Pi OS traegt dort ab Werk den Erstbenutzer ein. Eine Datei in conf.d allein
+# bleibt damit wirkungslos - die Fotobox meldete sich weiter als Betreiber in
+# einer Wayland-Sitzung an, ohne Kiosk und ohne Spiegelung.
+#
+# Die Reihenfolge laesst sich jederzeit nachsehen mit:
+#   sudo lightdm --show-config
+#
+# X11 und nicht Wayland ist dabei keine Geschmacksfrage: labwc und wlroots
+# kennen keinen Clone-Modus. Ein Fernseher als zweiter Bildschirm zeigt dort
+# zwangslaeufig einen anderen Ausschnitt. xrandr --same-as spiegelt.
+configure_autologin() {
+  local conf=/etc/lightdm/lightdm.conf
+  local backup="${conf}.vor-eventprint"
+
   if [[ ${DRY_RUN} -eq 1 ]]; then
+    printf '   \033[2m[dry-run]\033[0m %s\n' "sichere ${conf} nach ${backup} und traege die Fotobox-Sitzung ein"
     printf '   \033[2m[dry-run]\033[0m %s\n' "schreibe /etc/lightdm/lightdm.conf.d/90-eventprint.conf"
-  else
-    install -d -m 0755 /etc/lightdm/lightdm.conf.d
-    cat >/etc/lightdm/lightdm.conf.d/90-eventprint.conf <<EOF
+    return 0
+  fi
+
+  install -d -m 0755 /etc/lightdm/lightdm.conf.d
+  cat >/etc/lightdm/lightdm.conf.d/90-eventprint.conf <<EOF
 # Von install.sh angelegt: automatische Anmeldung der Fotobox.
 #
-# Die Datei liegt bewusst in lightdm.conf.d und nicht in lightdm.conf: So
-# bleibt die Einstellung des Systems unangetastet und laesst sich durch
-# Loeschen dieser einen Datei zuruecknehmen.
+# Achtung: /etc/lightdm/lightdm.conf wird SPAETER gelesen und gewinnt gegen
+# diese Datei. Die eigentliche Einstellung steht deshalb dort; hier steht sie
+# nur fuer den Fall, dass die Hauptdatei die Schluessel gar nicht kennt.
 [Seat:*]
 autologin-user=${KIOSK_USER}
 autologin-user-timeout=0
 autologin-session=openbox
 user-session=openbox
 EOF
+
+  [[ -f "${conf}" ]] || return 0
+
+  # Einmalig sichern, damit der Zustand vor der Fotobox nachvollziehbar bleibt.
+  if [[ ! -f "${backup}" ]]; then
+    cp -a "${conf}" "${backup}"
+    log "bisherige lightdm.conf gesichert nach ${backup}"
   fi
+
+  local key value
+  for pair in \
+    "autologin-user=${KIOSK_USER}" \
+    "autologin-user-timeout=0" \
+    "autologin-session=openbox" \
+    "user-session=openbox"
+  do
+    key="${pair%%=*}"
+    value="${pair#*=}"
+
+    if grep -qE "^[[:space:]]*${key}=" "${conf}"; then
+      sed -i -E "s|^[[:space:]]*${key}=.*|${key}=${value}|" "${conf}"
+    else
+      # Der Schluessel fehlt: direkt hinter [Seat:*] einfuegen, sonst landete er
+      # in einem fremden Abschnitt und bliebe wirkungslos.
+      sed -i "0,/^\[Seat:\*\]/s//[Seat:*]\n${key}=${value}/" "${conf}"
+    fi
+  done
+
+  log "automatische Anmeldung: ${KIOSK_USER} in eine openbox-Sitzung"
 }
 
 setup_kiosk
