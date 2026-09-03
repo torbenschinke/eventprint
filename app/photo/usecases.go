@@ -21,13 +21,17 @@ type UseCases struct {
 	FindLatest   FindLatest
 	Delete       Delete
 	OpenOriginal OpenOriginal
+
+	InspectArchive InspectArchive
+	ExportArchive  ExportArchive
+	PurgeEvent     PurgeEvent
 }
 
 // NewUseCases verdrahtet die Anwendungsfälle mit ihren Abhängigkeiten.
 //
 // archive sichert jedes eingehende Bild zusätzlich unverändert als Datei.
 // nil schaltet die Sicherung ab.
-func NewUseCases(bus events.Bus, repo Repository, images image.UseCases, archive Archive) UseCases {
+func NewUseCases(bus events.Bus, repo Repository, images image.UseCases, archive Archive, archiveDir string, purgeImage PurgeImage) UseCases {
 	var mutex sync.Mutex
 
 	findByID := NewFindByID(repo)
@@ -40,5 +44,9 @@ func NewUseCases(bus events.Bus, repo Repository, images image.UseCases, archive
 		FindLatest:   NewFindLatest(findAll),
 		Delete:       NewDelete(&mutex, bus, repo),
 		OpenOriginal: NewOpenOriginal(findByID, images.OpenReader),
+
+		InspectArchive: NewInspectArchive(archiveDir),
+		ExportArchive:  NewExportArchive(archiveDir),
+		PurgeEvent:     NewPurgeEvent(&mutex, bus, repo, purgeImage, archiveDir),
 	}
 }

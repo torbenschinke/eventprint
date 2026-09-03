@@ -28,6 +28,9 @@ type Pages struct {
 
 	// WiFi ist die Einrichtung der Funkverbindung.
 	WiFi core.NavigationPath
+
+	// Storage zeigt die Speicherbelegung und räumt die Fotobox frei.
+	Storage core.NavigationPath
 }
 
 // Options bündelt alles, was die Seiten zur Arbeit brauchen.

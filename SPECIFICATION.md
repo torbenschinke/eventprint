@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 20 | 100% |
-| Normative requirements covered | 20 | 100% |
-| … claimed by a test | 20 | 100% |
-| … demonstrated by a run | 20 | 100% |
-| … read by a person | 20 | 0% |
+| Source segments accounted for | 23 | 100% |
+| Normative requirements covered | 23 | 100% |
+| … claimed by a test | 23 | 100% |
+| … demonstrated by a run | 23 | 100% |
+| … read by a person | 23 | 0% |
 
 ## Gaps
 
@@ -37,6 +37,9 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 ### Requirements nobody has read
 
+- R-ARCHIV-EXPORT
+- R-ARCHIV-LOESCHEN
+- R-ARCHIV-PLATZ
 - R-DEC-ZUSTANDSABLAGE
 - R-DRUCK-AUFTRAG
 - R-DRUCK-DIAGNOSE
@@ -64,9 +67,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 20 |  |
-| … a test claims | 20 | 100% |
-| … a run demonstrated | 20 | 100% |
+| Normative requirements | 23 |  |
+| … a test claims | 23 | 100% |
+| … a run demonstrated | 23 | 100% |
 
 ### How much of the code a run went through
 
@@ -76,6 +79,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 
 | Document | Kind | Segments | Cited | Read | Drifted |
 |---|---|---:|---:|---:|---:|
+| `requirements/_sources/archiv.md` | markdown | 3 | 3 | 0 | 0 |
 | `requirements/_sources/druck.md` | markdown | 6 | 6 | 0 | 0 |
 | `requirements/_sources/entscheidungen.md` | markdown | 1 | 1 | 0 | 0 |
 | `requirements/_sources/foto.md` | markdown | 5 | 5 | 0 | 0 |
@@ -160,9 +164,9 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-22 packages in 6 bounded contexts, and 40 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+24 packages in 6 bounded contexts, and 43 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
-5 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
+6 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
 _No diagram is included in this document. Pass -figures to speclink generate, after rendering the sources written by speclink diagrams._
 
@@ -192,7 +196,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-41 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+47 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/photo
 
@@ -202,6 +206,13 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 _use case_ — `app/photo/uc_delete.go:11`
 
 **Answers to** [R-FOTO-LOESCHEN](#req-R-FOTO-LOESCHEN)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-exportarchive"></a>
+#### ExportArchive
+
+_query_ — `app/photo/uc_export_archive.go:14`
+
+**Answers to** [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-findall"></a>
 #### FindAll
@@ -231,6 +242,13 @@ _query_ — `app/photo/uc_import.go:25`
 
 **Answers to** [R-FOTO-IMPORT](#req-R-FOTO-IMPORT)
 
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-inspectarchive"></a>
+#### InspectArchive
+
+_query_ — `app/photo/uc_inspect_archive.go:10`
+
+**Answers to** [R-ARCHIV-PLATZ](#req-R-ARCHIV-PLATZ)
+
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-openoriginal"></a>
 #### OpenOriginal
 
@@ -238,35 +256,57 @@ _query_ — `app/photo/uc_open_original.go:13`
 
 **Answers to** [R-FOTO-DRUCKVORLAGE](#req-R-FOTO-DRUCKVORLAGE)
 
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-purgeevent"></a>
+#### PurgeEvent
+
+_query_ — `app/photo/uc_purge_event.go:48`
+
+**Answers to** [R-ARCHIV-LOESCHEN](#req-R-ARCHIV-LOESCHEN)
+
+<a id="req-code-de-torbenschinke-eventprint-photo-archive-export"></a>
+#### de.torbenschinke.eventprint.photo.archive.export
+
+_permission_ — `app/photo/perm.go:75`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-archive-inspect"></a>
+#### de.torbenschinke.eventprint.photo.archive.inspect
+
+_permission_ — `app/photo/perm.go:68`
+
 <a id="req-code-de-torbenschinke-eventprint-photo-delete"></a>
 #### de.torbenschinke.eventprint.photo.delete
 
-_permission_ — `app/photo/perm.go:50`
+_permission_ — `app/photo/perm.go:54`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-find-all"></a>
 #### de.torbenschinke.eventprint.photo.find\_all
 
-_permission_ — `app/photo/perm.go:36`
+_permission_ — `app/photo/perm.go:40`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-find-by-id"></a>
 #### de.torbenschinke.eventprint.photo.find\_by\_id
 
-_permission_ — `app/photo/perm.go:29`
+_permission_ — `app/photo/perm.go:33`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-find-latest"></a>
 #### de.torbenschinke.eventprint.photo.find\_latest
 
-_permission_ — `app/photo/perm.go:43`
+_permission_ — `app/photo/perm.go:47`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-import"></a>
 #### de.torbenschinke.eventprint.photo.import
 
-_permission_ — `app/photo/perm.go:22`
+_permission_ — `app/photo/perm.go:26`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-open-original"></a>
 #### de.torbenschinke.eventprint.photo.open\_original
 
-_permission_ — `app/photo/perm.go:57`
+_permission_ — `app/photo/perm.go:61`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-purge-event"></a>
+#### de.torbenschinke.eventprint.photo.purge\_event
+
+_permission_ — `app/photo/perm.go:82`
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-photo"></a>
 #### Photo
@@ -511,6 +551,9 @@ Every requirement that was read, and how far each one has got. A mark states wha
 
 | Requirement | Kind | Field | Status | Built | Tested | Run | Read |
 |---|---|---|---|---:|---:|---:|---:|
+| [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT) | functional | mixed | normative | yes | yes | yes | no |
+| [R-ARCHIV-LOESCHEN](#req-R-ARCHIV-LOESCHEN) | functional | mixed | normative | yes | yes | yes | no |
+| [R-ARCHIV-PLATZ](#req-R-ARCHIV-PLATZ) | functional | mixed | normative | yes | yes | yes | no |
 | [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE) | decision | technical | normative | yes | no | n/a | no |
 | [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-DIAGNOSE](#req-R-DRUCK-DIAGNOSE) | functional | mixed | normative | yes | yes | yes | no |
@@ -546,6 +589,42 @@ Every requirement that was read, and how far each one has got. A mark states wha
 - **Read** — a named person recorded that they read this exact wording.
 
 ## Requirements
+
+<a id="req-R-ARCHIV-EXPORT"></a>
+### R-ARCHIV-EXPORT — Fotoarchiv als eine Datei herunterladen
+
+Das gesamte Fotoarchiv MUSS sich als einzelne Datei herunterladen lassen.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/archiv.md#archiv-weitergeben
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/photo.ExportArchive`
+- **Demonstrated by** TestZipContainsEveryPhotoOnce
+
+<a id="req-R-ARCHIV-LOESCHEN"></a>
+### R-ARCHIV-LOESCHEN — Fotoarchiv nach Rückfrage löschen
+
+Das Fotoarchiv MUSS sich vollständig löschen lassen. Dem Löschen MUSS eine ausdrückliche, gesonderte Bestätigung vorausgehen, da die Bilder danach unwiederbringlich fort sind.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/archiv.md#archiv-freigeben
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/photo.PurgeEvent`
+- **Demonstrated by** TestPurgeEventClearsEverythingThatCostsSpace
+
+<a id="req-R-ARCHIV-PLATZ"></a>
+### R-ARCHIV-PLATZ — Speicherplatz einsehen
+
+Die Betreuung MUSS sehen können, wie viel Speicherplatz insgesamt vorhanden ist, wie viel das Fotoarchiv belegt und wie viel auf das übrige System entfällt.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/archiv.md#speicherplatz-einsehen
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/photo.InspectArchive`
+- **Demonstrated by** TestPartialFilesAreNeverCounted
 
 <a id="req-R-DEC-ZUSTANDSABLAGE"></a>
 ### R-DEC-ZUSTANDSABLAGE — Aggregate werden als Zustand abgelegt, nicht als Ereignisfolge
@@ -842,6 +921,15 @@ _functional, business, normative._
 ## Source documents
 
 What people wrote, and what became of each part of it.
+
+### requirements/\_sources/archiv.md
+
+| section | became |
+|---|---|
+| Fotoarchiv | _nothing, and says so_ |
+| Archiv weitergeben | R-ARCHIV-EXPORT |
+| Speicherplatz einsehen | R-ARCHIV-PLATZ |
+| Archiv freigeben | R-ARCHIV-LOESCHEN |
 
 ### requirements/\_sources/druck.md
 

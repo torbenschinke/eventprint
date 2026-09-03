@@ -16,6 +16,10 @@ const (
 	idFindLatest   permission.ID = "de.torbenschinke.eventprint.photo.find_latest"
 	idDelete       permission.ID = "de.torbenschinke.eventprint.photo.delete"
 	idOpenOriginal permission.ID = "de.torbenschinke.eventprint.photo.open_original"
+
+	idInspectArchive permission.ID = "de.torbenschinke.eventprint.photo.archive.inspect"
+	idExportArchive  permission.ID = "de.torbenschinke.eventprint.photo.archive.export"
+	idPurgeEvent     permission.ID = "de.torbenschinke.eventprint.photo.purge_event"
 )
 
 var (
@@ -59,5 +63,26 @@ var (
 		permtext.Description(idOpenOriginal,
 			"Träger dieser Berechtigung können die unveränderten Originaldaten eines Fotos lesen, etwa als Vorlage für den Druck.",
 			"Holders of this authorisation can read the untouched original data of a photo, for instance as the source for printing."),
+	)
+
+	PermInspectArchive = permission.Declare[InspectArchive](idInspectArchive,
+		permtext.Name(idInspectArchive, "Fotoarchiv einsehen", "Inspect the photo archive"),
+		permtext.Description(idInspectArchive,
+			"Träger dieser Berechtigung können sehen, wie viele Bilder im Archiv liegen und wie viel Platz sie belegen.",
+			"Holders of this authorisation can see how many photos the archive holds and how much space they occupy."),
+	)
+
+	PermExportArchive = permission.Declare[ExportArchive](idExportArchive,
+		permtext.Name(idExportArchive, "Fotoarchiv herunterladen", "Download the photo archive"),
+		permtext.Description(idExportArchive,
+			"Träger dieser Berechtigung können das gesamte Fotoarchiv als ZIP-Datei herunterladen.",
+			"Holders of this authorisation can download the complete photo archive as a ZIP file."),
+	)
+
+	PermPurgeEvent = permission.Declare[PurgeEvent](idPurgeEvent,
+		permtext.Name(idPurgeEvent, "Veranstaltung abschließen", "Finish the event"),
+		permtext.Description(idPurgeEvent,
+			"Träger dieser Berechtigung können alle Fotos, Bilddaten und Archivdateien endgültig entfernen, um die Fotobox für die nächste Veranstaltung freizuräumen.",
+			"Holders of this authorisation can permanently remove all photos, image data and archive files to prepare the photo booth for the next event."),
 	)
 )

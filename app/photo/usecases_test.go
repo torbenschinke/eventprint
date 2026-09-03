@@ -37,7 +37,7 @@ func newTestUseCases(t *testing.T) UseCases {
 
 	repo := json.NewSloppyJSONRepository[Photo, ID](mem.NewBlobStore("photo"))
 
-	return NewUseCases(events.NewEventBus(), repo, images, archive)
+	return NewUseCases(events.NewEventBus(), repo, images, archive, "", nil)
 }
 
 // importOne legt ein Bild an und liefert es zurück.

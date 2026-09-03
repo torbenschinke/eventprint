@@ -66,7 +66,7 @@ func boothStack(t *testing.T) (photo.UseCases, printing.UseCases, *discardPrinte
 
 	photos := photo.NewUseCases(bus,
 		json.NewSloppyJSONRepository[photo.Photo, photo.ID](mem.NewBlobStore("photo")),
-		images, archive)
+		images, archive, "", nil)
 
 	printer := &discardPrinter{}
 

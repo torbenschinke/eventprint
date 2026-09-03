@@ -153,6 +153,24 @@
     }
   },
   "verifications": {
+    "R-ARCHIV-EXPORT": [
+      {
+        "test": "TestZipContainsEveryPhotoOnce",
+        "text": "0cc6899b7666b1e7d79b0e437496e8227465ec7ef72f6648483db59a759ef507"
+      }
+    ],
+    "R-ARCHIV-LOESCHEN": [
+      {
+        "test": "TestPurgeEventClearsEverythingThatCostsSpace",
+        "text": "2565fc4b685d6f065a047361da2ec6c2d2849e8a129b54c8bc0b256b0262ef58"
+      }
+    ],
+    "R-ARCHIV-PLATZ": [
+      {
+        "test": "TestPartialFilesAreNeverCounted",
+        "text": "e1edd31b8b4f9260c5229ac700b0d1796655c695207038d008ad013de3ef3c5e"
+      }
+    ],
     "R-DRUCK-AUFTRAG": [
       {
         "test": "TestWorkerReportsSuccess",

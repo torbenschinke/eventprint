@@ -304,3 +304,63 @@ def test_public_url_setting_changes_qr_code(page: Page, server: str):
     # einzige, die stimmt.
     page.goto(server)
     expect(page.get_by_text(f"{public_url}/upload")).to_be_visible(timeout=30_000)
+
+
+def test_the_box_is_only_wiped_after_a_deliberate_confirmation(page: Page, server: str):
+    """Nach der Feier: Bilder herunterladen, Box freiräumen.
+
+    Der gefährlichste Ablauf der Anwendung – danach ist nichts
+    wiederherstellbar. Geprüft wird deshalb vor allem, was NICHT passiert:
+    dass ein Klick allein nicht reicht.
+    """
+    pin = "481902"
+
+    # Ein Foto, damit es etwas zu löschen gibt.
+    upload_photo(page, server)
+
+    # Betreuer werden.
+    page.goto(server)
+    tap_qr_code(page, 5)
+    expect(page.get_by_text("PIN festlegen")).to_be_visible(timeout=30_000)
+    enter_pin(page, pin)
+    enter_pin(page, pin)
+    expect(page.get_by_text("PIN festlegen")).to_have_count(0, timeout=30_000)
+
+    page.goto(f"{server}/settings/storage")
+    expect(page.get_by_text("Speicher und Archiv")).to_be_visible(timeout=30_000)
+
+    # Die Statistik nennt alle drei Anteile.
+    for zeile in ["Speicherkarte insgesamt", "Fotoarchiv", "Bildablage", "System und Übriges"]:
+        expect(page.get_by_text(zeile).first).to_be_visible()
+
+    page.get_by_role("button", name="Fotobox freiräumen").click()
+    expect(page.get_by_text("Fotobox freiräumen?")).to_be_visible(timeout=30_000)
+
+    # Ohne Häkchen ist der Knopf gesperrt. Ein Dialog allein genügt nicht: Wer
+    # den Abend über etwas weggeklickt hat, klickt auch das dritte Mal weg.
+    loeschen = page.get_by_role("button", name="Endgültig löschen")
+    expect(loeschen).to_be_disabled()
+
+    # Abbrechen lässt alles stehen.
+    page.get_by_role("button", name="Abbrechen").click()
+    page.goto(f"{server}/gallery")
+    expect(photo_tiles(page)).not_to_have_count(0, timeout=30_000)
+
+    # Erst mit der gesonderten Bestätigung.
+    page.goto(f"{server}/settings/storage")
+    page.get_by_role("button", name="Fotobox freiräumen").click()
+    page.get_by_text("Ja, die Bilder sind gesichert").click()
+
+    loeschen = page.get_by_role("button", name="Endgültig löschen")
+    expect(loeschen).to_be_enabled()
+    loeschen.click()
+
+    expect(page.get_by_text("Fotos entfernt")).to_be_visible(timeout=60_000)
+
+    # Die Oberfläche muss danach zusammenpassen: Eine Galerie, die Bilder
+    # zeigt, deren Daten fort sind, wäre schlimmer als eine leere.
+    page.goto(f"{server}/gallery")
+    expect(page.get_by_text("Noch keine Fotos")).to_be_visible(timeout=30_000)
+
+    page.goto(server)
+    expect(page.get_by_text("Noch keine Fotos")).to_be_visible(timeout=30_000)

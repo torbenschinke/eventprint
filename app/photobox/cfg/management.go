@@ -35,6 +35,7 @@ import (
 	"github.com/torbenschinke/eventprint/app/printing"
 	"github.com/torbenschinke/eventprint/app/wifi"
 	uiwifi "github.com/torbenschinke/eventprint/app/wifi/ui"
+	"github.com/torbenschinke/eventprint/pkg/diskfree"
 	"github.com/torbenschinke/eventprint/pkg/facecrop"
 )
 
@@ -166,7 +167,12 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 
 	slog.Info("photo archive ready", "dir", archiveDir)
 
-	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases, archive)
+	purgeImage, err := newPurgeImage(cfg)
+	if err != nil {
+		return Management{}, err
+	}
+
+	photos := photo.NewUseCases(cfg.EventBus(), photoRepo, images.UseCases, archive, archiveDir, purgeImage)
 
 	printer := printing.NewSettingsPrinter(loadPrinterSettings)
 
@@ -200,6 +206,7 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		Gallery: "gallery",
 		Jobs:    "print/status",
 		WiFi:    "settings/wifi",
+		Storage: "settings/storage",
 	}
 
 	// Freischaltungen und Berührungszähler leben nur im Speicher. Ein Neustart
@@ -407,6 +414,20 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		return uiwifi.PageWiFi(wnd, uiwifi.Options{WiFi: wifiUseCases})
 	})
 
+	storageOpts := uiphotobox.StorageOptions{
+		Photos: photos,
+		DiskUsage: func() (diskfree.Usage, error) {
+			return diskfree.Of(cfg.DataDir())
+		},
+		DataBytes: func() (int64, error) {
+			return dirBytes(cfg.DataDir())
+		},
+	}
+
+	cfg.RootViewWithDecoration(pages.Storage, func(wnd core.Window) core.View {
+		return uiphotobox.PageStorage(wnd, storageOpts)
+	})
+
 	// Die Karte erscheint im Admin-Center nur fuer Traeger der Berechtigung,
 	// also nach der PIN. Nago blendet sie sonst selbst aus.
 	cfg.AddAdminCenterGroup(func(subject auth.Subject) admin.Group {
@@ -418,6 +439,12 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 					Text:       "Das Funknetz vor Ort auswaehlen und die Fotobox damit verbinden.",
 					Target:     pages.WiFi,
 					Permission: wifi.PermConnect,
+				},
+				{
+					Title:      "Speicher und Archiv",
+					Text:       "Nach der Veranstaltung: Fotos als ZIP herunterladen und die Fotobox freiraeumen.",
+					Target:     pages.Storage,
+					Permission: photo.PermInspectArchive,
 				},
 			},
 		}
@@ -822,6 +849,12 @@ func operatorPermissions() []permission.ID {
 		wifi.PermScan,
 		wifi.PermStatus,
 		wifi.PermConnect,
+
+		// Der Abbau nach der Feier: Bilder herunterladen, Karte leeren.
+		// PermPurgeEvent loescht endgueltig und gehoert nie einem Gast.
+		photo.PermInspectArchive,
+		photo.PermExportArchive,
+		photo.PermPurgeEvent,
 	)
 }
 
