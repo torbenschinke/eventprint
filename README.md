@@ -283,21 +283,64 @@ Aufnahme unbemerkt verloren ging.
 
 ### Wenn Aufnahmen ausbleiben
 
-Häufigste Ursache ist der Volume-Monitor von GVFS. Er greift jede PTP-Kamera
-ab, sobald sie am Bus auftaucht, und hält sie fest; `gphoto2` meldet dann
-`Could not claim the USB device` oder verliert das Gerät im Betrieb.
-`scripts/install.sh` schaltet ihn deshalb ab und legt eine udev-Regel an, die
-die Kamera für den Dienst freigibt. Auf einem von Hand eingerichteten System
-gehört das nachgeholt:
+Zwei Ursachen sind bekannt, beide stellt `scripts/provision.sh` bei jedem
+Hochfahren ab:
 
-```bash
-sudo systemctl --global mask gvfs-gphoto2-volume-monitor.service
-sudo systemctl --global mask gphoto2-volume-monitor.service
-```
+Der **Volume-Monitor von GVFS** greift jede PTP-Kamera ab, sobald sie am Bus
+auftaucht, und hält sie fest; `gphoto2` meldet dann `Could not claim the USB
+device` oder verliert das Gerät im Betrieb. Er wird maskiert, und zusätzlich
+wird seine D-Bus-Aktivierung über `/usr/local/share` stillgelegt — die
+systemd-Unit allein genügt nicht, weil D-Bus ihn sonst nachstartet.
+
+Der **USB-Autosuspend** legt Geräte nach zwei Sekunden Leerlauf schlafen. Eine
+Kamera im Tethering wartet die meiste Zeit auf den Auslöser und gilt damit als
+untätig; schläft sie ein, bricht die PTP-Sitzung. Eine udev-Regel hält
+Kameras wach.
 
 Zur Prüfung meldet `gphoto2 --auto-detect` die Kamera, und
 `journalctl -u eventprint -f` zeigt `camera connected` beziehungsweise
-`camera tethering dropped`.
+`camera tethering dropped`. Die Zeile unter dem QR-Code zählt die Abrisse mit —
+sie ist die Ferndiagnose, wenn niemand auf die Box kommt.
+
+## Wie Änderungen auf die Box kommen
+
+Beim Hochfahren laufen drei Dienste nacheinander:
+
+```
+eventprint-update.service      holt origin/master und baut neu
+eventprint-provision.service   gleicht die Systemkonfiguration an
+eventprint.service             die Fotobox selbst
+```
+
+`update.sh` läuft **unprivilegiert** und tauscht nur die Binärdatei.
+`provision.sh` läuft **als root** und richtet alles, was das nicht kann: udev-
+Regeln, die Journal-Einstellung, das Stilllegen des Volume-Monitors — und die
+systemd-Units selbst, einschließlich seiner eigenen.
+
+Damit ist auch Systemkonfiguration per `git push` zustellbar: pushen, jemanden
+vor Ort den Strom ziehen lassen, fertig. Vorher ging das nur mit root vor dem
+Gerät, und beim ersten Einsatz stand die Box im Gastnetz hinter NAT — die
+Reparatur kostete eine Autofahrt.
+
+Die Reihenfolge ist wichtiger, als sie aussieht: `provision.sh` stammt aus dem
+Repository, und der Updater ist es, der das Repository aktualisiert. Liefe das
+Provisioning zuerst, arbeitete es mit dem Skript des vorherigen Standes, und
+eine Änderung daran bräuchte zwei Neustarts.
+
+**Der Preis ist benannt und angenommen:** Wer auf `master` pushen kann, führt
+auf der Box Befehle als root aus.
+
+Rückweg bei einem fehlerhaften Stand: `git revert`, pushen, erneut den Strom
+ziehen lassen. `update.sh` endet immer mit Erfolg und behält im Zweifel die
+alte Binärdatei, die Box bleibt also startfähig.
+
+### Logs
+
+Raspberry Pi OS hält das Journal im RAM, um die SD-Karte zu schonen
+(`40-rpi-volatile-storage.conf`). Nach der ersten Veranstaltung war das Journal
+des Abends damit verloren, bevor jemand hineinsehen konnte. `provision.sh` legt
+deshalb `99-eventprint-persistent.conf` an — die `99` ist wesentlich, eine `10`
+wäre gegen die `40` der Distribution wirkungslos.
 
 Unter **Einstellungen → Fotobox → Kamera** lässt sich der automatische Druck
 abschalten und das Standardlayout wählen. Standardmäßig wird jede Aufnahme
@@ -363,6 +406,7 @@ app/upld/                   Transiente Sitzungen und Upload-Warteschlangen
 
 app/photobox/cfg/           Enable() – verdrahtet die Fotobox
 app/photobox/cfg/camera/    Übernahme der Kamerabilder aus dem Tethering-Ordner
+scripts/provision.sh        Systemkonfiguration als root, laeuft bei jedem Start
 app/photobox/cfg/remote/    Ausgehender photoupld-Client und Abfrage
 app/photobox/ui/            Oberfläche der Fotobox (Paket uiphotobox)
 
