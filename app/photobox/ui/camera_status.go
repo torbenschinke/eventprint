@@ -45,6 +45,14 @@ func cameraStatusView(opts Options) core.View {
 			TextAlignment(ui.TextAlignCenter))
 	}
 
+	// Die Abrisszeile ist die Ferndiagnose. Ohne Zugang zur Box ist das, was
+	// jemand vor Ort hier vorliest, die einzige Auskunft darueber, ob die
+	// Kamera stabil haengt. Sie erscheint nur, wenn es etwas zu melden gibt.
+	if note := cameraDrops(status); note != "" {
+		lines = append(lines, ui.Text(note).Font(ui.BodySmall).
+			TextAlignment(ui.TextAlignCenter))
+	}
+
 	return ui.VStack(lines...).
 		Gap(ui.L4).
 		Alignment(ui.Center).
@@ -96,6 +104,20 @@ func cameraActivity(status camera.Status) string {
 
 	return fmt.Sprintf("%s übernommen, zuletzt %s.",
 		plural(status.Captures, "Aufnahme", "Aufnahmen"), ago(status.LastCapture))
+}
+
+// cameraDrops meldet Verbindungsabrisse und geglueckte Nachlesen.
+func cameraDrops(status camera.Status) string {
+	if status.Drops == 0 {
+		return ""
+	}
+
+	note := fmt.Sprintf("Verbindung %d× neu aufgebaut", status.Drops)
+	if status.Recovered > 0 {
+		note += fmt.Sprintf(", %d× von der Karte nachgeholt", status.Recovered)
+	}
+
+	return note + "."
 }
 
 func plural(n int, one, many string) string {

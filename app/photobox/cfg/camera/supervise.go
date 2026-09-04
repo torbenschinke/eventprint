@@ -38,6 +38,9 @@ const (
 	// den Bus nicht im Millisekundentakt belegt.
 	maxBackoff = 5 * time.Second
 
+	// recoverTimeout deckelt die Nachlese von der Speicherkarte.
+	recoverTimeout = 60 * time.Second
+
 	// healthyTethering ist die Laufzeit, ab der ein Tethering als "hat
 	// funktioniert" gilt. Bricht es danach ab, war es kein Startfehler,
 	// sondern eine Störung im Betrieb – und dann zählt jede Sekunde.
@@ -70,6 +73,9 @@ type supervisor struct {
 	// healthy ist die Laufzeit, ab der ein Tethering als geglueckt gilt.
 	// Null bedeutet healthyTethering.
 	healthy time.Duration
+
+	// recoverLimit deckelt die Nachlese. Null bedeutet recoverTimeout.
+	recoverLimit time.Duration
 
 	// recover merkt sich, dass eine Lücke im Tethering war. Beim nächsten
 	// Verbindungsaufbau werden die in der Lücke entstandenen Bilder von der
@@ -178,6 +184,7 @@ func (s *supervisor) once(ctx context.Context) outcome {
 	if lived >= s.healthyAfter() {
 		// Es lief und ist gestorben: ab jetzt klafft eine Lücke.
 		s.recover = true
+		s.status.dropped()
 		slog.Warn("camera tethering dropped, reconnecting at once",
 			"model", model, "lived", lived, "err", err)
 		s.status.failed(model, port, "Verbindung abgerissen, wird sofort neu aufgebaut.")
@@ -188,6 +195,14 @@ func (s *supervisor) once(ctx context.Context) outcome {
 	s.status.failed(model, port, "gphoto2 bekommt die Kamera nicht. "+
 		"Meist greift der Datei-Manager des Systems darauf zu.")
 	return outcomeStartFailed
+}
+
+// recoverAfter deckelt die Nachlese. Null bedeutet recoverTimeout.
+func (s *supervisor) recoverAfter() time.Duration {
+	if s.recoverLimit > 0 {
+		return s.recoverLimit
+	}
+	return recoverTimeout
 }
 
 func (s *supervisor) healthyAfter() time.Duration {
@@ -212,16 +227,26 @@ func (s *supervisor) tetherArgs(model, port string) []string {
 // heruntergeladen führt. Ohne diese Einschränkung würde bei jedem Neuaufbau
 // der gesamte Karteninhalt in den Ordner laufen.
 func (s *supervisor) recoverFromCard(ctx context.Context, model, port string) {
+	// Die Nachlese laeuft VOR dem Tethering, also in einer Zeit, in der
+	// niemand am USB lauscht. Ohne Deckel wuerde sie auf einer vollen Karte
+	// minutenlang laufen und genau die Luecke erzeugen, die sie schliessen
+	// soll. Lieber ein Bild spaeter nachholen als den Livebetrieb blockieren.
+	ctx, cancel := context.WithTimeout(ctx, s.recoverAfter())
+	defer cancel()
+
 	prefix := fmt.Sprintf("recover-%d-%%Y%%m%%d-%%H%%M%%S-%%03n.%%C", time.Now().UnixNano())
 	args := []string{
 		"--camera", model, "--port", port,
 		"--get-all-files", "--new", "--filename", filepath.Join(s.dir, prefix),
 	}
-	if err := s.runner.Run(ctx, os.Stderr, "gphoto2", args...); err != nil && ctx.Err() == nil {
+	if err := s.runner.Run(ctx, os.Stderr, "gphoto2", args...); err != nil {
 		// Kein Grund abzubrechen: das Tethering ist wichtiger als die
 		// Nachlese, und nicht jede Kamera kennt --new.
-		slog.Warn("cannot recover captures from camera card", "model", model, "err", err)
+		slog.Warn("cannot recover captures from camera card", "model", model,
+			"timeout", ctx.Err() != nil, "err", err)
+		return
 	}
+	s.status.recovered()
 }
 
 // detectedCamera liest Modell und Port aus der Ausgabe von --auto-detect.

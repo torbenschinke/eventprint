@@ -1,0 +1,30 @@
+[Unit]
+Description=eventprint: Systemkonfiguration an das Repository angleichen
+Documentation=file:/opt/eventprint/README.md
+
+# Vor dem Updater und damit vor dem Dienst. Was hier gerichtet wird - udev,
+# Journal, die Kamerafreigabe - muss stehen, bevor die Fotobox startet.
+Before=eventprint-update.service eventprint.service
+Wants=eventprint-update.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Bewusst als root: Genau das ist der Zweck. update.sh laeuft unprivilegiert
+# und kann nur Go-Code ausspielen; jede Aenderung an udev oder systemd hing
+# vorher daran, dass jemand mit root vor dem Geraet sitzt. Beim ersten Einsatz
+# bedeutete das eine Autofahrt, weil die Box im Gastnetz nicht erreichbar war.
+#
+# Der Preis ist benannt und angenommen: Wer auf den Zweig pushen kann, fuehrt
+# hier Befehle als root aus.
+ExecStart=/opt/eventprint/scripts/provision.sh
+
+# Das Skript endet immer mit Erfolg. Diese Zeile ist der zweite Riegel: Ein
+# Fehler hier darf die Fotobox nicht am Starten hindern.
+SuccessExitStatus=0 1
+
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

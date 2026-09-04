@@ -47,6 +47,16 @@ type Status struct {
 	// Pending ist die Zahl der Bilder, die noch importiert oder gedruckt
 	// werden.
 	Pending int
+
+	// Drops zaehlt, wie oft ein laufendes Tethering abgerissen ist.
+	//
+	// Das ist die Ferndiagnose: Ohne Zugang zur Box ist diese Zahl, vorgelesen
+	// von jemandem vor Ort, die einzige Auskunft darueber, ob die Kamera
+	// stabil haengt oder dauernd neu verbindet.
+	Drops int
+
+	// Recovered zaehlt die geglueckten Nachlesen von der Speicherkarte.
+	Recovered int
 }
 
 // status hält den Zustand für die Oberfläche fest.
@@ -100,4 +110,12 @@ func (s *status) captured() {
 
 func (s *status) pending(n int) {
 	s.update(func(v *Status) { v.Pending = n })
+}
+
+func (s *status) dropped() {
+	s.update(func(v *Status) { v.Drops++ })
+}
+
+func (s *status) recovered() {
+	s.update(func(v *Status) { v.Recovered++ })
 }

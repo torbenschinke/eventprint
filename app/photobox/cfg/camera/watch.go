@@ -43,6 +43,10 @@ type Monitor struct {
 	runner  commandRunner
 	queue   chan string
 	watcher *watcher
+
+	// healthy ist die Laufzeit, ab der ein Tethering als geglueckt gilt.
+	// Null bedeutet healthyTethering; die Tests setzen sie kuerzer.
+	healthy time.Duration
 }
 
 // New baut die Kameraanbindung auf, ohne sie zu starten.
@@ -75,8 +79,8 @@ func (m *Monitor) Run(ctx context.Context) {
 		return
 	}
 
-	sup := &supervisor{dir: m.dir, load: m.load, runner: m.runner, status: m.status}
-	go sup.run(ctx)
+	sup := &supervisor{dir: m.dir, load: m.load, runner: m.runner, status: m.status, healthy: m.healthy}
+	go guard(ctx, "supervisor", m.status, sup.run)
 
 	// Import und Druck laufen in einem eigenen Thread. Vorher geschah beides
 	// mitten im Verzeichnisdurchlauf: Solange ein Bild geschrieben oder ein
@@ -86,9 +90,9 @@ func (m *Monitor) Run(ctx context.Context) {
 		load: m.load, photos: m.photos, prints: m.prints,
 		status: m.status, queue: m.queue, done: m.watcher.release,
 	}
-	go w.run(ctx)
+	go guard(ctx, "worker", m.status, w.run)
 
-	m.watcher.run(ctx, m.load)
+	guard(ctx, "watcher", m.status, func(c context.Context) { m.watcher.run(c, m.load) })
 }
 
 // Run ist der frühere Einstieg und bleibt als Abkürzung erhalten.

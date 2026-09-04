@@ -174,43 +174,20 @@ for group in lp lpadmin plugdev video; do
 done
 
 # ------------------------------------------------------------------ Kamera ---
-# Der Desktop-Aufsatz muss von der Kamera ferngehalten werden.
+# Die Kamerafreigabe, die Journal-Einstellung und das Stilllegen des
+# GVFS-Volume-Monitors stehen in scripts/provision.sh und laufen von dort bei
+# jedem Start. Hier wird nur einmal angestossen, damit die frisch aufgesetzte
+# Box nicht erst einen Neustart braucht.
 #
-# Sobald eine PTP-Kamera am USB auftaucht, greift der Volume-Monitor von GVFS
-# sie ab und haelt sie fest, damit man sie als Laufwerk durchblaettern kann.
-# gphoto2 kommt dann nicht mehr an das Geraet ("Could not claim the USB
-# device") oder verliert es mitten im Betrieb wieder. Beides trifft die
-# Fotobox an der teuersten Stelle: Waehrend das Tethering neu aufgebaut wird,
-# lauscht niemand am Bus, und eine in dieser Zeit ausgeloeste Aufnahme bleibt
-# auf der Speicherkarte liegen. So verschwindet ein einzelnes Foto mitten aus
-# einer Serie, ohne dass jemand etwas bemerkt.
-#
-# Auf einem Geraet, das den Abend ueber nur Fotos druckt, wird die Kamera nie
-# als Laufwerk gebraucht. Der Monitor wird deshalb ersatzlos abgeschaltet.
-for unit in gvfs-gphoto2-volume-monitor gphoto2-volume-monitor; do
-  service="/usr/lib/systemd/user/${unit}.service"
-  if [[ -e "${service}" || -e "/usr/share/dbus-1/services/org.gtk.vfs.GPhoto2VolumeMonitor.service" ]]; then
-    log "${unit} abschalten, damit gphoto2 an die Kamera kommt"
-    run systemctl --global mask "${unit}.service"
-  fi
-done
-
-# Ohne Regel gehoert der USB-Knoten der Kamera root. Der Dienst laeuft als
-# ${SERVICE_USER} und bekaeme sie sonst gar nicht erst zu fassen. uaccess und
-# plugdev decken die ueblichen Faelle ab, MTP_NO_PROBE haelt zusaetzlich die
-# Automatik der Desktop-Umgebung fern.
-UDEV_RULE="/etc/udev/rules.d/70-eventprint-camera.rules"
-log "udev-Regel für die Kamera schreiben: ${UDEV_RULE}"
+# Der Umweg ueber ein eigenes Skript ist Absicht: install.sh setzt eine Maschine
+# neu auf und wird dabei von einem Menschen gestartet. provision.sh laeuft bei
+# jedem Hochfahren und macht Systemkonfiguration damit per "git push"
+# zustellbar - beim ersten Einsatz fehlte genau das und kostete eine Fahrt.
 if [[ ${DRY_RUN} -eq 0 ]]; then
-  cat >"${UDEV_RULE}" <<'RULE'
-# Von eventprint verwaltet. Gibt PTP-Kameras für den Dienst frei und hält die
-# Automatik des Desktops davon fern.
-SUBSYSTEM=="usb", ENV{ID_GPHOTO2}=="1", MODE="0664", GROUP="plugdev", TAG+="uaccess", ENV{UDISKS_IGNORE}="1", ENV{MTP_NO_PROBE}="1"
-SUBSYSTEM=="usb", ENV{ID_USB_INTERFACES}=="*:060101:*", MODE="0664", GROUP="plugdev", TAG+="uaccess", ENV{UDISKS_IGNORE}="1", ENV{MTP_NO_PROBE}="1"
-RULE
-  run udevadm control --reload-rules
+  log "Systemkonfiguration angleichen (provision.sh)"
+  "${PREFIX}/scripts/provision.sh" || warn "provision.sh meldete ein Problem; siehe Ausgabe oben."
 else
-  log "(dry-run) ${UDEV_RULE} würde geschrieben"
+  log "(dry-run) ${PREFIX}/scripts/provision.sh wuerde laufen"
 fi
 
 # ------------------------------------------------------------- Quelltext ---
@@ -663,12 +640,12 @@ EVENTPRINT_PRINTER=${queue_value}
 EOF
 fi
 
-for unit in eventprint-update.service eventprint.service; do
+for unit in eventprint-provision.service eventprint-update.service eventprint.service; do
   run install -m 0644 "${PREFIX}/deploy/systemd/${unit}" "/etc/systemd/system/${unit}"
 done
 
 run systemctl daemon-reload
-run systemctl enable eventprint-update.service eventprint.service
+run systemctl enable eventprint-provision.service eventprint-update.service eventprint.service
 run systemctl enable cups.service
 
 log "fertig"

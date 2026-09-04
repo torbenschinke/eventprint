@@ -44,6 +44,10 @@ type job struct {
 
 	attempts int
 	nextTry  time.Time
+
+	// vanished bedeutet, dass die Datei zwischen Meldung und Zugriff
+	// verschwunden ist. Dann hat sie jemand anders erledigt.
+	vanished bool
 }
 
 // worker importiert und druckt, ohne den Verzeichnisdurchlauf aufzuhalten.
@@ -120,6 +124,11 @@ func (w *worker) work(ctx context.Context) {
 			w.done(j.path)
 			continue
 		}
+		if j.vanished {
+			// Nichts mehr zu tun, und nichts zu melden.
+			w.done(j.path)
+			continue
+		}
 		if j.attempts >= retryLimit {
 			// Der Pfad wird ausdruecklich NICHT freigegeben. Sonst faende ihn
 			// der naechste Verzeichnisdurchlauf wieder, reihte ihn erneut ein
@@ -174,6 +183,18 @@ func (w *worker) step(j *job) bool {
 func (w *worker) importFile(j *job) (photo.ID, bool) {
 	raw, err := os.ReadFile(j.path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// Die Datei ist weg, waehrend der Auftrag in der Warteschlange
+			// stand. Das ist kein Fehler, sondern das Ende eines Wettlaufs:
+			// Der Verzeichnisdurchlauf liest, der Worker loescht und gibt
+			// frei, und der Durchlauf beansprucht danach den veralteten Pfad
+			// noch einmal. Als Fehler behandelt bedeutete das einen
+			// Phantom-Auftrag, der zehnmal wiederholt wurde und dabei jedes
+			// Mal eine Fehlerzeile schrieb.
+			slog.Debug("camera file vanished before import", "path", j.path)
+			j.vanished = true
+			return "", false
+		}
 		slog.Error("cannot read camera file", "path", j.path, "err", err)
 		return "", false
 	}
