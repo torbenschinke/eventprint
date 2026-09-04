@@ -1,12 +1,12 @@
 [Unit]
 Description=eventprint Fotobox
 Documentation=file:/opt/eventprint/README.md
-After=network.target cups.service eventprint-update.service
+After=network.target cups.service eventprint-update.service eventprint-provision.service
 
 # Wants, nicht Requires: Scheitert die Aktualisierung – etwa ohne Netz –, muss
 # die Fotobox trotzdem mit dem vorhandenen Stand starten. Genau dafür endet
 # update.sh immer mit Erfolg.
-Wants=eventprint-update.service cups.service
+Wants=eventprint-update.service eventprint-provision.service cups.service
 
 [Service]
 Type=simple

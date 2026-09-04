@@ -2,10 +2,19 @@
 Description=eventprint: Systemkonfiguration an das Repository angleichen
 Documentation=file:/opt/eventprint/README.md
 
-# Vor dem Updater und damit vor dem Dienst. Was hier gerichtet wird - udev,
-# Journal, die Kamerafreigabe - muss stehen, bevor die Fotobox startet.
-Before=eventprint-update.service eventprint.service
+# Nach dem Updater und vor dem Dienst.
+#
+# Die Reihenfolge ist wichtiger, als sie aussieht: provision.sh stammt aus dem
+# Repository, und der Updater ist es, der das Repository aktualisiert. Liefe
+# das Provisioning zuerst, arbeitete es mit dem Skript des VORHERIGEN Standes -
+# eine Aenderung daran braeuchte dann zwei Neustarts, und der zweite wuerde
+# vergessen. So genuegt einer.
+#
+# Der Updater endet immer mit Erfolg und behaelt im Zweifel den alten Stand,
+# hier auf ihn zu warten kostet also nichts.
+After=eventprint-update.service
 Wants=eventprint-update.service
+Before=eventprint.service
 
 [Service]
 Type=oneshot
