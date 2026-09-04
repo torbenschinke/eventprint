@@ -11,7 +11,7 @@ require (
 	go.wdy.de/nago v0.0.0-20260825122142-0bc1268bd119
 	gocv.io/x/gocv v0.43.0
 	golang.org/x/image v0.33.0
-	golang.org/x/text v0.31.0
+	golang.org/x/text v0.37.0
 )
 
 require (
@@ -30,6 +30,6 @@ require (
 	github.com/wagslane/go-password-validator v0.3.0 // indirect
 	github.com/worldiety/material-color-utilities v0.0.0-20250324124753-a84b74640c16 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 )
