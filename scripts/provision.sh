@@ -73,7 +73,13 @@ fi
 # Laufwerk gebraucht.
 for unit in gvfs-gphoto2-volume-monitor gphoto2-volume-monitor; do
   if [[ -e "/usr/libexec/${unit}" || -e "/usr/lib/gvfs/${unit}" ]]; then
-    if ! systemctl --global is-enabled "${unit}.service" 2>/dev/null | grep -q masked; then
+    # Das Ergebnis wird in eine Variable geholt statt durch eine Pipe geprueft:
+    # is-enabled liefert fuer maskierte Units einen Fehlercode, und mit
+    # pipefail scheitert dann die ganze Pipeline, obwohl grep getroffen hat.
+    # Die Bedingung war dadurch immer wahr und der Block lief bei jedem Start
+    # erneut - genau das, was ein wiederholbares Skript nicht tun darf.
+    state="$(systemctl --global is-enabled "${unit}.service" 2>/dev/null || true)"
+    if [[ "${state}" != *masked* ]]; then
       log "${unit} abschalten, damit gphoto2 an die Kamera kommt"
       systemctl --global mask "${unit}.service" 2>/dev/null && changed=1
     fi
