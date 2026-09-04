@@ -25,6 +25,8 @@
 
 set -uo pipefail
 
+readonly ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
 log() { printf '%s eventprint-provision: %s\n' "$(date -Is)" "$*"; }
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -33,6 +35,31 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 changed=0
+
+# ------------------------------------------------------------------- Units ---
+# Die systemd-Units werden nach /etc kopiert, nicht verlinkt. Ein "git pull"
+# aendert sie deshalb nicht - genau der Henne-Ei-Fehler, der dieses Skript
+# noetig gemacht hat, nur eine Ebene hoeher. Ohne diesen Abschnitt waere jede
+# Aenderung an einer Unit wieder nur mit root vor dem Geraet zustellbar.
+#
+# Die eigene Unit wird dabei mitaktualisiert. Das wirkt beim naechsten Start,
+# nicht sofort, und das genuegt.
+units_changed=0
+for unit in eventprint-provision.service eventprint-update.service eventprint.service; do
+  src="${ROOT_DIR}/deploy/systemd/${unit}"
+  dst="/etc/systemd/system/${unit}"
+  [[ -f "${src}" ]] || continue
+  if ! cmp -s "${src}" "${dst}"; then
+    log "Unit ${unit} angleichen"
+    install -m 0644 "${src}" "${dst}"
+    units_changed=1
+    changed=1
+  fi
+done
+if [[ ${units_changed} -eq 1 ]]; then
+  systemctl daemon-reload
+  systemctl enable eventprint-provision.service eventprint-update.service eventprint.service >/dev/null 2>&1
+fi
 
 # ------------------------------------------------------------------ Journal ---
 # Nach der ersten Veranstaltung war das Journal des Abends verloren. Raspberry
