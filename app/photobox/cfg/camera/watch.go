@@ -3,17 +3,14 @@ package camera
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
-	"go.wdy.de/nago/application/image"
-	"go.wdy.de/nago/application/user"
+	"github.com/fsnotify/fsnotify"
 
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/app/printing"
@@ -22,144 +19,217 @@ import (
 type Options struct {
 	AutoPrint         bool
 	AutoPrintTemplate printing.TemplateID
-	ScanInterval      time.Duration
-	DetectInterval    time.Duration
+
+	// ScanInterval ist der Abstand des Rückfall-Durchlaufs über das
+	// Verzeichnis. Der Normalfall kommt über fsnotify, dieser Takt fängt nur
+	// ab, was der Kernel nicht meldet.
+	ScanInterval time.Duration
+
+	// DetectInterval ist der Abstand der Kamerasuche, solange keine Kamera am
+	// USB hängt. Er gilt ausdrücklich NICHT für den Wiederaufbau eines
+	// abgerissenen Tetherings.
+	DetectInterval time.Duration
 }
 
 type LoadOptions func() Options
 
-type commandRunner interface {
-	Output(context.Context, string, ...string) ([]byte, error)
-	Run(context.Context, io.Writer, string, ...string) error
+// Monitor ist die Kameraanbindung: Erkennung, Tethering, Übernahme, Druck.
+type Monitor struct {
+	dir     string
+	load    LoadOptions
+	photos  photo.UseCases
+	prints  printing.UseCases
+	status  *status
+	runner  commandRunner
+	queue   chan string
+	watcher *watcher
 }
 
-type execRunner struct{}
-
-func (execRunner) Output(ctx context.Context, name string, args ...string) ([]byte, error) {
-	return exec.CommandContext(ctx, name, args...).Output()
+// New baut die Kameraanbindung auf, ohne sie zu starten.
+func New(dir string, load LoadOptions, photos photo.UseCases, prints printing.UseCases) *Monitor {
+	st := &status{value: Status{State: StateSearching}}
+	m := &Monitor{
+		dir:    dir,
+		load:   load,
+		photos: photos,
+		prints: prints,
+		status: st,
+		runner: execRunner{},
+		queue:  make(chan string, queueDepth),
+	}
+	m.watcher = &watcher{dir: dir, states: map[string]fileState{}, taken: map[string]bool{}, queue: m.queue}
+	return m
 }
 
-func (execRunner) Run(ctx context.Context, output io.Writer, name string, args ...string) error {
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Stdout = output
-	cmd.Stderr = output
-	return cmd.Run()
+// Status meldet den Zustand der Kamera an die Oberfläche. Er darf aus jedem
+// Thread gelesen werden.
+func (m *Monitor) Status() Status {
+	return m.status.get()
 }
+
+// Run hält Erkennung, Tethering, Übernahme und Druck am Leben, bis ctx endet.
+func (m *Monitor) Run(ctx context.Context) {
+	if err := os.MkdirAll(m.dir, 0o755); err != nil {
+		slog.Error("cannot create camera directory", "dir", m.dir, "err", err)
+		m.status.failed("", "", "Der Ordner für die Kamerabilder lässt sich nicht anlegen.")
+		return
+	}
+
+	sup := &supervisor{dir: m.dir, load: m.load, runner: m.runner, status: m.status}
+	go sup.run(ctx)
+
+	// Import und Druck laufen in einem eigenen Thread. Vorher geschah beides
+	// mitten im Verzeichnisdurchlauf: Solange ein Bild geschrieben oder ein
+	// Druckauftrag eingereiht wurde, sah niemand nach neuen Aufnahmen. Ein
+	// hängender Drucker legte damit die gesamte Bildannahme still.
+	w := &worker{
+		load: m.load, photos: m.photos, prints: m.prints,
+		status: m.status, queue: m.queue, done: m.watcher.release,
+	}
+	go w.run(ctx)
+
+	m.watcher.run(ctx, m.load)
+}
+
+// Run ist der frühere Einstieg und bleibt als Abkürzung erhalten.
+func Run(ctx context.Context, dir string, load LoadOptions, photos photo.UseCases, prints printing.UseCases) {
+	New(dir, load, photos, prints).Run(ctx)
+}
+
+// queueDepth puffert Aufnahmen, die schneller eintreffen, als sie gedruckt
+// werden. Eine Serienaufnahme darf nicht dazu führen, dass der Durchlauf
+// blockiert.
+const queueDepth = 64
 
 type fileState struct {
 	size    int64
 	modTime time.Time
 }
 
-type pendingPhoto struct {
-	id       photo.ID
-	template printing.TemplateID
+// watcher meldet fertige Dateien an den Worker.
+type watcher struct {
+	dir   string
+	queue chan<- string
 
-	// printed hält fest, dass der Auftrag bereits eingereiht wurde.
+	states map[string]fileState
+
+	// taken hält fest, welche Dateien bereits übergeben sind. Ohne diesen
+	// Merker würde derselbe Pfad bei jedem Durchlauf erneut in die
+	// Warteschlange wandern, solange der Worker noch daran arbeitet.
 	//
-	// Der Eintrag bleibt bestehen, bis die Datei gelöscht ist. Scheitert das
-	// Löschen – etwa weil das Verzeichnis schreibgeschützt ist –, sah der
-	// nächste Durchlauf im Sekundentakt einen offenen Eintrag und druckte
-	// erneut. Ohne diese Markierung wäre eine einzige klemmende Datei ein
-	// endloser Papierverbrauch.
-	printed bool
+	// Der Worker gibt Einträge aus seinem eigenen Thread frei, deshalb der
+	// Mutex.
+	mu    sync.Mutex
+	taken map[string]bool
 }
 
-// Run keeps camera detection, tethering, importing and printing alive until ctx ends.
-func Run(ctx context.Context, dir string, load LoadOptions, photos photo.UseCases, prints printing.UseCases) {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		slog.Error("cannot create camera directory", "dir", dir, "err", err)
-		return
-	}
-
-	w := &watcher{
-		dir:     dir,
-		load:    load,
-		photos:  photos,
-		prints:  prints,
-		states:  map[string]fileState{},
-		pending: map[string]pendingPhoto{},
-	}
-	go supervise(ctx, dir, execRunner{}, load)
-	w.run(ctx)
-}
-
-func supervise(ctx context.Context, dir string, runner commandRunner, load LoadOptions) {
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-
-		superviseOnce(ctx, dir, runner)
-
-		interval := load().DetectInterval
-		if interval <= 0 {
-			interval = 10 * time.Second
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(interval):
-		}
-	}
-}
-
-func superviseOnce(ctx context.Context, dir string, runner commandRunner) bool {
-	out, err := runner.Output(ctx, "gphoto2", "--auto-detect")
-	if err != nil {
-		slog.Error("cannot detect camera with gphoto2", "err", err)
+func (w *watcher) claim(path string) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.taken[path] {
 		return false
 	}
-	model, port, ok := detectedCamera(string(out))
-	if !ok {
-		return false
-	}
-	slog.Info("camera connected", "model", model, "port", port)
-	prefix := fmt.Sprintf("capture-%d-%%Y%%m%%d-%%H%%M%%S-%%03n.%%C", time.Now().UnixNano())
-	args := []string{"--camera", model, "--port", port, "--capture-tethered", "--filename", filepath.Join(dir, prefix)}
-	if err := runner.Run(ctx, os.Stderr, "gphoto2", args...); err != nil && ctx.Err() == nil {
-		slog.Warn("camera disconnected or tethering stopped", "model", model, "err", err)
-	}
+	w.taken[path] = true
 	return true
 }
 
-func detectedCamera(output string) (model, port string, ok bool) {
-	for _, line := range strings.Split(output, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 2 || !strings.HasPrefix(fields[len(fields)-1], "usb:") {
-			continue
+// release gibt einen Pfad wieder frei, nachdem der Worker fertig ist.
+func (w *watcher) release(path string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	delete(w.taken, path)
+}
+
+func (w *watcher) forgetMissing(present map[string]bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for path := range w.taken {
+		if !present[path] {
+			delete(w.taken, path)
 		}
-		return strings.Join(fields[:len(fields)-1], " "), fields[len(fields)-1], true
 	}
-	return "", "", false
 }
 
-type watcher struct {
-	dir    string
-	load   LoadOptions
-	photos photo.UseCases
-	prints printing.UseCases
-
-	states  map[string]fileState
-	pending map[string]pendingPhoto
-}
-
-func (w *watcher) run(ctx context.Context) {
+// run wartet auf Meldungen des Kernels und läuft zusätzlich im Takt.
+func (w *watcher) run(ctx context.Context, load LoadOptions) {
 	w.scan()
-	interval := w.load().ScanInterval
-	if interval <= 0 {
-		interval = time.Second
-	}
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+
+	events := w.notify(ctx)
+	timer := time.NewTimer(scanInterval(load))
+	defer timer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case _, ok := <-events:
+			if !ok {
+				events = nil
+				continue
+			}
+			w.scan()
+		case <-timer.C:
 			w.scan()
 		}
+		// Der Takt wird bei jedem Durchlauf neu gelesen. Vorher stand er ein
+		// einziges Mal beim Start fest, eine geänderte Einstellung wirkte nie.
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer.Reset(scanInterval(load))
 	}
+}
+
+func scanInterval(load LoadOptions) time.Duration {
+	if interval := load().ScanInterval; interval > 0 {
+		return interval
+	}
+	return time.Second
+}
+
+// notify liefert Schreibmeldungen des Kernels für das Verzeichnis.
+//
+// Fällt das aus, bleibt der getaktete Durchlauf als Rückfall. Deshalb ist ein
+// Fehler hier kein Grund aufzuhören.
+func (w *watcher) notify(ctx context.Context) <-chan struct{} {
+	fsw, err := fsnotify.NewWatcher()
+	if err != nil {
+		slog.Warn("cannot watch camera directory, falling back to polling", "err", err)
+		return nil
+	}
+	if err := fsw.Add(w.dir); err != nil {
+		slog.Warn("cannot watch camera directory, falling back to polling", "dir", w.dir, "err", err)
+		_ = fsw.Close()
+		return nil
+	}
+
+	out := make(chan struct{}, 1)
+	go func() {
+		defer close(out)
+		defer func() { _ = fsw.Close() }()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case _, ok := <-fsw.Events:
+				if !ok {
+					return
+				}
+				select {
+				case out <- struct{}{}:
+				default:
+				}
+			case err, ok := <-fsw.Errors:
+				if !ok {
+					return
+				}
+				slog.Warn("camera directory watch failed", "err", err)
+			}
+		}
+	}()
+	return out
 }
 
 func (w *watcher) scan() {
@@ -168,81 +238,50 @@ func (w *watcher) scan() {
 		slog.Error("cannot read camera directory", "dir", w.dir, "err", err)
 		return
 	}
+
 	present := make(map[string]bool, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 || !isImage(entry.Name()) {
 			continue
 		}
+
 		path := filepath.Join(w.dir, entry.Name())
 		present[path] = true
-		if pending, ok := w.pending[path]; ok {
-			w.finish(path, pending)
-			continue
-		}
+
 		info, err := entry.Info()
 		if err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
 			continue
 		}
-		current := fileState{size: info.Size(), modTime: info.ModTime()}
-		if previous, ok := w.states[path]; !ok || previous != current {
-			w.states[path] = current
+
+		// Vollständigkeit wird am Bild selbst geprüft, nicht an zwei gleichen
+		// Verzeichniseinträgen. Die alte Regel kostete immer einen zusätzlichen
+		// Takt und war trotzdem unsicher: Stockte der USB-Transfer eine Sekunde
+		// lang, sahen zwei Durchläufe dieselbe Größe und ein halbes JPEG ging
+		// in den Import.
+		if !complete(path) {
+			w.states[path] = fileState{size: info.Size(), modTime: info.ModTime()}
 			continue
 		}
+
 		delete(w.states, path)
-		w.ingest(path)
+		if !w.claim(path) {
+			continue
+		}
+		select {
+		case w.queue <- path:
+		default:
+			// Die Warteschlange ist voll. Der Pfad bleibt liegen und kommt im
+			// nächsten Durchlauf erneut dran.
+			w.release(path)
+		}
 	}
+
 	for path := range w.states {
 		if !present[path] {
 			delete(w.states, path)
 		}
 	}
-}
-
-func (w *watcher) ingest(path string) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		slog.Error("cannot read camera file", "path", path, "err", err)
-		return
-	}
-	p, err := w.photos.Import(user.SU(), photo.Options{Source: photo.SourceCamera}, image.MemFile{
-		Filename: filepath.Base(path), MimeTypeHint: mimeTypeOf(path), Bytes: raw,
-	})
-	if err != nil {
-		slog.Error("cannot import camera file", "path", path, "err", err)
-		return
-	}
-
-	opts := w.load()
-	tpl := printing.TemplateByID(opts.AutoPrintTemplate).ID
-	if opts.AutoPrintTemplate == "" {
-		tpl = printing.TemplatePolaroid
-	}
-	pending := pendingPhoto{id: p.ID, template: tpl}
-	w.pending[path] = pending
-	slog.Info("imported camera photo", "path", path, "photo", string(p.ID))
-	w.finish(path, pending)
-}
-
-func (w *watcher) finish(path string, pending pendingPhoto) {
-	if !pending.printed && w.load().AutoPrint {
-		if _, err := w.prints.Print(user.SU(), pending.id, pending.template); err != nil {
-			// Der Auftrag kam nicht in die Warteschlange. Der nächste
-			// Durchlauf versucht es erneut – etwa nachdem der Drucker wieder
-			// erreichbar ist.
-			slog.Error("cannot auto print camera photo", "photo", string(pending.id), "err", err)
-			return
-		}
-
-		// Ab hier ist der Druck angestoßen und darf unter keinen Umständen
-		// wiederholt werden.
-		pending.printed = true
-		w.pending[path] = pending
-	}
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		slog.Error("cannot remove imported camera file", "path", path, "err", err)
-		return
-	}
-	delete(w.pending, path)
+	w.forgetMissing(present)
 }
 
 func isImage(name string) bool {

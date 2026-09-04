@@ -173,6 +173,46 @@ for group in lp lpadmin plugdev video; do
   fi
 done
 
+# ------------------------------------------------------------------ Kamera ---
+# Der Desktop-Aufsatz muss von der Kamera ferngehalten werden.
+#
+# Sobald eine PTP-Kamera am USB auftaucht, greift der Volume-Monitor von GVFS
+# sie ab und haelt sie fest, damit man sie als Laufwerk durchblaettern kann.
+# gphoto2 kommt dann nicht mehr an das Geraet ("Could not claim the USB
+# device") oder verliert es mitten im Betrieb wieder. Beides trifft die
+# Fotobox an der teuersten Stelle: Waehrend das Tethering neu aufgebaut wird,
+# lauscht niemand am Bus, und eine in dieser Zeit ausgeloeste Aufnahme bleibt
+# auf der Speicherkarte liegen. So verschwindet ein einzelnes Foto mitten aus
+# einer Serie, ohne dass jemand etwas bemerkt.
+#
+# Auf einem Geraet, das den Abend ueber nur Fotos druckt, wird die Kamera nie
+# als Laufwerk gebraucht. Der Monitor wird deshalb ersatzlos abgeschaltet.
+for unit in gvfs-gphoto2-volume-monitor gphoto2-volume-monitor; do
+  service="/usr/lib/systemd/user/${unit}.service"
+  if [[ -e "${service}" || -e "/usr/share/dbus-1/services/org.gtk.vfs.GPhoto2VolumeMonitor.service" ]]; then
+    log "${unit} abschalten, damit gphoto2 an die Kamera kommt"
+    run systemctl --global mask "${unit}.service"
+  fi
+done
+
+# Ohne Regel gehoert der USB-Knoten der Kamera root. Der Dienst laeuft als
+# ${SERVICE_USER} und bekaeme sie sonst gar nicht erst zu fassen. uaccess und
+# plugdev decken die ueblichen Faelle ab, MTP_NO_PROBE haelt zusaetzlich die
+# Automatik der Desktop-Umgebung fern.
+UDEV_RULE="/etc/udev/rules.d/70-eventprint-camera.rules"
+log "udev-Regel für die Kamera schreiben: ${UDEV_RULE}"
+if [[ ${DRY_RUN} -eq 0 ]]; then
+  cat >"${UDEV_RULE}" <<'RULE'
+# Von eventprint verwaltet. Gibt PTP-Kameras für den Dienst frei und hält die
+# Automatik des Desktops davon fern.
+SUBSYSTEM=="usb", ENV{ID_GPHOTO2}=="1", MODE="0664", GROUP="plugdev", TAG+="uaccess", ENV{UDISKS_IGNORE}="1", ENV{MTP_NO_PROBE}="1"
+SUBSYSTEM=="usb", ENV{ID_USB_INTERFACES}=="*:060101:*", MODE="0664", GROUP="plugdev", TAG+="uaccess", ENV{UDISKS_IGNORE}="1", ENV{MTP_NO_PROBE}="1"
+RULE
+  run udevadm control --reload-rules
+else
+  log "(dry-run) ${UDEV_RULE} würde geschrieben"
+fi
+
 # ------------------------------------------------------------- Quelltext ---
 if [[ -d "${PREFIX}/.git" ]]; then
   log "Repository in ${PREFIX} aktualisieren"

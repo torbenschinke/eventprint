@@ -281,6 +281,17 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 		return withLANHost(derived, lanAddress(net.Interfaces))
 	}
 
+	cam := camera.New(filepath.Join(cfg.DataDir(), "camera", "incoming"), func() camera.Options {
+		booth := loadBoothSettings()
+		return camera.Options{
+			AutoPrint:         booth.CameraAutoPrint,
+			AutoPrintTemplate: booth.CameraTemplate,
+			ScanInterval:      time.Second,
+			DetectInterval:    10 * time.Second,
+		}
+	}, photos, prints)
+	go cam.Run(cfg.Context())
+
 	uiOpts := uiphotobox.Options{
 		Pages:      pages,
 		Photos:     photos,
@@ -358,6 +369,11 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 
 			return boothUploadURL()
 		},
+
+		// CameraStatus bringt den Zustand der Kamera auf den Startbildschirm.
+		// Bricht das Tethering ab, sagte das vorher nur das Log, und die
+		// Fotobox nahm scheinbar weiter Bilder auf.
+		CameraStatus: cam.Status,
 	}
 
 	// Der Touchscreen der Fotobox misst 1024x600. Auf so wenig Hoehe ist jede
@@ -481,16 +497,6 @@ func Enable(cfg *application.Configurator, opts Options) (Management, error) {
 			},
 		}
 	})
-
-	go camera.Run(cfg.Context(), filepath.Join(cfg.DataDir(), "camera", "incoming"), func() camera.Options {
-		booth := loadBoothSettings()
-		return camera.Options{
-			AutoPrint:         booth.CameraAutoPrint,
-			AutoPrintTemplate: booth.CameraTemplate,
-			ScanInterval:      time.Second,
-			DetectInterval:    10 * time.Second,
-		}
-	}, photos, prints)
 
 	management := Management{
 		Photos:   photos,

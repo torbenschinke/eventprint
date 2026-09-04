@@ -9,6 +9,7 @@ import (
 	"go.wdy.de/nago/presentation/core"
 
 	"github.com/torbenschinke/eventprint/app/photo"
+	"github.com/torbenschinke/eventprint/app/photobox/cfg/camera"
 	"github.com/torbenschinke/eventprint/app/printing"
 )
 
@@ -88,4 +89,15 @@ type Options struct {
 	// Upload-Seite. Sie wird erst zur Laufzeit gebildet, weil Nago den
 	// öffentlichen Hostnamen aus der ersten Verbindung ableitet.
 	UploadURL func() string
+
+	// CameraStatus meldet, ob die Kamera angeschlossen ist und ihre Bilder
+	// ankommen.
+	//
+	// Vorher stand das ausschließlich im Log. Riss das Tethering ab, sah der
+	// Startbildschirm genauso aus wie im Normalbetrieb: Es wurde weiter
+	// ausgelöst, und die Aufnahmen blieben auf der Speicherkarte liegen.
+	// Niemand merkte es, bis am Ende des Abends Bilder fehlten.
+	//
+	// Nil bedeutet: keine Kameraanbindung, dann wird nichts angezeigt.
+	CameraStatus func() camera.Status
 }

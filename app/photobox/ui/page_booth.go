@@ -90,6 +90,7 @@ func uploadInvitation(wnd core.Window, opts Options, pad pinPad) core.View {
 					Alignment(ui.Center).
 					Frame(ui.Frame{}.Size(ui.L256, ui.L256)),
 			),
+			cameraStatusView(opts),
 			settingsShortcut(wnd, opts),
 		).
 			Gap(ui.L16).
@@ -111,6 +112,7 @@ func uploadInvitation(wnd core.Window, opts Options, pad pinPad) core.View {
 		),
 		ui.Text(url).Font(ui.MonoSmall).
 			TextAlignment(ui.TextAlignCenter),
+		cameraStatusView(opts),
 	).
 		Gap(ui.L16).
 		Alignment(ui.Center).

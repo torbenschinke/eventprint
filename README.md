@@ -267,16 +267,46 @@ Der Fotobox-Build benötigt deshalb aktiviertes CGO und eine über
 gebaute Upload-Service benötigt OpenCV nicht.
 
 Die Kamera kann jederzeit an- oder abgesteckt werden. Spätestens nach zehn
-Sekunden startet die Fotobox den Tethering-Betrieb; nach einer Trennung sucht
-sie automatisch erneut. Beim Auslösen lädt `gphoto2` die Aufnahme herunter,
-belässt das Original auf der Speicherkarte und die Fotobox übernimmt sie in
-Historie und Galerie.
+Sekunden startet die Fotobox den Tethering-Betrieb. Beim Auslösen lädt
+`gphoto2` die Aufnahme herunter, belässt das Original auf der Speicherkarte
+und die Fotobox übernimmt sie in Historie und Galerie. Der Startbildschirm
+zeigt unter dem QR-Code, ob die Kamera bereit ist und wann zuletzt eine
+Aufnahme angekommen ist.
+
+Die zehn Sekunden gelten ausschließlich für die **Suche**, solange keine
+Kamera am USB hängt. Reißt ein **laufendes** Tethering ab, wird es sofort
+wieder aufgebaut, und die währenddessen entstandenen Aufnahmen werden
+anschließend mit `--get-all-files --new` von der Speicherkarte nachgeholt.
+Beides ist notwendig, weil `--capture-tethered` nur neu entstehende Bilder
+herunterlädt: Jede Sekunde ohne Tethering war vorher eine Sekunde, in der eine
+Aufnahme unbemerkt verloren ging.
+
+### Wenn Aufnahmen ausbleiben
+
+Häufigste Ursache ist der Volume-Monitor von GVFS. Er greift jede PTP-Kamera
+ab, sobald sie am Bus auftaucht, und hält sie fest; `gphoto2` meldet dann
+`Could not claim the USB device` oder verliert das Gerät im Betrieb.
+`scripts/install.sh` schaltet ihn deshalb ab und legt eine udev-Regel an, die
+die Kamera für den Dienst freigibt. Auf einem von Hand eingerichteten System
+gehört das nachgeholt:
+
+```bash
+sudo systemctl --global mask gvfs-gphoto2-volume-monitor.service
+sudo systemctl --global mask gphoto2-volume-monitor.service
+```
+
+Zur Prüfung meldet `gphoto2 --auto-detect` die Kamera, und
+`journalctl -u eventprint -f` zeigt `camera connected` beziehungsweise
+`camera tethering dropped`.
 
 Unter **Einstellungen → Fotobox → Kamera** lässt sich der automatische Druck
 abschalten und das Standardlayout wählen. Standardmäßig wird jede Aufnahme
 sofort als **Polaroid** gedruckt. Heruntergeladene Dateien werden erst nach
 erfolgreichem Import und gegebenenfalls erfolgreichem Einreihen des
-Druckauftrags entfernt.
+Druckauftrags entfernt. Ein Bild gilt erst als vollständig übertragen, wenn es
+mit seinem Endmarker (JPEG `FFD9`, PNG `IEND`) abschließt; abgeschnittene
+Dateien werden nicht importiert. Gescheiterte Druckaufträge werden mit
+wachsendem Abstand wiederholt statt im Sekundentakt.
 
 Unter **Einstellungen → Fotobox → Bildausschnitt** kann der automatische
 Polaroid-Bildausschnitt deaktiviert werden. Er ist standardmäßig aktiv und
