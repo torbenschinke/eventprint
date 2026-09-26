@@ -16,14 +16,14 @@ import (
 )
 
 // Im Heimbetrieb landet, was von Handy und Kamera kommt, im Eingang. Was von
-// Lightroom oder vom USB-Stick geholt wurde, hat jemand bewusst ausgewählt
+// vom NAS oder vom USB-Stick geholt wurde, hat jemand bewusst ausgewählt
 // und gehört nicht dorthin; Fotos einer Feier schon gar nicht.
 func TestInboxCollectsPrivatePhotosFromPhoneAndCamera(t *testing.T) {
 	lib := newLibrary(t)
 
 	phone := lib.importOne(t, photo.ImportCmd{Name: "handy.jpg", Source: photo.SourceRelay, Unseen: true})
 	camera := lib.importOne(t, photo.ImportCmd{Name: "kamera.jpg", Source: photo.SourceCamera, Unseen: true})
-	lib.importOne(t, photo.ImportCmd{Name: "lr.jpg", Source: photo.SourceLightroom})
+	lib.importOne(t, photo.ImportCmd{Name: "nas.jpg", Source: photo.SourceNAS})
 	lib.importOne(t, photo.ImportCmd{Name: "usb.jpg", Source: photo.SourceUSB})
 	lib.importOne(t, photo.ImportCmd{Name: "feier.jpg", Source: photo.SourceRelay, Event: "hochzeit", Unseen: true})
 

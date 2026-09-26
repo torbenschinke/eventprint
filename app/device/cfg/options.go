@@ -1,7 +1,7 @@
 // Package cfgdevice verdrahtet alle Kontexte zu einem lauffähigen Gerät.
 //
 // Hier und nur hier werden Adapter gewählt: Dateiablage, CUPS, udisks,
-// NetworkManager, Adobe. Die Kontexte selbst kennen nur ihre Ports.
+// NetworkManager. Die Kontexte selbst kennen nur ihre Ports.
 package cfgdevice
 
 import (
@@ -35,13 +35,6 @@ type Options struct {
 	PrinterQueue string
 	RelayURL     string
 	RelayToken   string
-
-	// AdobeClientID und AdobeClientSecret sind die Zugangsdaten der
-	// Lightroom-Anbindung aus der Adobe Developer Console. Sie gehören zum
-	// Gerät, nicht zu einer Person, und stehen deshalb nicht in den
-	// Einstellungen.
-	AdobeClientID     string
-	AdobeClientSecret string
 }
 
 // OptionsFromEnv liest die Parameter aus der Umgebung.
@@ -52,8 +45,6 @@ type Options struct {
 //	EVENTPRINT_PRINTER          CUPS-Warteschlange für ein frisches Gerät
 //	EVENTPRINT_RELAY_URL        Upload-Dienst für ein frisches Gerät
 //	EVENTPRINT_RELAY_TOKEN      Token des Geräts beim Upload-Dienst
-//	EVENTPRINT_ADOBE_CLIENT_ID  Adobe Developer Console, Client-ID
-//	EVENTPRINT_ADOBE_SECRET     Adobe Developer Console, Client-Secret
 func OptionsFromEnv() Options {
 	data := firstNonEmpty(os.Getenv("EVENTPRINT_DATA_DIR"), os.Getenv("STATE_DIRECTORY"))
 	if data == "" {
@@ -75,15 +66,13 @@ func OptionsFromEnv() Options {
 	}
 
 	return Options{
-		DataDir:           data,
-		RuntimeDir:        runtime,
-		CacheDir:          filepath.Join(data, "cache"),
-		CameraDir:         camera,
-		PrinterQueue:      os.Getenv("EVENTPRINT_PRINTER"),
-		RelayURL:          os.Getenv("EVENTPRINT_RELAY_URL"),
-		RelayToken:        os.Getenv("EVENTPRINT_RELAY_TOKEN"),
-		AdobeClientID:     os.Getenv("EVENTPRINT_ADOBE_CLIENT_ID"),
-		AdobeClientSecret: os.Getenv("EVENTPRINT_ADOBE_SECRET"),
+		DataDir:      data,
+		RuntimeDir:   runtime,
+		CacheDir:     filepath.Join(data, "cache"),
+		CameraDir:    camera,
+		PrinterQueue: os.Getenv("EVENTPRINT_PRINTER"),
+		RelayURL:     os.Getenv("EVENTPRINT_RELAY_URL"),
+		RelayToken:   os.Getenv("EVENTPRINT_RELAY_TOKEN"),
 	}
 }
 

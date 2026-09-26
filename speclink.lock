@@ -423,7 +423,7 @@
       "kind": "markdown"
     },
     "requirements/_sources/foto.md#fotos": {
-      "fingerprint": "63bd931f105257ae38199a28d7cd9d160fc4fbbf6bc76c1638bee0c4211ab9e5",
+      "fingerprint": "b66f8709af8b8f32fb8c23bac44ec0cc6236f5d433c78f4de586402be83446e9",
       "kind": "markdown"
     },
     "requirements/_sources/foto.md#historie": {
@@ -491,7 +491,7 @@
       "kind": "markdown"
     },
     "requirements/_sources/quellen.md#quellen": {
-      "fingerprint": "acd37512e2c07a4d7050d6269eb914c7459872b3e7dfa9461c7d47adacbadcff",
+      "fingerprint": "ac350d93bee4f3303b3a02b84aa2f24657ce60cc216111d33a6210c94a5a85cd",
       "kind": "markdown"
     },
     "requirements/_sources/quellen.md#usb-stick-als-quelle": {
@@ -864,50 +864,6 @@
       {
         "test": "TestStatusJoinsDeviceAndSignal",
         "text": "aa7a3fe53a03831ea0cf4f8bfd4ebe64cbb008227f485c54a77a71774000f8e3"
-      }
-    ],
-    "R-QUELLEN-LIGHTROOM": [
-      {
-        "test": "TestAlbumsFollowAllPagesAndSkipFolders",
-        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
-      },
-      {
-        "test": "TestAssets",
-        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
-      },
-      {
-        "test": "TestDownload",
-        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
-      },
-      {
-        "test": "TestOpenThumbnail",
-        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
-      }
-    ],
-    "R-QUELLEN-LIGHTROOM-ANMELDUNG": [
-      {
-        "test": "TestConnectViaRelay",
-        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
-      },
-      {
-        "test": "TestDisconnect",
-        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
-      },
-      {
-        "test": "TestOAuthFlowDeliversCodeExactlyOnce",
-        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
-      },
-      {
-        "test": "TestOAuthForeignTokenCannotCollect",
-        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
-      },
-      {
-        "test": "TestOAuthRelayRoundTrip",
-        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
-      },
-      {
-        "test": "TestOAuthUseCasesSeparateBoxes",
-        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
       }
     ],
     "R-QUELLEN-USB": [

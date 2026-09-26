@@ -53,9 +53,8 @@ type App struct {
 	selected []photo.ID
 	studio   []photo.ID
 
-	// lrSelected und usbSelected sind die Auswahl in fremden Quellen, deren
-	// Bilder noch nicht auf der Box liegen.
-	lrSelected  []asset.ID
+	// usbSelected ist die Auswahl in einer fremden Quelle, deren Bilder noch
+	// nicht auf der Box liegen.
 	usbSelected []asset.ID
 
 	// exportEvent und exportAll wählen aus, was auf den USB-Stick geht; ohne
@@ -208,7 +207,7 @@ func (a *App) startTicker(st *states) {
 
 // modeChanged baut nach einem Wechsel der Betriebsart alles neu auf.
 func (a *App) modeChanged() {
-	a.selected, a.studio, a.lrSelected, a.usbSelected = nil, nil, nil, nil
+	a.selected, a.studio, a.usbSelected = nil, nil, nil
 	a.galleries = map[string]*ui.Gallery{}
 	a.filled = map[string]any{}
 	a.st.sheet.Set(SheetNone)

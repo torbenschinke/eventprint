@@ -22,20 +22,3 @@ func TestUploadURL(t *testing.T) {
 		})
 	}
 }
-
-func TestOAuthURLs(t *testing.T) {
-	configured := Settings{PublicURL: "https://upload.example.de/base/"}
-	fallback := func() string { return "http://localhost:3000/" }
-
-	if got, want := configured.OAuthStartURL("abc_-1", fallback), "https://upload.example.de/base/oauth/adobe/start?s=abc_-1"; got != want {
-		t.Fatalf("OAuthStartURL = %q, want %q", got, want)
-	}
-
-	if got, want := configured.OAuthCallbackURL(fallback), "https://upload.example.de/base/oauth/adobe/callback"; got != want {
-		t.Fatalf("OAuthCallbackURL = %q, want %q", got, want)
-	}
-
-	if got, want := (Settings{}).OAuthCallbackURL(fallback), "http://localhost:3000/oauth/adobe/callback"; got != want {
-		t.Fatalf("OAuthCallbackURL (fallback) = %q, want %q", got, want)
-	}
-}

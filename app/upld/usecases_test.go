@@ -42,7 +42,7 @@ func newTestUseCases(t *testing.T) (UseCases, *Registry, image.UseCases) {
 
 	registry := NewRegistry(nil)
 
-	return NewUseCases(registry, NewOAuthRegistry(), images), registry, images
+	return NewUseCases(registry, images), registry, images
 }
 
 // enqueue legt ein Bild ab und hängt einen Auftrag daran.

@@ -2,7 +2,6 @@ package photoupld
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"go.wdy.de/nago/application"
@@ -22,7 +21,6 @@ const RelayRole role.ID = "de.torbenschinke.photoupld.relay"
 type Management struct {
 	UploadPage core.NavigationPath
 	Registry   *upld.Registry
-	OAuth      *upld.OAuthRegistry
 	UseCases   upld.UseCases
 }
 
@@ -48,7 +46,6 @@ func Enable(cfg *application.Configurator) (Management, error) {
 		return Management{}, err
 	}
 	registry := upld.NewRegistry(purger.Delete)
-	oauth := upld.NewOAuthRegistry()
 
 	settingsMgmt, err := cfg.SettingsManagement()
 	if err != nil {
@@ -58,9 +55,6 @@ func Enable(cfg *application.Configurator) (Management, error) {
 	fallbackURL := func() string { return cfg.ContextPathURI("", nil) }
 	uploadURL := func(id upld.UploadID) string {
 		return loadSettings().UploadURL(string(id), fallbackURL)
-	}
-	oauthStartURL := func(state upld.OAuthState) string {
-		return loadSettings().OAuthStartURL(string(state), fallbackURL)
 	}
 
 	roles, err := cfg.RoleManagement()
@@ -82,22 +76,17 @@ func Enable(cfg *application.Configurator) (Management, error) {
 	if err != nil {
 		return Management{}, err
 	}
-	uploads := upld.NewUseCases(registry, oauth, images.UseCases)
+	uploads := upld.NewUseCases(registry, images.UseCases)
 
 	ConfigureAPI(apiMgmt.API, tokens, uploads, uploadURL)
-	ConfigureOAuth(apiMgmt.API, cfg, tokens.UseCases.AuthenticateSubject, uploads, oauthStartURL)
-
-	// Die Rücksprungadresse muss bei Adobe hinterlegt sein, sonst lehnt Adobe
-	// jede Anmeldung ab. Wer das Relais einrichtet, findet sie hier.
-	slog.Info("photoupld: Rücksprungadresse für Adobe", "redirect_uri", loadSettings().OAuthCallbackURL(fallbackURL))
 
 	const uploadPage core.NavigationPath = "upload"
 	cfg.RootView(uploadPage, func(wnd core.Window) core.View {
 		return uploadui.PageUpload(wnd, uploadui.Options{Registry: registry, CreateSrcSet: images.UseCases.CreateSrcSet})
 	})
-	go reap(cfg.Context(), registry, oauth)
+	go reap(cfg.Context(), registry)
 
-	management := Management{UploadPage: uploadPage, Registry: registry, OAuth: oauth, UseCases: uploads}
+	management := Management{UploadPage: uploadPage, Registry: registry, UseCases: uploads}
 	cfg.AddContextValue(core.ContextValue("eventprint.photoupld", management))
 	return management, nil
 }
@@ -110,7 +99,7 @@ func Enable(cfg *application.Configurator) (Management, error) {
 // Abend über gültig; verstummt sie, räumt der Verfall hinter ihr auf.
 const sessionIdleTimeout = 30 * time.Minute
 
-func reap(ctx context.Context, registry *upld.Registry, oauth *upld.OAuthRegistry) {
+func reap(ctx context.Context, registry *upld.Registry) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	for {
@@ -119,7 +108,6 @@ func reap(ctx context.Context, registry *upld.Registry, oauth *upld.OAuthRegistr
 			return
 		case <-ticker.C:
 			registry.PurgeOlderThan(time.Now().Add(-sessionIdleTimeout))
-			oauth.PurgeExpired()
 		}
 	}
 }

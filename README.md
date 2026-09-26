@@ -22,9 +22,7 @@ die GPU, ohne Browser. Die Einrichtung des Druckers ist getrennt dokumentiert:
 * **Fotos:** Mediathek mit Eingang, allen Fotos, Favoriten, Gedrucktem und den
   Fotos vergangener Feiern, als Ziegelreihen im Seitenverhältnis der Fotos,
   mit Mehrfachauswahl.
-* **Quellen:** Adobe Lightroom (Alben durchsuchen, gedruckt wird die in
-  Lightroom bearbeitete Fassung) und USB-Stick. Eine Netzwerkfreigabe ist
-  vorgesehen.
+* **Quellen:** USB-Stick. Eine Netzwerkfreigabe ist vorgesehen.
 * **Druck-Studio** mit echter Vorschau aus dem Renderer des Druckers:
 
   | | |
@@ -205,8 +203,6 @@ Einstellungen nichts steht.
 | `EVENTPRINT_PRINTER` | CUPS-Warteschlange, z. B. `CZ01`; leer = Testbetrieb |
 | `EVENTPRINT_RELAY_URL` | Basis-URL des Upload-Dienstes `photoupld` |
 | `EVENTPRINT_RELAY_TOKEN` | Zugangstoken der Box beim Upload-Dienst |
-| `EVENTPRINT_ADOBE_CLIENT_ID` | Lightroom: Client-ID aus der Adobe Developer Console |
-| `EVENTPRINT_ADOBE_SECRET` | Lightroom: Client-Secret dazu |
 | `EVENTPRINT_CAMERA_DIR` | Tethering-Ordner; `off` schaltet die Kamera ab |
 | `EVENTPRINT_UI_SCALE` | Vergrößerung der Oberfläche; Vorgabe 1,5 für 1080p |
 | `EVENTPRINT_DATA_DIR`, `EVENTPRINT_RUNTIME_DIR` | nur zum Entwickeln; unter systemd gelten `/var/lib/eventprint` und `/run/eventprint` |
@@ -247,21 +243,6 @@ Gestaltung ab und nimmt mehrere Bilder auf einmal, die im Eingang landen. Im
 Kiosk fehlt der Parameter, und die Seite fragt wie bisher nach dem Layout;
 das Bild wird sofort gedruckt. Für HEIC braucht auch der Server libheif
 (`apt install libheif1`); fehlt sie, meldet das Protokoll es beim Start.
-
-### Adobe Lightroom
-
-1. In der [Adobe Developer Console](https://developer.adobe.com/console) ein
-   Projekt mit der Lightroom-API anlegen (OAuth Web). Als Redirect-URI
-   `<öffentliche Adresse von photoupld>/oauth/adobe/callback` eintragen; der
-   Dienst schreibt die genaue Adresse beim Start ins Protokoll.
-2. Client-ID und Secret als `EVENTPRINT_ADOBE_CLIENT_ID` und
-   `EVENTPRINT_ADOBE_SECRET` eintragen.
-3. Am Gerät **Einstellungen → Konten & Quellen → Mit dem Handy anmelden** und
-   den QR-Code scannen. Die Anmeldung geschieht auf dem Handy, kein Kennwort
-   wird an der Box getippt.
-
-Die Lightroom-API verlangt eine Freigabe durch Adobe; die Anbindung ist gegen
-eine nachgebildete API getestet, noch nicht gegen die echte.
 
 ### HEIC
 
@@ -414,10 +395,9 @@ app/photo/           Fotos: Import, Mediathek, Eingang, Feiern, Originale
 app/printing/        Gestaltung, Renderer, Druckaufträge, CUPS-Anbindung
 app/relay/           Box-Seite des Upload-Dienstes
 app/camera/          Tethering mit gphoto2
-app/lightroom/       Adobe Lightroom, Anmeldung per Handy
 app/usb/             USB-Sticks: erkennen, kopieren, auswerfen, lesen
 app/wifi/            Funknetz über NetworkManager
-app/upld/            Upload-Dienst: Sitzungen, Warteschlangen, Anmelde-Weiterleitung
+app/upld/            Upload-Dienst: Sitzungen, Warteschlangen
 app/photoupld/       Upload-Dienst: Verdrahtung und Seite für das Handy
 
 pkg/xgift/           generische gift-Bausteine, gedacht für upstream
@@ -579,7 +559,7 @@ go test -tags nofacecrop ./...
 
 * **Fachlichkeit:** jeder Anwendungsfall mit seinen Berechtigungen, gegen
   vorgetäuschte Befehle (`lpstat`, `lsblk`, `udisksctl`, `nmcli`) und
-  nachgebildete Dienste (Upload-Dienst, Adobe).
+  nachgebildete Dienste (Upload-Dienst).
 * **Renderer:** am Pixel – Papiergeometrie, gleichmäßiger
   Passepartout-Rand, Passfotos in echter Größe, Filter, Beschriftung,
   Datumsstempel, der Rückfall vom Polaroid zum Passepartout.

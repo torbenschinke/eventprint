@@ -27,8 +27,8 @@ var (
 	PermImport = permission.Declare[Import](idImport,
 		permtext.Name(idImport, "Fotos hinzufügen", "Add photos"),
 		permtext.Description(idImport,
-			"Träger dieser Berechtigung können Fotos aus Kamera, Handy, Lightroom oder USB-Stick übernehmen.",
-			"Holders of this authorisation can add photos from the camera, a phone, Lightroom or a USB stick."),
+			"Träger dieser Berechtigung können Fotos aus Kamera, Handy, NAS oder USB-Stick übernehmen.",
+			"Holders of this authorisation can add photos from the camera, a phone, a NAS or a USB stick."),
 	)
 
 	PermFindAll = permission.Declare[FindAll](idFindAll,

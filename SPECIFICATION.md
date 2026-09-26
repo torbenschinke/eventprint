@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 39 | 100% |
-| Normative requirements covered | 38 | 100% |
-| … claimed by a test | 38 | 100% |
-| … demonstrated by a run | 38 | 100% |
-| … read by a person | 38 | 0% |
+| Source segments accounted for | 37 | 100% |
+| Normative requirements covered | 36 | 100% |
+| … claimed by a test | 36 | 100% |
+| … demonstrated by a run | 36 | 100% |
+| … read by a person | 36 | 0% |
 
 ## Gaps
 
@@ -67,8 +67,6 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 - R-NETZ-SUCHE
 - R-NETZ-VERBINDEN
 - R-NETZ-ZUSTAND
-- R-QUELLEN-LIGHTROOM
-- R-QUELLEN-LIGHTROOM-ANMELDUNG
 - R-QUELLEN-USB
 - R-UPLOAD-ABHOLUNG
 - R-UPLOAD-BESTAETIGUNG
@@ -82,9 +80,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 38 |  |
-| … a test claims | 38 | 100% |
-| … a run demonstrated | 38 | 100% |
+| Normative requirements | 36 |  |
+| … a test claims | 36 | 100% |
+| … a run demonstrated | 36 | 100% |
 
 ### How much of the code a run went through
 
@@ -100,7 +98,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | `requirements/_sources/foto.md` | markdown | 6 | 6 | 0 | 0 |
 | `requirements/_sources/modus.md` | markdown | 5 | 5 | 0 | 0 |
 | `requirements/_sources/netz.md` | markdown | 4 | 4 | 0 | 0 |
-| `requirements/_sources/quellen.md` | markdown | 3 | 3 | 0 | 0 |
+| `requirements/_sources/quellen.md` | markdown | 1 | 1 | 0 | 0 |
 | `requirements/_sources/upload.md` | markdown | 5 | 5 | 0 | 0 |
 
 ## Themes
@@ -183,7 +181,7 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-30 packages in 10 bounded contexts, and 65 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+29 packages in 9 bounded contexts, and 60 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
 8 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
@@ -191,21 +189,19 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ### Where one context reaches into another
 
-23 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
+21 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
 
 | From | To |
 |---|---|
 | `app/device` | `app/photo` |
 | `app/device` | `app/printing` |
 | `app/device/cfg` | `app/camera` |
-| `app/device/cfg` | `app/lightroom` |
 | `app/device/cfg` | `app/photo` |
 | `app/device/cfg` | `app/printing` |
 | `app/device/cfg` | `app/relay` |
 | `app/device/cfg` | `app/usb` |
 | `app/device/cfg` | `app/wifi` |
 | `app/device/ui` | `app/camera` |
-| `app/device/ui` | `app/lightroom` |
 | `app/device/ui` | `app/photo` |
 | `app/device/ui` | `app/printing` |
 | `app/device/ui` | `app/relay` |
@@ -221,7 +217,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-112 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+92 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/device
 
@@ -356,104 +352,6 @@ _permission_ — `app/device/perm.go:52`
 #### de.torbenschinke.eventprint.device.unlock
 
 _permission_ — `app/device/perm.go:66`
-
-### app/lightroom
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-account"></a>
-#### Account
-
-_query_ — `app/lightroom/uc_account.go:12`
-
-**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-albums"></a>
-#### Albums
-
-_query_ — `app/lightroom/uc_albums.go:19`
-
-**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-assets"></a>
-#### Assets
-
-_query_ — `app/lightroom/uc_assets.go:18`
-
-**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-awaitconnect"></a>
-#### AwaitConnect
-
-_query_ — `app/lightroom/uc_await_connect.go:17`
-
-**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-beginconnect"></a>
-#### BeginConnect
-
-_query_ — `app/lightroom/uc_begin_connect.go:16`
-
-**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-disconnect"></a>
-#### Disconnect
-
-_use case_ — `app/lightroom/uc_disconnect.go:12`
-
-**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-download"></a>
-#### Download
-
-_query_ — `app/lightroom/uc_download.go:15`
-
-**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-openthumbnail"></a>
-#### OpenThumbnail
-
-_query_ — `app/lightroom/uc_open_thumbnail.go:15`
-
-**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-account"></a>
-#### de.torbenschinke.eventprint.lightroom.account
-
-_permission_ — `app/lightroom/perm.go:45`
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-albums"></a>
-#### de.torbenschinke.eventprint.lightroom.albums
-
-_permission_ — `app/lightroom/perm.go:52`
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-assets"></a>
-#### de.torbenschinke.eventprint.lightroom.assets
-
-_permission_ — `app/lightroom/perm.go:59`
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-await-connect"></a>
-#### de.torbenschinke.eventprint.lightroom.await\_connect
-
-_permission_ — `app/lightroom/perm.go:31`
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-begin-connect"></a>
-#### de.torbenschinke.eventprint.lightroom.begin\_connect
-
-_permission_ — `app/lightroom/perm.go:24`
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-disconnect"></a>
-#### de.torbenschinke.eventprint.lightroom.disconnect
-
-_permission_ — `app/lightroom/perm.go:38`
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-download"></a>
-#### de.torbenschinke.eventprint.lightroom.download
-
-_permission_ — `app/lightroom/perm.go:73`
-
-<a id="req-code-de-torbenschinke-eventprint-lightroom-open-thumbnail"></a>
-#### de.torbenschinke.eventprint.lightroom.open\_thumbnail
-
-_permission_ — `app/lightroom/perm.go:66`
 
 ### app/photo
 
@@ -748,13 +646,6 @@ _use case_ — `app/upld/uc_ack_job.go:9`
 
 **Answers to** [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG)
 
-<a id="req-code-github-com-torbenschinke-eventprint-app-upld-collectlogin"></a>
-#### CollectLogin
-
-_query_ — `app/upld/uc_collect_login.go:12`
-
-**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
-
 <a id="req-code-github-com-torbenschinke-eventprint-app-upld-findpendingjobs"></a>
 #### FindPendingJobs
 
@@ -776,42 +667,25 @@ _query_ — `app/upld/uc_open_session.go:11`
 
 **Answers to** [R-UPLOAD-SITZUNG](#req-R-UPLOAD-SITZUNG)
 
-<a id="req-code-github-com-torbenschinke-eventprint-app-upld-registerlogin"></a>
-#### RegisterLogin
-
-_use case_ — `app/upld/uc_register_login.go:11`
-
-**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
-
 <a id="req-code-de-torbenschinke-photoupld-ack"></a>
 #### de.torbenschinke.photoupld.ack
 
-_permission_ — `app/upld/perm.go:41`
+_permission_ — `app/upld/perm.go:38`
 
 <a id="req-code-de-torbenschinke-photoupld-fetch"></a>
 #### de.torbenschinke.photoupld.fetch
 
-_permission_ — `app/upld/perm.go:34`
-
-<a id="req-code-de-torbenschinke-photoupld-oauth-collect"></a>
-#### de.torbenschinke.photoupld.oauth.collect
-
-_permission_ — `app/upld/perm.go:55`
-
-<a id="req-code-de-torbenschinke-photoupld-oauth-register"></a>
-#### de.torbenschinke.photoupld.oauth.register
-
-_permission_ — `app/upld/perm.go:48`
+_permission_ — `app/upld/perm.go:31`
 
 <a id="req-code-de-torbenschinke-photoupld-poll"></a>
 #### de.torbenschinke.photoupld.poll
 
-_permission_ — `app/upld/perm.go:27`
+_permission_ — `app/upld/perm.go:24`
 
 <a id="req-code-de-torbenschinke-photoupld-session"></a>
 #### de.torbenschinke.photoupld.session
 
-_permission_ — `app/upld/perm.go:20`
+_permission_ — `app/upld/perm.go:17`
 
 ### app/usb
 
@@ -924,7 +798,6 @@ _No topology is declared, so what this system talks to is stated nowhere._
 | `DELETE /api/v1/job` | — | `AckResponse` | [AckJob](#req-code-github-com-torbenschinke-eventprint-app-upld-ackjob) | R-UPLOAD-BESTAETIGUNG |
 | `GET /api/v1/job/image` | — | — | [OpenJobImage](#req-code-github-com-torbenschinke-eventprint-app-upld-openjobimage) | R-UPLOAD-BILD |
 | `GET /api/v1/jobs` | — | `JobResponse` | [FindPendingJobs](#req-code-github-com-torbenschinke-eventprint-app-upld-findpendingjobs) | R-UPLOAD-ABHOLUNG |
-| `POST /api/v1/oauth/adobe` | `OAuthRegisterRequest` | `OAuthRegisterResponse` | [RegisterLogin](#req-code-github-com-torbenschinke-eventprint-app-upld-registerlogin) | R-QUELLEN-LIGHTROOM-ANMELDUNG |
 | `POST /api/v1/session` | — | `SessionResponse` | [OpenSession](#req-code-github-com-torbenschinke-eventprint-app-upld-opensession) | R-UPLOAD-SITZUNG |
 
 ### What crosses each address
@@ -950,23 +823,6 @@ Reaches `FindPendingJobs`.
 **Takes** _nothing_
 
 **Returns** `JobResponse` — `[]{id:string,template:string,filename:string,createdAt:string}`
-
-#### POST /api/v1/oauth/adobe
-
-Reaches `RegisterLogin`.
-
-**Takes** `OAuthRegisterRequest`
-
-| Field | Wire | Shape | Omitted when empty |
-|---|---|---|---:|
-| `State` | `state` | `string` | no |
-| `AuthorizeURL` | `authorizeUrl` | `string` | no |
-
-**Returns** `OAuthRegisterResponse`
-
-| Field | Wire | Shape | Omitted when empty |
-|---|---|---|---:|
-| `StartURL` | `startUrl` | `string` | no |
 
 #### POST /api/v1/session
 
@@ -1022,8 +878,6 @@ Every requirement that was read, and how far each one has got. A mark states wha
 | [R-NETZ-SUCHE](#req-R-NETZ-SUCHE) | functional | mixed | normative | yes | yes | yes | no |
 | [R-NETZ-VERBINDEN](#req-R-NETZ-VERBINDEN) | functional | mixed | normative | yes | yes | yes | no |
 | [R-NETZ-ZUSTAND](#req-R-NETZ-ZUSTAND) | functional | mixed | normative | yes | yes | yes | no |
-| [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM) | functional | business | normative | yes | yes | yes | no |
-| [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG) | functional | mixed | normative | yes | yes | yes | no |
 | [R-QUELLEN-USB](#req-R-QUELLEN-USB) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-ABHOLUNG](#req-R-UPLOAD-ABHOLUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG) | functional | business | normative | yes | yes | yes | no |
@@ -1488,38 +1342,6 @@ _functional, mixed, normative._
   - `github.com/torbenschinke/eventprint/app/wifi.Current`
 - **Demonstrated by** TestStatusJoinsDeviceAndSignal
 
-<a id="req-R-QUELLEN-LIGHTROOM"></a>
-### R-QUELLEN-LIGHTROOM — Lightroom durchsuchen und bearbeitete Fassung drucken
-
-Alben und Fotos aus Lightroom MÜSSEN sich am Gerät durchsuchen lassen; gedruckt werden MUSS die in Lightroom bearbeitete Fassung.
-
-_functional, business, normative._
-
-- **Asked for in** requirements/\_sources/quellen.md#lightroom-durchsuchen
-- **Implemented by**
-  - `github.com/torbenschinke/eventprint/app/lightroom.Albums`
-  - `github.com/torbenschinke/eventprint/app/lightroom.Assets`
-  - `github.com/torbenschinke/eventprint/app/lightroom.Download`
-  - `github.com/torbenschinke/eventprint/app/lightroom.OpenThumbnail`
-- **Demonstrated by** TestAlbumsFollowAllPagesAndSkipFolders, TestAssets, TestDownload, TestOpenThumbnail
-
-<a id="req-R-QUELLEN-LIGHTROOM-ANMELDUNG"></a>
-### R-QUELLEN-LIGHTROOM-ANMELDUNG — Lightroom per Handy verbinden
-
-Das Lightroom-Konto MUSS sich verbinden lassen, ohne am Gerät ein Kennwort einzugeben; die Rückmeldung der Anmeldung MUSS über den Upload-Dienst laufen, und die Verbindung MUSS sich trennen lassen.
-
-_functional, mixed, normative._
-
-- **Asked for in** requirements/\_sources/quellen.md#lightroom-verbinden
-- **Implemented by**
-  - `github.com/torbenschinke/eventprint/app/lightroom.Account`
-  - `github.com/torbenschinke/eventprint/app/lightroom.AwaitConnect`
-  - `github.com/torbenschinke/eventprint/app/lightroom.BeginConnect`
-  - `github.com/torbenschinke/eventprint/app/lightroom.Disconnect`
-  - `github.com/torbenschinke/eventprint/app/upld.CollectLogin`
-  - `github.com/torbenschinke/eventprint/app/upld.RegisterLogin`
-- **Demonstrated by** TestConnectViaRelay, TestDisconnect, TestOAuthFlowDeliversCodeExactlyOnce, TestOAuthForeignTokenCannotCollect, TestOAuthRelayRoundTrip, TestOAuthUseCasesSeparateBoxes
-
 <a id="req-R-QUELLEN-USB"></a>
 ### R-QUELLEN-USB — Bilder vom USB-Stick übernehmen
 
@@ -1675,8 +1497,6 @@ What people wrote, and what became of each part of it.
 | section | became |
 |---|---|
 | Quellen | _nothing, and says so_ |
-| Lightroom verbinden | R-QUELLEN-LIGHTROOM-ANMELDUNG |
-| Lightroom durchsuchen | R-QUELLEN-LIGHTROOM |
 | USB-Stick als Quelle | R-QUELLEN-USB |
 
 ### requirements/\_sources/upload.md

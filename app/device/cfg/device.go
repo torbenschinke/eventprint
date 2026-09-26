@@ -14,7 +14,6 @@ import (
 
 	"github.com/torbenschinke/eventprint/app/camera"
 	"github.com/torbenschinke/eventprint/app/device"
-	"github.com/torbenschinke/eventprint/app/lightroom"
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/app/printing"
 	"github.com/torbenschinke/eventprint/app/relay"
@@ -27,13 +26,12 @@ import (
 type Device struct {
 	Options Options
 
-	Photos    photo.UseCases
-	Printing  printing.UseCases
-	Device    device.UseCases
-	Relay     relay.UseCases
-	Lightroom lightroom.UseCases
-	USB       usb.UseCases
-	WiFi      wifi.UseCases
+	Photos   photo.UseCases
+	Printing printing.UseCases
+	Device   device.UseCases
+	Relay    relay.UseCases
+	USB      usb.UseCases
+	WiFi     wifi.UseCases
 
 	// Camera ist nil, wenn die Kamera abgeschaltet ist.
 	Camera *camera.Monitor
@@ -166,15 +164,6 @@ func Start(ctx context.Context, opts Options) (*Device, error) {
 	d.Relay = relay.NewUseCases(poller)
 	d.WiFi = wifi.NewUseCases()
 	d.USB = usb.NewUseCases(usb.ExecRunner{}, usb.StatfsFreeSpace)
-	d.Lightroom = lightroom.NewUseCases(func() lightroom.Config {
-		s := loadSettings()
-		return lightroom.Config{
-			ClientID:     opts.AdobeClientID,
-			ClientSecret: opts.AdobeClientSecret,
-			RelayURL:     s.RelayURL,
-			RelayToken:   s.RelayToken,
-		}
-	}, lightroom.NewFileTokenStore(filepath.Join(opts.DataDir, "lightroom-tokens.json")))
 
 	d.grants = grants()
 
@@ -238,13 +227,13 @@ func seedSettings(store device.SettingsStore, opts Options) error {
 // Der Gast bekommt, was er für die Feier braucht, und nichts darüber hinaus:
 // die Fotos der Feier sehen, ein Foto in einem Kiosk-Layout drucken, den
 // QR-Code sehen, und die PIN eingeben dürfen. Alles andere – Mediathek,
-// Einstellungen, USB, Lightroom – bleibt ihm verschlossen, weil ihm die
+// Einstellungen, USB – bleibt ihm verschlossen, weil ihm die
 // Berechtigungen fehlen, nicht nur die Knöpfe.
 func grants() device.Grants {
 	var owner []permission.ID
 	for _, perms := range [][]permission.ID{
 		photo.Permissions(), printing.Permissions(), device.Permissions(), relay.Permissions(),
-		lightroom.Permissions(), usb.Permissions(), {wifi.PermScan, wifi.PermStatus, wifi.PermConnect},
+		usb.Permissions(), {wifi.PermScan, wifi.PermStatus, wifi.PermConnect},
 	} {
 		owner = append(owner, perms...)
 	}

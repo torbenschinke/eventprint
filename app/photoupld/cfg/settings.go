@@ -21,19 +21,6 @@ func (s Settings) UploadURL(id string, fallback func() string) string {
 	return s.publicURL("/upload", url.Values{"u": {id}}, fallback)
 }
 
-// OAuthStartURL ist der Link, den die Fotobox als QR-Code zeigt, wenn ihr
-// Besitzer ein Konto bei Adobe verbinden will.
-func (s Settings) OAuthStartURL(state string, fallback func() string) string {
-	return s.publicURL(OAuthStartPath, url.Values{"s": {state}}, fallback)
-}
-
-// OAuthCallbackURL ist die Rücksprungadresse, die bei Adobe hinterlegt sein
-// muss. Die Fotobox nennt sie Adobe bei jeder Anmeldung; weicht sie von der
-// hinterlegten ab, lehnt Adobe die Anmeldung ab.
-func (s Settings) OAuthCallbackURL(fallback func() string) string {
-	return s.publicURL(OAuthCallbackPath, nil, fallback)
-}
-
 // publicURL bildet eine von außen erreichbare Adresse des Dienstes.
 //
 // Alle Adressen hängen an derselben Basis. Liefe eine davon an der

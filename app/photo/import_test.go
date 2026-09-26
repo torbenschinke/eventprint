@@ -28,7 +28,7 @@ func TestImportStoresOriginalByteForByteFromEverySource(t *testing.T) {
 	}{
 		{photo.SourceCamera, "IMG_0001.JPG", jpegBytes(t, 60, 40), ".jpg", 60, 40},
 		{photo.SourceRelay, "handy.png", pngBytes(t, 30, 50), ".png", 30, 50},
-		{photo.SourceLightroom, "export.jpg", jpegBytes(t, 20, 20), ".jpg", 20, 20},
+		{photo.SourceNAS, "export.jpg", jpegBytes(t, 20, 20), ".jpg", 20, 20},
 		{photo.SourceUSB, "stick.png", pngBytes(t, 12, 8), ".png", 12, 8},
 	}
 

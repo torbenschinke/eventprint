@@ -35,7 +35,7 @@ var _ = spec.ForField[Photo]("File",
 	spec.Satisfies(foto.RFotoDruckvorlage),
 )
 
-// Woher das Bild stammt: Kamera, Handy, Lightroom oder USB-Stick.
+// Woher das Bild stammt: Kamera, Handy, NAS oder USB-Stick.
 var _ = spec.ForField[Photo]("Source",
 	spec.Satisfies(foto.RFotoImport),
 )

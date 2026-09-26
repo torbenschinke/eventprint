@@ -96,7 +96,7 @@ func (a *App) kioskStartSheet(ctx *gift.Context, st *states) gift.View {
 		ui.VStack(rows...).Background(ui.ColorBackground).CornerRadius(u(14)),
 		ui.HStack(
 			ui.Icon(outline.InfoCircle).Size(u(22)).Foreground(orange),
-			body("Der Kiosk bleibt aktiv, bis die Box neu startet. Stecker ziehen und wieder einstecken bringt dich zurück in den Heimbetrieb. Mediathek und Lightroom sind bis dahin verborgen.", 15).MaxLines(4).Flex(1),
+			body("Der Kiosk bleibt aktiv, bis die Box neu startet. Stecker ziehen und wieder einstecken bringt dich zurück in den Heimbetrieb. Mediathek und Einstellungen sind bis dahin verborgen.", 15).MaxLines(4).Flex(1),
 		).Gap(u(12)).Padding(u(14)).Background(ui.RGB(0xFF, 0xF6, 0xE0)).CornerRadius(u(14)),
 		ui.HStack(
 			secondary("Abbrechen", func() { a.dismissSheet() }),

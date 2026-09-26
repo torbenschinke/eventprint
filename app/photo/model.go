@@ -1,7 +1,7 @@
 // Package photo verwaltet die Fotos des Geräts: Import aus allen Quellen,
 // Ablage der Originale, Auswahl für den Druck und Weitergabe.
 //
-// Woher ein Bild kommt – Kamera, Handy, Lightroom, USB-Stick –, spielt nach
+// Woher ein Bild kommt – Kamera, Handy, NAS, USB-Stick –, spielt nach
 // dem Import keine Rolle mehr. Es liegt als unverändertes Original auf der
 // Speicherkarte, und alles Weitere (Vorschau, Druck, Export) liest genau diese
 // Datei.
@@ -89,8 +89,8 @@ const (
 	// Upload-Dienst.
 	SourceRelay Source = "relay"
 
-	// SourceLightroom markiert Bilder aus Adobe Lightroom.
-	SourceLightroom Source = "lightroom"
+	// SourceNAS markiert Bilder von einer Netzwerkfreigabe.
+	SourceNAS Source = "nas"
 
 	// SourceUSB markiert Bilder von einem USB-Stick.
 	SourceUSB Source = "usb"
@@ -103,8 +103,8 @@ func (s Source) String() string {
 		return "Kamera"
 	case SourceRelay:
 		return "Handy"
-	case SourceLightroom:
-		return "Lightroom"
+	case SourceNAS:
+		return "NAS"
 	case SourceUSB:
 		return "USB-Stick"
 	default:

@@ -15,7 +15,6 @@ import (
 	"github.com/worldiety/gift/ui"
 
 	"github.com/torbenschinke/eventprint/app/device"
-	"github.com/torbenschinke/eventprint/app/lightroom"
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/app/printing"
 	"github.com/torbenschinke/eventprint/app/relay"
@@ -341,104 +340,6 @@ func (a *App) uploadSettings(ctx *gift.Context, st *states, s device.Settings, s
 // --- Konten & Quellen -------------------------------------------------------
 
 func (a *App) sourceSettings(ctx *gift.Context, st *states) gift.View {
-	tick := ctx.Read(st.tick)
-	rev := ctx.State("rev", 0)
-	flow := ctx.State("flow", "")
-	start := ctx.State("start", "")
-
-	account := xgift.UseResource[lightroom.AccountInfo](ctx, "account")
-	account.LoadKeyed(ctx.Read(rev), func() (lightroom.AccountInfo, error) {
-		c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-
-		return a.dev.Lightroom.Account(a.dev.Subject(), c)
-	})
-
-	// Während jemand auf dem Handy die Anmeldung durchläuft, fragt die Box
-	// im Takt beim Upload-Dienst nach, ob sie fertig ist.
-	state := ctx.Read(flow)
-	poll := xgift.UseResource[lightroom.Status](ctx, "poll")
-	if state != "" {
-		poll.LoadKeyed([2]any{state, tick}, func() (lightroom.Status, error) {
-			c, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			return a.dev.Lightroom.AwaitConnect(a.dev.Subject(), c, state)
-		})
-
-		switch {
-		case poll.Value() == lightroom.StatusConnected:
-			flow.Set("")
-			start.Set("")
-			rev.Set(rev.Get() + 1)
-			a.show("Lightroom ist verbunden.")
-		case poll.Value() == lightroom.StatusExpired:
-			flow.Set("")
-			start.Set("")
-			a.show("Die Anmeldung ist abgelaufen. Bitte erneut starten.")
-		case poll.Err() != nil:
-			a.fail(poll.Err())
-			flow.Set("")
-		}
-	}
-
-	acc := account.Value()
-	var lr []gift.View
-	switch {
-	case acc.Connected:
-		name := "Verbunden"
-		if acc.Name != "" {
-			name = "Verbunden als " + acc.Name
-		}
-
-		lr = []gift.View{
-			ui.Row("Adobe Lightroom").Subtitle(name).Value("✓"),
-			ui.Row("Fotos durchsuchen").Chevron(outline.AngleRight).OnTap(func() { a.openLibrary(photo.ScopeAll, sourceLightroom) }),
-			ui.Row("Verbindung trennen").Chevron(outline.AngleRight).OnTap(func() {
-				if !a.fail(a.dev.Lightroom.Disconnect(a.dev.Subject())) {
-					rev.Set(rev.Get() + 1)
-				}
-			}),
-		}
-	case ctx.Read(start) != "":
-		lr = []gift.View{ui.Row("").Accessory(ui.HStack(
-			xgift.QRCode(start.Get(), u(180)),
-			ui.VStack(
-				title("Mit dem Handy anmelden", 20),
-				body("1  Code mit der Handykamera scannen", 15),
-				body("2  Bei Adobe anmelden, Zugriff erlauben", 15),
-				body("3  Fertig – deine Alben erscheinen unter Fotos", 15),
-				muted("Warte auf Anmeldung … Kennwörter tippst du nie an der Box ein.", 13).MaxLines(2),
-			).Gap(u(8)).Flex(1),
-		).Gap(u(20)).Align(geom.Center))}
-	default:
-		hint := "Nicht verbunden"
-		if account.Err() != nil {
-			hint = account.Err().Error()
-		}
-
-		lr = []gift.View{
-			ui.Row("Adobe Lightroom").Subtitle(hint),
-			ui.Row("Mit dem Handy anmelden").Chevron(outline.AngleRight).OnTap(func() {
-				go func() {
-					c, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-					defer cancel()
-
-					auth, err := a.dev.Lightroom.BeginConnect(a.dev.Subject(), c)
-					xgift.Post(func() {
-						if a.fail(err) {
-							return
-						}
-
-						poll.Set(lightroom.StatusPending)
-						start.Set(auth.StartURL)
-						flow.Set(auth.State)
-					})
-				}()
-			}),
-		}
-	}
-
 	camera := "abgeschaltet"
 	if a.dev.Camera != nil {
 		cs := a.dev.Camera.Status()
@@ -449,8 +350,7 @@ func (a *App) sourceSettings(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return ui.VStack(
-		section("ADOBE LIGHTROOM", lr...),
-		section("WEITERE QUELLEN",
+		section("QUELLEN",
 			ui.Row("Handy-Upload per QR").Subtitle("über den öffentlichen Upload-Dienst").Value("immer an"),
 			ui.Row("USB-Stick").Subtitle("erscheint unter Fotos, sobald eingesteckt").Value("automatisch"),
 			ui.Row("Kamera per USB").Subtitle("Aufnahmen landen im Eingang").Value(camera),

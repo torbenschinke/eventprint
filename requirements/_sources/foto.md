@@ -4,7 +4,7 @@
 
 Das Gerät ist zuerst ein Fotodrucker für zuhause und auf Wunsch eine Fotobox
 für Feiern. Bilder kommen von der angeschlossenen Kamera, vom Handy über den
-Upload-Dienst, aus Adobe Lightroom und von einem USB-Stick. Woher ein Bild
+Upload-Dienst, von einem NAS im Heimnetz und von einem USB-Stick. Woher ein Bild
 kommt, darf für alles Weitere keine Rolle spielen.
 
 ## Bilder aufnehmen

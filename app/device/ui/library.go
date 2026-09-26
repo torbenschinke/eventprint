@@ -18,8 +18,7 @@ import (
 
 // Quellen außerhalb der Mediathek.
 const (
-	sourceLightroom = "lightroom"
-	sourceUSB       = "usb"
+	sourceUSB = "usb"
 )
 
 // openLibrary öffnet die Mediathek mit einer Auswahl.
@@ -41,8 +40,6 @@ func (a *App) library(ctx *gift.Context, st *states) gift.View {
 
 	var content gift.View
 	switch source {
-	case sourceLightroom:
-		content = gift.Component("lightroom", func(ctx *gift.Context) gift.View { return a.lightroomBrowser(ctx, st) })
 	case sourceUSB:
 		content = gift.Component("usb", func(ctx *gift.Context) gift.View { return a.usbBrowser(ctx, st) })
 	default:
@@ -151,7 +148,6 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 
 	items = append(items,
 		muted("QUELLEN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(14)}),
-		row("Adobe Lightroom", outline.CloudArrowUp, "", source == sourceLightroom, func() { a.openLibrary(scope, sourceLightroom) }),
 		row("USB-Stick", outline.ArchiveArrowDown, "", source == sourceUSB, func() { a.openLibrary(scope, sourceUSB) }),
 		ui.HStack(
 			ui.Icon(outline.Server).Size(u(22)).Foreground(ui.ColorSecondaryLabel),

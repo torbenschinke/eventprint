@@ -11,9 +11,6 @@ const (
 	idPollJobs    permission.ID = "de.torbenschinke.photoupld.poll"
 	idFetchImage  permission.ID = "de.torbenschinke.photoupld.fetch"
 	idAckJob      permission.ID = "de.torbenschinke.photoupld.ack"
-
-	idRegisterLogin permission.ID = "de.torbenschinke.photoupld.oauth.register"
-	idCollectLogin  permission.ID = "de.torbenschinke.photoupld.oauth.collect"
 )
 
 var (
@@ -44,23 +41,9 @@ var (
 			"Darf übernommene Aufträge bestätigen und damit löschen.",
 			"May acknowledge and thereby delete jobs it has taken over."),
 	)
-
-	PermRegisterLogin = permission.Declare[RegisterLogin](idRegisterLogin,
-		permtext.Name(idRegisterLogin, "Anmeldung vermitteln", "Relay a sign-in"),
-		permtext.Description(idRegisterLogin,
-			"Darf eine Anmeldung bei einem Fremddienst über das Relais leiten.",
-			"May route a sign-in with a third-party service through the relay."),
-	)
-
-	PermCollectLogin = permission.Declare[CollectLogin](idCollectLogin,
-		permtext.Name(idCollectLogin, "Anmeldung abholen", "Collect a sign-in"),
-		permtext.Description(idCollectLogin,
-			"Darf den Code einer selbst angemeldeten Anmeldung abholen.",
-			"May collect the code of a sign-in it registered itself."),
-	)
 )
 
 // RelayPermissions ist die Rolle, die eine Fotobox am Upload-Service braucht.
 func RelayPermissions() []permission.ID {
-	return []permission.ID{PermOpenSession, PermPollJobs, PermFetchImage, PermAckJob, PermRegisterLogin, PermCollectLogin}
+	return []permission.ID{PermOpenSession, PermPollJobs, PermFetchImage, PermAckJob}
 }

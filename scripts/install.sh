@@ -676,10 +676,9 @@ ${printer_line}
          eine Betreuer-PIN vergeben, bevor sie auf eine Feier geht; ohne PIN
          beendet den Kiosk nur ein Neustart.
 
-    3. Upload-Dienst und Adobe Lightroom traegt man am bequemsten in
-         /etc/default/eventprint ein (EVENTPRINT_RELAY_URL,
-         EVENTPRINT_RELAY_TOKEN, EVENTPRINT_ADOBE_CLIENT_ID,
-         EVENTPRINT_ADOBE_SECRET), statt Tokens auf dem Touchscreen zu tippen.
+    3. Den Upload-Dienst traegt man am bequemsten in /etc/default/eventprint
+         ein (EVENTPRINT_RELAY_URL, EVENTPRINT_RELAY_TOKEN), statt Tokens
+         auf dem Touchscreen zu tippen.
 
   Beim naechsten Hochfahren holt eventprint-update.service den Stand von
   origin/${BRANCH} und baut bei Bedarf neu. Schlaegt das fehl, startet die
