@@ -35,9 +35,9 @@ const maxDepth = 6
 
 // NewImages bindet die Bildersuche an das eingehängte Dateisystem.
 //
-// Nur JPEG und PNG: Das sind die Formate, die die Druckstrecke lesen kann.
-// HEIC vom iPhone ließe sich hier zwar finden, aber nicht drucken, und ein
-// Bild, das beim Antippen scheitert, ist schlimmer als eines, das fehlt.
+// JPEG, PNG und HEIC: die Formate, die die Druckstrecke lesen kann. HEIC
+// setzt libheif auf dem Gerät voraus (siehe pkg/heif); fehlt sie, scheitert
+// erst die Übernahme mit einer verständlichen Meldung.
 func NewImages(runner Runner) Images {
 	h := host{runner: runner}
 
@@ -167,7 +167,7 @@ func depth(root, path string) int {
 // der Schreibweise: Kameras schreiben ".JPG", Telefone ".jpg".
 func isImageName(name string) bool {
 	switch strings.ToLower(filepath.Ext(name)) {
-	case ".jpg", ".jpeg", ".png":
+	case ".jpg", ".jpeg", ".png", ".heic", ".heif":
 		return true
 	default:
 		return false

@@ -96,7 +96,7 @@ func PageUpload(wnd core.Window, opts Options) core.View {
 }
 
 func importImage(wnd core.Window, opts Options, uploadID upld.UploadID, target *core.State[image.ID], filename *core.State[string], imgW, imgH *core.State[int]) {
-	wnd.ImportFiles(core.ImportFilesOptions{ID: "photoupld-file", AllowedMimeTypes: []string{"image/jpeg", "image/png"}, OnCompletion: func(files []core.File) {
+	wnd.ImportFiles(core.ImportFilesOptions{ID: "photoupld-file", AllowedMimeTypes: []string{"image/jpeg", "image/png", "image/heic", "image/heif"}, OnCompletion: func(files []core.File) {
 		if len(files) == 0 {
 			return
 		}

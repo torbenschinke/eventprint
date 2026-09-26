@@ -64,9 +64,10 @@ func NewImport(mutex *sync.Mutex, repo Repository, originals Originals) Import {
 
 		cfg, format, err := image.DecodeConfig(bytes.NewReader(cmd.Data))
 		if err != nil {
-			// HEIC ist der häufigste Fall: iPhones liefern es, wenn die
-			// Freigabe nicht umwandelt. Die Meldung soll sagen, was zu tun ist.
-			return Photo{}, errors.New("das Bild kann nicht gelesen werden – bitte als JPEG oder PNG senden")
+			// HEIC kann nur gelesen werden, wenn libheif installiert und
+			// angemeldet ist (siehe pkg/heif). Die Meldung soll sagen, was
+			// zu tun ist.
+			return Photo{}, errors.New("das Bild kann nicht gelesen werden – bitte als JPEG, PNG oder HEIC senden")
 		}
 
 		width, height := cfg.Width, cfg.Height
@@ -78,8 +79,14 @@ func NewImport(mutex *sync.Mutex, repo Repository, originals Originals) Import {
 		id := NewID(now)
 
 		ext := ".jpg"
-		if format == "png" {
+		switch format {
+		case "png":
 			ext = ".png"
+		case "heif":
+			// Das Original bleibt HEIC. Die Lage steckt dort nicht im EXIF,
+			// sondern in eigenen Boxen, die libheif beim Lesen anwendet; die
+			// gemeldeten Maße sind deshalb schon die aufgerichteten.
+			ext = ".heic"
 		}
 
 		photo := Photo{

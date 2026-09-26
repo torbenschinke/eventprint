@@ -46,7 +46,7 @@ func pageInbox(wnd core.Window, opts Options, id upld.UploadID) core.View {
 // nicht ein einziges kaputtes alle anderen mitreißen. Ein unlesbares Bild
 // meldet ein Banner mit Dateinamen, damit klar ist, welches fehlt.
 func importInbox(wnd core.Window, opts Options, uploadID upld.UploadID, sent *core.State[int]) {
-	wnd.ImportFiles(core.ImportFilesOptions{ID: "photoupld-inbox-files", Multiple: true, AllowedMimeTypes: []string{"image/jpeg", "image/png"}, OnCompletion: func(files []core.File) {
+	wnd.ImportFiles(core.ImportFilesOptions{ID: "photoupld-inbox-files", Multiple: true, AllowedMimeTypes: []string{"image/jpeg", "image/png", "image/heic", "image/heif"}, OnCompletion: func(files []core.File) {
 		if len(files) == 0 {
 			return
 		}

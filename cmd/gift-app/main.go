@@ -31,6 +31,7 @@ import (
 
 	cfgdevice "github.com/torbenschinke/eventprint/app/device/cfg"
 	uidevice "github.com/torbenschinke/eventprint/app/device/ui"
+	"github.com/torbenschinke/eventprint/pkg/heif"
 	"github.com/torbenschinke/eventprint/pkg/xgift"
 )
 
@@ -58,6 +59,16 @@ func run() error {
 	}
 
 	ui.SetDefaultFont(ui.MustFont(ui.FontQuery{Family: inter.Family}))
+
+	// HEIC von iPhones: für Import und Druck über image.Decode, für die
+	// Vorschaubilder über die Decoderliste von gift. Ohne libheif auf dem
+	// Gerät bleibt es bei JPEG und PNG.
+	if heif.Register() {
+		asset.RegisterDecoder("image/heic", heif.Decoder{})
+		asset.RegisterDecoder("image/heif", heif.Decoder{})
+	} else {
+		slog.Warn("libheif nicht gefunden, HEIC-Fotos werden abgelehnt")
+	}
 
 	// Der Entwurf rechnet in 1280 x 720 Punkten. Auf dem 1080p-Bildschirm
 	// der Box ist alles um die Hälfte größer; gift kennt nur ganzzahlige
