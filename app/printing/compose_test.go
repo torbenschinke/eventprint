@@ -352,6 +352,33 @@ func TestComposeMatteHasUniformBorder(t *testing.T) {
 	}
 }
 
+// TestComposeMatteWidths: Im Druck-Studio lässt sich der Rand schmaler
+// wählen. 5 mm sind 59 Punkte, 7,5 mm 89; ohne Wahl bleibt es bei 1 cm.
+func TestComposeMatteWidths(t *testing.T) {
+	for mat, want := range map[printing.MatWidth]int{
+		printing.MatNarrow: 59,
+		printing.MatMedium: 89,
+		"":                 printing.PassepartoutMargin,
+	} {
+		l := layoutOf(printing.FormatSingle, printing.DesignMatte)
+		l.Mat = mat
+
+		canvas := compose(l, solid(400, 600, blue))
+		v := visibleArea(false)
+		cy := (v.Min.Y + v.Max.Y) / 2
+
+		if got := canvas.At(v.Min.X+want-1, cy); !near(got, white) {
+			t.Errorf("%q: Rand endet vor %d Punkten, dort ist %v", mat, want, got)
+		}
+
+		if got := canvas.At(v.Min.X+want, cy); !near(got, blue) {
+			t.Errorf("%q: Motiv beginnt nicht bei %d Punkten, dort ist %v", mat, want, got)
+		}
+	}
+
+	spec.Verified(t, druck.RDruckGestaltung)
+}
+
 // TestComposePolaroidCaption: Die Beschriftung steht im breiten Steg – und
 // ohne Text bleibt der Steg leer, statt Anführungszeichen oder Reste zu
 // zeigen.

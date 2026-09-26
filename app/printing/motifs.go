@@ -9,7 +9,6 @@ import (
 	"go.wdy.de/nago/application/permission"
 
 	"github.com/torbenschinke/eventprint/app/photo"
-	"github.com/torbenschinke/eventprint/pkg/orient"
 )
 
 // loadMotifs lädt die Originale eines Blattes.
@@ -20,7 +19,7 @@ type loadMotifs func(ids []photo.ID, layout Layout) (Sheet, error)
 // Der Druck läuft ohne jemanden vor dem Bildschirm – der Worker arbeitet
 // Aufträge ab, die längst angenommen und geprüft sind. Er liest deshalb als
 // System und nicht mit den Rechten dessen, der vielleicht gerade davorsteht.
-func motifLoader(locate photo.Locate) loadMotifs {
+func motifLoader(locate photo.Locate, scaled ScaledJPEGDecoder) loadMotifs {
 	return func(ids []photo.ID, layout Layout) (Sheet, error) {
 		locs, err := locate(permission.SU(), ids...)
 		if err != nil {
@@ -39,8 +38,9 @@ func motifLoader(locate photo.Locate) loadMotifs {
 			}
 
 			// Aufgerichtet wird erst hier. Die Datei bleibt das Original,
-			// wie Kamera oder Handy es geliefert haben.
-			img, _, err := orient.Decode(raw)
+			// wie Kamera oder Handy es geliefert haben. Gedruckt wird aus
+			// der vollen Auflösung.
+			img, err := decodeOriginal(raw, 0, scaled)
 			if err != nil {
 				return Sheet{}, fmt.Errorf("cannot decode original: %w", err)
 			}

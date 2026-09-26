@@ -26,6 +26,7 @@ var _ = spec.ForField[Job]("Photos",
 // Die Gestaltung des Blattes: Format, Rahmen, Farbe, Text, Oberfläche.
 var _ = spec.ForField[Job]("Layout",
 	spec.Satisfies(druck.RDruckGestaltung),
+	spec.Waive("K9-FIELD-SHAPE", "Die Randbreite \"mat\" kam als optionales Feld hinzu. Gespeicherte Aufträge ohne sie lesen sich unverändert; leer bedeutet 1 cm, genau der Rand, mit dem sie gedruckt wurden."),
 )
 
 // Der Druckvorgang, zu dem das Blatt gehört. Die Oberfläche zeigt seinen

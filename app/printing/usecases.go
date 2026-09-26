@@ -44,6 +44,10 @@ type Options struct {
 
 	// Observe erfährt jeden abgeschlossenen Auftrag, etwa um Papier zu zählen.
 	Observe func(Job)
+
+	// DecodeJPEGScaled dekodiert JPEGs für die Vorschau verkleinert. Nil
+	// dekodiert voll und verkleinert danach – richtig, nur langsamer.
+	DecodeJPEGScaled ScaledJPEGDecoder
 }
 
 // enqueueTimeout begrenzt das Warten auf einen freien Platz in der
@@ -86,7 +90,8 @@ func NewUseCases(ctx context.Context, opts Options) UseCases {
 	repo, printer := opts.Repository, opts.Printer
 	findJobByID := NewFindJobByID(repo)
 	renderOptions := orDefaultRenderOptions(opts.RenderOptions)
-	motifs := motifLoader(opts.Locate)
+	motifs := motifLoader(opts.Locate, opts.DecodeJPEGScaled)
+	previews := newPreviewSources(previewCacheSize)
 	visible := visibleTo(opts.Locate)
 
 	worker := newWorker(&mutex, repo, printer, motifs, renderOptions, opts.Observe)
@@ -97,7 +102,7 @@ func NewUseCases(ctx context.Context, opts Options) UseCases {
 	return UseCases{
 		Print:       NewPrint(ctx, &mutex, repo, printer, queue),
 		PrintSimple: NewPrintSimple(ctx, &mutex, repo, printer, queue, opts.MaxKioskCopies, visible),
-		Preview:     NewPreview(motifs, renderOptions, visible),
+		Preview:     NewPreview(previewLoader(opts.Locate, opts.DecodeJPEGScaled, previews), previewRenderOptions(renderOptions, previews), visible),
 		FindAllJobs: NewFindAllJobs(repo),
 		FindJobByID: findJobByID,
 		Retry:       NewRetry(ctx, &mutex, repo, printer, findJobByID, queue),

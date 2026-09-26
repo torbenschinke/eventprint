@@ -621,6 +621,10 @@
     ],
     "R-DRUCK-GESTALTUNG": [
       {
+        "test": "TestComposeMatteWidths",
+        "text": "316726dfc30eb9720f5f3357ba5be41aa9aee6a6cd763989402674e7fda5981a"
+      },
+      {
         "test": "TestPolaroidFallsBackWhenFacesDoNotFit",
         "text": "316726dfc30eb9720f5f3357ba5be41aa9aee6a6cd763989402674e7fda5981a"
       },
@@ -690,6 +694,14 @@
       }
     ],
     "R-DRUCK-VORSCHAU": [
+      {
+        "test": "TestDecodeOriginalWithoutScaledDecoder",
+        "text": "8b863665c9f1c095f3e2591613d960f0b7b3b9e323e8bc888a0cd98a2acc671b"
+      },
+      {
+        "test": "TestPreviewLoadsReducedAndOnce",
+        "text": "8b863665c9f1c095f3e2591613d960f0b7b3b9e323e8bc888a0cd98a2acc671b"
+      },
       {
         "test": "TestPreviewRendersWithoutPrinting",
         "text": "8b863665c9f1c095f3e2591613d960f0b7b3b9e323e8bc888a0cd98a2acc671b"

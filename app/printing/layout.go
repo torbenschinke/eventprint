@@ -14,6 +14,10 @@ type Layout struct {
 	// Galerie.
 	Frame FrameColor `json:"frame,omitempty"`
 
+	// Mat ist die Breite des Passepartout-Randes. Leer ist 1 cm, der Rand
+	// der Kiosk-Layouts, den Gäste kennen.
+	Mat MatWidth `json:"mat,omitempty"`
+
 	Filter Filter `json:"filter,omitempty"`
 
 	// Caption steht im breiten Steg des Polaroids.
@@ -62,6 +66,27 @@ const (
 	FrameCream FrameColor = "cream"
 	FrameBlack FrameColor = "black"
 )
+
+// MatWidth ist die Breite des Passepartout-Randes.
+type MatWidth string
+
+const (
+	MatWide   MatWidth = "10mm"
+	MatMedium MatWidth = "7.5mm"
+	MatNarrow MatWidth = "5mm"
+)
+
+// Dots ist die Randbreite in Rasterpunkten. Ein unbekannter Wert ist 1 cm.
+func (m MatWidth) Dots() int {
+	switch m {
+	case MatNarrow:
+		return mmToDots(5)
+	case MatMedium:
+		return mmToDots(7.5)
+	default:
+		return PassepartoutMargin
+	}
+}
 
 // Filter ist eine Farbanmutung.
 type Filter string
@@ -130,6 +155,26 @@ func Frames() []Choice[FrameColor] {
 	}
 }
 
+// Is meldet, ob m die Breite w meint; leer ist 1 cm.
+func (m MatWidth) Is(w MatWidth) bool {
+	if m == "" {
+		m = MatWide
+	}
+
+	return m == w
+}
+
+// Mats liefert die Randbreiten des Passepartouts. Ein Zentimeter wirkt auf
+// 10 × 15 cm wie ein Galerierahmen; für ein zurückhaltendes Blatt ist ein
+// halber eleganter.
+func Mats() []Choice[MatWidth] {
+	return []Choice[MatWidth]{
+		{MatNarrow, "5 mm", "schmal"},
+		{MatMedium, "7,5 mm", "mittel"},
+		{MatWide, "1 cm", "breit"},
+	}
+}
+
 // Filters liefert die Farbanmutungen.
 func Filters() []Choice[Filter] {
 	return []Choice[Filter]{
@@ -178,6 +223,10 @@ func (l Layout) Normalized() Layout {
 
 	if !known(Frames(), l.Frame) {
 		l.Frame = d.Frame
+	}
+
+	if l.Mat != "" && !known(Mats(), l.Mat) {
+		l.Mat = ""
 	}
 
 	if !known(Filters(), l.Filter) {

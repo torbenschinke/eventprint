@@ -75,10 +75,11 @@ const (
 
 // padding liefert den Rand um den Inhaltsbereich und den Abstand zwischen
 // den Feldern, in Rasterpunkten und bezogen auf die tatsächliche Lage.
-func padding(d Design, landscape bool) (left, top, right, bottom, gap int) {
-	switch d {
+func padding(l Layout, landscape bool) (left, top, right, bottom, gap int) {
+	switch l.Design {
 	case DesignMatte:
-		return PassepartoutMargin, PassepartoutMargin, PassepartoutMargin, PassepartoutMargin, PassepartoutMargin / 2
+		m := l.Mat.Dots()
+		return m, m, m, m, m / 2
 	case DesignPolaroid:
 		return polaroidSide, polaroidSide, polaroidSide, polaroidBottom, polaroidSide / 2
 	case DesignFilm:
@@ -186,9 +187,10 @@ func Compose(s Sheet, raster Raster, opts RenderOptions) *image.RGBA {
 		drawSprockets(canvas, visible, landscape)
 	}
 
-	if l.Design == DesignPolaroid && l.Format != FormatPassport && strings.TrimSpace(l.Caption) != "" {
-		band := image.Rect(visible.Min.X+polaroidSide, visible.Max.Y-polaroidBottom, visible.Max.X-polaroidSide, visible.Max.Y)
-		drawCaption(canvas, band, l.Caption, l.CaptionFont, contrastInk(paper))
+	if strings.TrimSpace(l.Caption) != "" {
+		if band, size, ok := captionBand(l, visible, areas); ok {
+			drawCaption(canvas, band, l.Caption, l.CaptionFont, contrastInk(paper), size)
+		}
 	}
 
 	if l.DateStamp && len(areas) > 0 {
@@ -273,7 +275,7 @@ func cellAreas(l Layout, page, visible image.Rectangle, landscape bool) []image.
 		return passportAreas(visible)
 	}
 
-	left, top, right, bottom, gap := padding(l.Design, landscape)
+	left, top, right, bottom, gap := padding(l, landscape)
 
 	// Randlos reicht bis in den Überstand, damit auch bei leichtem Versatz
 	// im Drucker kein weißer Streifen bleibt.
@@ -511,10 +513,42 @@ func loadFonts() {
 	})
 }
 
-// drawCaption setzt die Beschriftung mittig in den Steg. Zu lange Texte
-// werden kleiner gesetzt statt abgeschnitten; erst unterhalb einer lesbaren
-// Größe wird gekürzt.
-func drawCaption(img *image.RGBA, band image.Rectangle, text string, f CaptionFont, ink color.RGBA) {
+// captionBand liefert die Fläche der Beschriftung und ihre größte
+// Schriftgröße in Punkten.
+//
+// Beschriftet wird, wo Papier frei ist: im breiten Steg des Polaroids, unter
+// dem Bild der Galerie wie ein Schild im Museum, und im unteren Rand des
+// Passepartouts. Randlos, Film und Passfotos haben keinen Platz dafür; dort
+// bleibt der Text weg, und die Oberfläche sagt das.
+func captionBand(l Layout, visible image.Rectangle, areas []image.Rectangle) (image.Rectangle, float64, bool) {
+	if l.Format == FormatPassport || len(areas) == 0 {
+		return image.Rectangle{}, 0, false
+	}
+
+	bottom := areas[0].Max.Y
+	for _, a := range areas[1:] {
+		bottom = max(bottom, a.Max.Y)
+	}
+
+	switch l.Design {
+	case DesignPolaroid:
+		return image.Rect(visible.Min.X+polaroidSide, visible.Max.Y-polaroidBottom, visible.Max.X-polaroidSide, visible.Max.Y), 84, true
+	case DesignGallery:
+		band := image.Rect(visible.Min.X+galleryMargin, bottom+galleryOffset+galleryLine, visible.Max.X-galleryMargin, visible.Max.Y)
+		return band, float64(band.Dy()) * 0.5, band.Dy() > 0
+	case DesignMatte:
+		m := l.Mat.Dots()
+		band := image.Rect(visible.Min.X+m, bottom, visible.Max.X-m, visible.Max.Y)
+		return band, float64(band.Dy()) * 0.6, band.Dy() > 0
+	default:
+		return image.Rectangle{}, 0, false
+	}
+}
+
+// drawCaption setzt die Beschriftung mittig in die Fläche band, höchstens in
+// der Größe maxSize. Zu lange Texte werden kleiner gesetzt statt
+// abgeschnitten; erst unterhalb einer lesbaren Größe wird gekürzt.
+func drawCaption(img *image.RGBA, band image.Rectangle, text string, f CaptionFont, ink color.RGBA, maxSize float64) {
 	loadFonts()
 	otf := fonts[f]
 	if otf == nil {
@@ -524,14 +558,16 @@ func drawCaption(img *image.RGBA, band image.Rectangle, text string, f CaptionFo
 	text = strings.TrimSpace(text)
 	maxW := band.Dx() - 40
 
-	for size := 84.0; size >= 40; size -= 4 {
+	// Unter 24 Punkten, gut 2 mm, ist eine Beschriftung kein Schmuck mehr.
+	minSize := min(40.0, max(24.0, maxSize))
+	for size := max(maxSize, minSize); size >= minSize; size -= 2 {
 		face, err := opentype.NewFace(otf, &opentype.FaceOptions{Size: size, DPI: 72, Hinting: font.HintingFull})
 		if err != nil {
 			return
 		}
 
 		width := font.MeasureString(face, text).Ceil()
-		if width <= maxW || size <= 40 {
+		if width <= maxW || size-2 < minSize {
 			for width > maxW && len([]rune(text)) > 1 {
 				r := []rune(text)
 				text = string(r[:len(r)-2]) + "…"

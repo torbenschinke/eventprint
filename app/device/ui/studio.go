@@ -356,14 +356,28 @@ func (a *App) designTab(l printing.Layout, set func(func(*printing.Layout))) gif
 			Style(face).HoverStyle(face).PressedStyle(face).Frame(u(44), u(44)).Label(f.Name))
 	}
 
-	return ui.VStack(
+	rows := []gift.View{
 		xgift.Grid(2, u(10), cards...),
 		ui.HStack(frames...).Gap(u(8)).Align(geom.Center),
+	}
+
+	// Die Breite des Passepartouts: 1 cm ist der Rand des Kiosks, schmaler
+	// wirkt ein Blatt eleganter.
+	if l.Design == printing.DesignMatte {
+		mats := []gift.View{body("Randbreite", 15).Flex(1)}
+		for _, m := range printing.Mats() {
+			mats = append(mats, xgift.Chip(m.Name, l.Mat.Is(m.ID), u(15), blue, func() { set(func(l *printing.Layout) { l.Mat = m.ID }) }))
+		}
+
+		rows = append(rows, ui.HStack(mats...).Gap(u(8)).Align(geom.Center))
+	}
+
+	return ui.VStack(append(rows,
 		ui.List(
 			ui.Row("Datumsstempel").Subtitle("Datum orange in der Ecke, wie früher").
 				Accessory(ui.Toggle(l.DateStamp, func(v bool) { set(func(l *printing.Layout) { l.DateStamp = v }) })),
 		),
-	).Gap(u(14)).PaddingInsets(geom.Insets{Top: u(12)})
+	)...).Gap(u(14)).PaddingInsets(geom.Insets{Top: u(12)})
 }
 
 func (a *App) imageTab(l printing.Layout, set func(func(*printing.Layout))) gift.View {
@@ -375,7 +389,7 @@ func (a *App) imageTab(l printing.Layout, set func(func(*printing.Layout))) gift
 
 	return ui.VStack(
 		muted("Farbanmutung", 13),
-		xgift.Grid(3, u(8), chips...),
+		xgift.Grid(int(pick(3, 2)), u(8), chips...),
 		ui.List(
 			ui.Row("Ausschnitt auf Gesichter").Subtitle("Erkennt Personen und rückt sie ins Bild").
 				Accessory(ui.Toggle(l.FaceCrop, func(v bool) { set(func(l *printing.Layout) { l.FaceCrop = v }) })),
@@ -392,9 +406,18 @@ func (a *App) textTab(ctx *gift.Context, l printing.Layout, set func(func(*print
 		fonts = append(fonts, xgift.Chip(f.Name, l.CaptionFont == f.ID, u(15), blue, func() { set(func(l *printing.Layout) { l.CaptionFont = f.ID }) }))
 	}
 
-	hint := "Sichtbar im breiten Steg des Polaroids."
-	if l.Design != printing.DesignPolaroid {
-		hint = "Die Beschriftung erscheint mit dem Design Polaroid."
+	var hint string
+	switch {
+	case l.Format == printing.FormatPassport:
+		hint = "Passfotos bleiben ohne Beschriftung."
+	case l.Design == printing.DesignPolaroid:
+		hint = "Steht im breiten Steg des Polaroids."
+	case l.Design == printing.DesignGallery:
+		hint = "Steht unter dem Bild wie ein Schild im Museum."
+	case l.Design == printing.DesignMatte:
+		hint = "Steht im unteren Rand des Passepartouts."
+	default:
+		hint = "Randlos und Film haben keinen Platz für Text – wähle Polaroid, Galerie oder Passepartout."
 	}
 
 	return ui.VStack(
@@ -406,7 +429,7 @@ func (a *App) textTab(ctx *gift.Context, l printing.Layout, set func(func(*print
 			MinHeight(u(48)),
 		muted(hint, 13),
 		body("Schrift", 15),
-		ui.HStack(fonts...).Gap(u(8)),
+		ui.HScroll(fonts...).Gap(u(8)),
 		ui.Box().Frame(1, ui.OnScreenKeyboardHeight()),
 	).Gap(u(10)).PaddingInsets(geom.Insets{Top: u(12)})
 }

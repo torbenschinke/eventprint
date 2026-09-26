@@ -1105,7 +1105,7 @@ _functional, business, normative._
   - `github.com/torbenschinke/eventprint/app/printing.Job.Layout`
   - `github.com/torbenschinke/eventprint/app/printing.Print`
   - `github.com/torbenschinke/eventprint/app/printing.Print`
-- **Demonstrated by** TestPolaroidFallsBackWhenFacesDoNotFit, TestPrintSheetsFollowTheFormat, TestPrintSplitsBatchIntoSheets
+- **Demonstrated by** TestComposeMatteWidths, TestPolaroidFallsBackWhenFacesDoNotFit, TestPrintSheetsFollowTheFormat, TestPrintSplitsBatchIntoSheets
 
 <a id="req-R-DRUCK-KEIN-NACHDRUCK"></a>
 ### R-DRUCK-KEIN-NACHDRUCK — Kein Ausdruck ohne Auslösung
@@ -1183,7 +1183,7 @@ _functional, business, normative._
 - **Implemented by**
   - `github.com/torbenschinke/eventprint/app/printing.Preview`
   - `github.com/torbenschinke/eventprint/app/printing.Preview`
-- **Demonstrated by** TestPreviewRendersWithoutPrinting
+- **Demonstrated by** TestDecodeOriginalWithoutScaledDecoder, TestPreviewLoadsReducedAndOnce, TestPreviewRendersWithoutPrinting
 
 <a id="req-R-DRUCK-WIEDERHOLUNG"></a>
 ### R-DRUCK-WIEDERHOLUNG — Gescheiterten Auftrag wiederholen
