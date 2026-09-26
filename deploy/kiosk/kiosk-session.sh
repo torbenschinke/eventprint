@@ -29,6 +29,10 @@ if command -v unclutter >/dev/null 2>&1; then
   unclutter -idle 1 -root &
 fi
 
+# Erst einmal einrichten – Drehung, Touch, Dichte –, dann im Hintergrund
+# auf neue Bildschirme achten. Die Fotobox liest die Dichte beim Start; sie
+# darf den Bildschirm deshalb erst danach bekommen.
+/usr/local/bin/eventprint-mirror-displays --once
 /usr/local/bin/eventprint-mirror-displays &
 
 # Dem Dienstnutzer den Bildschirm freigeben – genau ihm und niemandem sonst.

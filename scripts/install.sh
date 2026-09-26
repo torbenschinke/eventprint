@@ -87,7 +87,8 @@ PACKAGES=(
   xserver-xorg xinit              # X11; Wayland kann den Fernseher nicht spiegeln
   openbox                         # Fenstersteuerung ohne Menue und ohne Leiste
   lightdm                         # automatische Anmeldung
-  x11-xserver-utils               # xrandr, xset und xhost
+  x11-xserver-utils               # xrandr, xset, xhost und xrdb
+  xinput                          # Touch auf den Touchscreen legen, auch gedreht
   unclutter                       # versteckt den Mauszeiger
   libgl1 libegl1 libgl1-mesa-dri  # OpenGL fuer gift; geladen wird es zur Laufzeit
   libx11-6 libxrandr2 libxcursor1 libxi6 libxinerama1 libxxf86vm1

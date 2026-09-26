@@ -106,10 +106,12 @@ fi
 # Aeltere Installationen haben es nicht. Ohne Netz gelingt die Nachinstallation
 # nicht; dann eben beim naechsten Start – die Box startet trotzdem.
 #
-# Dasselbe gilt fuer libheif, ohne die HEIC-Fotos von iPhones abgelehnt werden.
+# Dasselbe gilt fuer libheif, ohne die HEIC-Fotos von iPhones abgelehnt werden,
+# und fuer xinput, das den Touch auf gedrehte Panels legt.
 missing=()
 command -v udisksctl >/dev/null 2>&1 || missing+=(udisks2)
 ldconfig -p 2>/dev/null | grep -q 'libheif\.so\.1' || missing+=(libheif1)
+command -v xinput >/dev/null 2>&1 || missing+=(xinput)
 if [[ ${#missing[@]} -gt 0 ]]; then
   log "nachinstallieren: ${missing[*]}"
   if timeout 300 env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}" >/dev/null 2>&1; then
