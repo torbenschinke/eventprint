@@ -1,27 +1,25 @@
-# Fotoarchiv
+# Weitergabe
 
 <!-- speclink:informative -->
 
-Jedes eingehende Bild wird zusätzlich unverändert als Datei abgelegt. Diese
-Kopie ist das, was nach der Feier an die Gäste geht - der Blob-Store der
-Anwendung taugt dafür nicht, dort liegen die Dateien unter technischen
-Schlüsseln.
+Die Bilder einer Feier sollen danach an die Gäste gehen. Das Gerät hat dafür
+weder einen öffentlichen Zugang noch eine Tastatur; ein USB-Stick ist der
+Weg, den jeder vor Ort in der Tasche hat.
 
-## Archiv weitergeben
+## Fotos weitergeben
 
-Die Bilder einer Feier sollen danach an die Gäste gehen. Die Betreuung MUSS das
-gesamte Fotoarchiv als eine einzelne Datei herunterladen können, ohne die
-Fotobox aufzuschrauben oder einen Datenträger anzustecken.
+Die Fotos einer Feier, eine Auswahl oder alle Fotos MÜSSEN sich im Original
+auf einen USB-Stick kopieren lassen, ohne das Gerät aufzuschrauben. Ein
+abgebrochener Kopiervorgang MUSS sich wiederholen lassen, ohne Dateien doppelt
+anzulegen, und der Stick MUSS sich sicher auswerfen lassen.
 
 ## Speicherplatz einsehen
 
-Die Fotobox läuft auf einer Speicherkarte begrenzter Größe. Die Betreuung MUSS
-sehen können, wie viel Platz insgesamt vorhanden ist, wie viel davon das
-Fotoarchiv belegt und wie viel auf das übrige System entfällt. Ohne diese
+Das Gerät läuft auf einer Speicherkarte begrenzter Größe. Es MUSS sichtbar
+sein, wie viel Platz die Fotos belegen und wie viel frei ist. Ohne diese
 Auskunft ist der Zeitpunkt zum Aufräumen nicht bestimmbar.
 
-## Archiv freigeben
+## Feier abschließen
 
-Das Fotoarchiv MUSS sich vollständig löschen lassen, um Speicherplatz
-freizugeben. Da die Bilder danach unwiederbringlich fort sind, MUSS dem
-Löschen eine ausdrückliche, gesonderte Bestätigung vorausgehen.
+Die Fotos einer Feier MÜSSEN sich gesammelt löschen lassen, um Platz für die
+nächste zu schaffen. Private Fotos DÜRFEN davon nicht betroffen sein.

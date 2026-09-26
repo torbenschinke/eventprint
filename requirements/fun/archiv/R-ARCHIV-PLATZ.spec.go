@@ -5,10 +5,10 @@ import "github.com/worldiety/speclink/spec"
 var RArchivPlatz = spec.Requirement{
 	ID:         "R-ARCHIV-PLATZ",
 	Kind:       spec.Functional,
-	Discipline: spec.Mixed,
+	Discipline: spec.Business,
 	Status:     spec.Normative,
 	Title:      "Speicherplatz einsehen",
-	Text:       "Die Betreuung MUSS sehen können, wie viel Speicherplatz insgesamt vorhanden ist, wie viel das Fotoarchiv belegt und wie viel auf das übrige System entfällt.",
+	Text:       "Es MUSS sichtbar sein, wie viel Platz die Fotos belegen und wie viel frei ist.",
 	Sources: []spec.Source{
 		{Doc: "requirements/_sources/archiv.md", Anchor: "speicherplatz-einsehen"},
 	},

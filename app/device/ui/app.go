@@ -117,8 +117,17 @@ func New(dev *cfgdevice.Device, gapp *gift.App) *App {
 	}
 }
 
+// SetApp verbindet die Oberfläche mit der gift-Anwendung, wenn diese erst
+// nach ihr entsteht – etwa in einem Test, dessen Harness die Anwendung
+// selbst anlegt.
+func (a *App) SetApp(gapp *gift.App) { a.gapp = gapp }
+
 // ApplyTheme setzt das Erscheinungsbild passend zur Betriebsart.
 func (a *App) ApplyTheme() {
+	if a.gapp == nil {
+		return
+	}
+
 	k, _ := a.dev.Device.CurrentKiosk(a.dev.Subject())
 	if !k.Active() {
 		ui.SetTheme(a.gapp, homeTheme())

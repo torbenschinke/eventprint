@@ -7,9 +7,9 @@ var RFotoHistorie = spec.Requirement{
 	Kind:       spec.Functional,
 	Discipline: spec.Business,
 	Status:     spec.Normative,
-	Title:      "Historie der Bilder, die neuesten zuerst",
-	Text:       "Die entstandenen Bilder MÜSSEN abrufbar sein, beginnend mit dem neuesten; wahlweise vollständig oder auf die jüngsten begrenzt.",
+	Title:      "Mediathek mit Favoriten und gedruckten Fotos",
+	Text:       "Alle Fotos MÜSSEN in einer Mediathek sichtbar sein, die neuesten zuerst; Fotos MÜSSEN sich als Favorit markieren lassen, gedruckte Fotos MÜSSEN erkennbar sein.",
 	Sources: []spec.Source{
-		{Doc: "requirements/_sources/foto.md", Anchor: "historie"},
+		{Doc: "requirements/_sources/foto.md", Anchor: "mediathek"},
 	},
 }

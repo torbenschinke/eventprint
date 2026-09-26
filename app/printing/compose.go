@@ -139,6 +139,12 @@ func Compose(s Sheet, raster Raster, opts RenderOptions) *image.RGBA {
 		s.Images = []image.Image{placeholderImage()}
 	}
 
+	// Die Gesichtserkennung ist auf dem Raspberry Pi teuer und läuft je
+	// Motiv nur einmal, auch wenn sie hier schon für die Wahl des Rahmens
+	// gebraucht wird.
+	faces := faceCache{detect: opts.DetectFaces, enabled: l.FaceCrop && opts.AutoCrop}
+	l = polaroidFallback(l, s.Images[0], &faces)
+
 	first := s.Images[0].Bounds()
 	landscape := SheetLandscape(l, first.Dx(), first.Dy())
 
@@ -156,9 +162,6 @@ func Compose(s Sheet, raster Raster, opts RenderOptions) *image.RGBA {
 	visible := image.Rect((pageW-visW)/2, (pageH-visH)/2, (pageW-visW)/2+visW, (pageH-visH)/2+visH)
 
 	areas := cellAreas(l, canvas.Bounds(), visible, landscape)
-	// Die Einstellung des Geräts schaltet die Erkennung ab, das Blatt kann
-	// sie zusätzlich abwählen. Beides muss zustimmen.
-	faces := faceCache{detect: opts.DetectFaces, enabled: l.FaceCrop && opts.AutoCrop}
 
 	for i, area := range areas {
 		src := s.Images[motifIndex(l, i, len(s.Images))]
@@ -202,6 +205,50 @@ func Compose(s Sheet, raster Raster, opts RenderOptions) *image.RGBA {
 	}
 
 	return canvas
+}
+
+// polaroidFallback wechselt vom Polaroid zum Passepartout, wenn die
+// erkannten Gesichter nicht vollständig in das Polaroidfenster passen.
+//
+// Das Polaroid ist hochkant und sein Fenster fast quadratisch. Eine Gruppe
+// nebeneinander auf einem Querformatfoto passt dort nicht hinein; der
+// Ausschnitt schnitt dann die Gesichter am Rand ab, und genau das hat Gäste
+// verärgert. Das Passepartout mit seinem Rand von 1 cm legt das Papier in die
+// Lage des Motivs und zeigt alle. Die Vorschau entsteht mit demselben
+// Renderer, der Gast sieht den Wechsel also, bevor er druckt.
+//
+// Ohne Gesichtserkennung oder ohne Gesichter bleibt es beim Polaroid.
+func polaroidFallback(l Layout, img image.Image, faces *faceCache) Layout {
+	if l.Design != DesignPolaroid || (l.Format != FormatSingle && l.Format != FormatSquare) {
+		return l
+	}
+
+	if !faces.enabled || faces.detect == nil {
+		return l
+	}
+
+	bounds := img.Bounds()
+	group := faceGroup(bounds, faces.found(img))
+	if group.Empty() {
+		return l
+	}
+
+	// Das Polaroidfenster auf hochkantem Papier; Lage und Maße sind die von
+	// cellAreas für diese Gestaltung.
+	area := image.Rect(0, 0, VisibleShort-2*polaroidSide, VisibleMedia4x6.Long()-polaroidSide-polaroidBottom)
+	if l.Format == FormatSquare {
+		side := min(area.Dx(), area.Dy())
+		area = image.Rect(0, 0, side, side)
+	}
+
+	crop := cropForFaces(bounds, faces.found(img), area)
+	if !crop.Empty() && group.In(crop) {
+		return l
+	}
+
+	l.Design = DesignMatte
+
+	return l
 }
 
 // motifIndex ordnet einem Feld sein Motiv zu.
@@ -326,13 +373,27 @@ func (f *faceCache) crop(src image.Image, area image.Rectangle) image.Rectangle 
 		f.known = map[image.Image][]image.Rectangle{}
 	}
 
+	return cropForFaces(src.Bounds(), f.found(src), area)
+}
+
+// found liefert die Gesichter eines Motivs und erkennt sie nur beim ersten
+// Mal.
+func (f *faceCache) found(src image.Image) []image.Rectangle {
+	if !f.enabled || f.detect == nil {
+		return nil
+	}
+
+	if f.known == nil {
+		f.known = map[image.Image][]image.Rectangle{}
+	}
+
 	faces, ok := f.known[src]
 	if !ok {
 		faces = f.detect(src)
 		f.known[src] = faces
 	}
 
-	return cropForFaces(src.Bounds(), faces, area)
+	return faces
 }
 
 // applyFilter verändert die Farben eines Feldes.

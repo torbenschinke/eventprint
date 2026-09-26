@@ -113,6 +113,7 @@ func (p *Poller) Run(ctx context.Context) {
 		}
 
 		next := p.load()
+		active.Interval = next.Interval
 		if next.URL != active.URL || next.Token != active.Token {
 			active = next
 			client = nil

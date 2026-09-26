@@ -18,14 +18,29 @@ var _ = spec.ForField[Job]("ID",
 	spec.Satisfies(druck.RDruckStatus),
 )
 
-// Das Foto, das gedruckt werden soll.
-var _ = spec.ForField[Job]("Photo",
+// Die Fotos auf diesem Blatt, in der Reihenfolge der Felder.
+var _ = spec.ForField[Job]("Photos",
 	spec.Satisfies(druck.RDruckAuftrag),
 )
 
-// Das gewählte Layout: formatfüllend, Passepartout oder Polaroid.
-var _ = spec.ForField[Job]("Template",
-	spec.Satisfies(druck.RDruckAuftrag),
+// Die Gestaltung des Blattes: Format, Rahmen, Farbe, Text, Oberfläche.
+var _ = spec.ForField[Job]("Layout",
+	spec.Satisfies(druck.RDruckGestaltung),
+)
+
+// Der Druckvorgang, zu dem das Blatt gehört. Die Oberfläche zeigt seinen
+// Fortschritt als Ganzes.
+var _ = spec.ForField[Job]("Batch",
+	spec.Satisfies(druck.RDruckStatus),
+)
+
+// Nummer des Blattes und Zahl der Blätter im Druckvorgang.
+var _ = spec.ForField[Job]("Sheet",
+	spec.Satisfies(druck.RDruckStatus),
+)
+
+var _ = spec.ForField[Job]("Sheets",
+	spec.Satisfies(druck.RDruckStatus),
 )
 
 // Name der Warteschlange, an die der Auftrag ging.
@@ -53,11 +68,6 @@ var _ = spec.ForField[Job]("PrinterJob",
 // Der unübersetzte Grund des Abschlusses aus dem Druckprotokoll.
 // Für die Fehlersuche belastbarer als die Meldung im Klartext.
 var _ = spec.ForField[Job]("Reason",
-	spec.Satisfies(druck.RDruckStatus),
-)
-
-// Wer den Druck ausgelöst hat.
-var _ = spec.ForField[Job]("RequestedBy",
 	spec.Satisfies(druck.RDruckStatus),
 )
 

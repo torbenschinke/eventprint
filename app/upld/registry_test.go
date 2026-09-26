@@ -4,9 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/worldiety/speclink/spec"
 	"go.wdy.de/nago/application/image"
 
 	"github.com/torbenschinke/eventprint/app/printing"
+	"github.com/torbenschinke/eventprint/requirements/fun/upload"
 )
 
 func TestOpenRotatesIdentityAndPurgesImages(t *testing.T) {
@@ -134,6 +136,8 @@ func TestEnqueueKeepsInboxTemplate(t *testing.T) {
 			}
 		})
 	}
+
+	spec.Verified(t, upload.RUploadEingang)
 }
 
 func TestRemainingCountsDownToFull(t *testing.T) {
@@ -163,4 +167,6 @@ func TestRemainingCountsDownToFull(t *testing.T) {
 	if _, err := r.Remaining("gibt-es-nicht"); err != ErrExpired {
 		t.Fatalf("Remaining einer unbekannten Sitzung: %v, erwartet ErrExpired", err)
 	}
+
+	spec.Verified(t, upload.RUploadEingang)
 }

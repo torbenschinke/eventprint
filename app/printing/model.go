@@ -95,9 +95,6 @@ type Job struct {
 	// übersetzt und deshalb für die Fehlersuche belastbarer als die Meldung.
 	Reason string `json:"reason,omitempty"`
 
-	// RequestedBy ist der Anzeigename dessen, der den Druck ausgelöst hat.
-	RequestedBy string `json:"by,omitempty"`
-
 	CreatedAt  time.Time `json:"createdAt"`
 	FinishedAt time.Time `json:"finishedAt,omitzero"`
 }

@@ -11,7 +11,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"sync"
 	"time"
+
+	"go.wdy.de/nago/application/permission"
 
 	"go.wdy.de/nago/pkg/data"
 )
@@ -24,10 +27,48 @@ import (
 type ID string
 
 // NewID erzeugt eine neue, zeitlich sortierbare ID für den Zeitpunkt t.
+//
+// Die Millisekunde ist streng steigend: Ein Stapel vom USB-Stick kommt
+// schneller herein, als die Uhr tickt, und der Zufallsteil allein ordnete
+// Bilder derselben Millisekunde beliebig.
 func NewID(t time.Time) ID {
 	var buf [8]byte
 	_, _ = rand.Read(buf[:])
-	return ID(fmt.Sprintf("%013d-%s", t.UTC().UnixMilli(), hex.EncodeToString(buf[:])))
+
+	ms := t.UTC().UnixMilli()
+	idClock.Lock()
+	if ms <= idClock.last {
+		ms = idClock.last + 1
+	}
+	idClock.last = ms
+	idClock.Unlock()
+
+	return ID(fmt.Sprintf("%013d-%s", ms, hex.EncodeToString(buf[:])))
+}
+
+var idClock struct {
+	sync.Mutex
+	last int64
+}
+
+// EventScoped wird von Subjekten erfüllt, die an eine Feier gebunden sind –
+// den Gästen im Kiosk. Wer nicht die ganze Mediathek sehen darf, sieht genau
+// die Fotos dieser Feier und keine anderen.
+type EventScoped interface {
+	EventScope() EventID
+}
+
+// visibleTo entscheidet, ob ein Subjekt ohne Mediatheksrecht ein Foto sehen
+// darf: nur ein Foto der Feier, an die es gebunden ist. Private Fotos und die
+// Fotos früherer Feiern bleiben verborgen, auch wenn jemand ihre Kennung
+// kennt.
+func visibleTo(subject interface{ HasPermission(id permission.ID) bool }, p Photo) bool {
+	if subject.HasPermission(PermFindAll) {
+		return true
+	}
+
+	scoped, ok := subject.(EventScoped)
+	return ok && !p.Private() && p.Event == scoped.EventScope()
 }
 
 // EventID ordnet ein Foto einer Feier zu, also einem Lauf des Kiosk-Modus.

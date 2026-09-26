@@ -4,10 +4,11 @@ import (
 	"github.com/worldiety/speclink/spec"
 
 	"github.com/torbenschinke/eventprint/requirements/fun/druck"
+	"github.com/torbenschinke/eventprint/requirements/fun/modus"
 )
 
 var _ = spec.For[Print](
-	spec.Satisfies(druck.RDruckAuftrag, druck.RDruckKeinNachdruck),
+	spec.Satisfies(druck.RDruckAuftrag, druck.RDruckKeinNachdruck, druck.RDruckGestaltung),
 	spec.Help(`Stellt ein Foto mit dem gewählten Layout in die Warteschlange.
 Der Aufruf kehrt sofort zurück; gedruckt wird im Hintergrund. Gibt die Fotobox
 den Auftrag später auf, nimmt sie ihn auch beim Druckdienst zurück.`),
@@ -37,4 +38,16 @@ var _ = spec.For[Preview](
 var _ = spec.For[Diagnose](
 	spec.Satisfies(druck.RDruckDiagnose),
 	spec.Help(`Beschreibt den Zustand des Druckers für die Betreuung.`),
+)
+
+var _ = spec.For[PrintSimple](
+	spec.Satisfies(druck.RDruckKiosk, modus.RModusPrivat),
+	spec.Help(`Druckt im Kiosk ein Foto der Feier in einem Kiosk-Layout, in
+begrenzter Anzahl.`),
+)
+
+var _ = spec.For[Cancel](
+	spec.Satisfies(druck.RDruckAbbruch),
+	spec.Help(`Bricht Aufträge ab, die noch nicht gedruckt sind, und nimmt sie beim
+Druckdienst zurück.`),
 )

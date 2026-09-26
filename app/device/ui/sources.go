@@ -95,7 +95,7 @@ func (a *App) lightroomBrowser(ctx *gift.Context, st *states) gift.View {
 
 	g := a.gallery("lightroom")
 	page := assets.Value()
-	if a.refill("lightroom", [2]any{assets, assets.Version()}) {
+	if assets.Loaded() && a.refill("lightroom", lightroomKey(page.Assets)) {
 		a.fillLightroom(g, page.Assets)
 		xgift.ShowSelection(g, a.lrSelected)
 	}
@@ -156,7 +156,7 @@ func (a *App) lightroomBrowser(ctx *gift.Context, st *states) gift.View {
 			head(sub),
 			ui.HScroll(albums...).Gap(u(8)).PaddingInsets(geom.Insets{Left: u(32), Right: u(32)}).MinHeight(u(48)),
 			ui.ImageGallery(g).
-				Layout(squareGrid(u(150))).
+				Layout(brickRows(u(170))).
 				Tile(tileStyle()).
 				PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Top: u(12), Bottom: u(120)}).
 				OnSelect(func(id asset.ID) {
@@ -185,6 +185,26 @@ func (a *App) fillLightroom(g *ui.Gallery, assets []lightroom.Asset) {
 			return a.dev.Lightroom.OpenThumbnail(a.dev.Subject(), c, assetID)
 		})
 	})
+}
+
+func lightroomKey(assets []lightroom.Asset) string {
+	var b strings.Builder
+	for _, a := range assets {
+		b.WriteString(a.ID)
+		b.WriteByte('|')
+	}
+
+	return b.String()
+}
+
+func usbKey(images []usb.Image) string {
+	var b strings.Builder
+	for _, img := range images {
+		b.WriteString(img.Path)
+		b.WriteByte('|')
+	}
+
+	return b.String()
 }
 
 // importBar ist die Leiste zum Übernehmen fremder Fotos.
@@ -286,7 +306,7 @@ func (a *App) usbBrowser(ctx *gift.Context, st *states) gift.View {
 
 	drive := d.drives[0]
 	g := a.gallery("usb")
-	if a.refill("usb", [2]any{res, res.Version()}) {
+	if a.refill("usb", usbKey(d.images)) {
 		meta := make([]asset.Metadata, 0, len(d.images))
 		for _, img := range d.images {
 			meta = append(meta, asset.Metadata{ID: asset.ID("usb:" + img.Path)})
@@ -334,7 +354,7 @@ func (a *App) usbBrowser(ctx *gift.Context, st *states) gift.View {
 		xgift.Fill(ui.VStack(
 			header(sub, secondary("Auswerfen", func() { a.eject(drive.Path, func() { res.Load(load) }) })),
 			ui.ImageGallery(g).
-				Layout(squareGrid(u(150))).
+				Layout(brickRows(u(170))).
 				Tile(tileStyle()).
 				PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Bottom: u(120)}).
 				OnSelect(func(id asset.ID) {

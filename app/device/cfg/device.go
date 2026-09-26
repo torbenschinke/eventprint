@@ -65,10 +65,10 @@ func (d *Device) Subject() device.Actor {
 	}
 
 	if d.lock.Unlocked() {
-		return device.NewActor(device.RoleOperator, d.grants)
+		return device.NewActor(device.RoleOperator, d.grants).WithEvent(k.Event)
 	}
 
-	return device.NewActor(device.RoleGuest, d.grants)
+	return device.NewActor(device.RoleGuest, d.grants).WithEvent(k.Event)
 }
 
 // Relock beendet eine Freischaltung der Betreuung sofort.

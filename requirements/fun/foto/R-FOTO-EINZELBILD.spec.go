@@ -7,8 +7,8 @@ var RFotoEinzelbild = spec.Requirement{
 	Kind:       spec.Functional,
 	Discipline: spec.Business,
 	Status:     spec.Normative,
-	Title:      "Einzelnes Bild anhand seiner Kennung finden",
-	Text:       "Ein einzelnes Bild MUSS anhand seiner Kennung auffindbar sein, damit ein Nachdruck ohne Durchsuchen der Historie möglich ist.",
+	Title:      "Einzelnes Bild über seine Kennung finden",
+	Text:       "Ein einzelnes Bild MUSS anhand seiner Kennung auffindbar sein.",
 	Sources: []spec.Source{
 		{Doc: "requirements/_sources/foto.md", Anchor: "einzelnes-bild"},
 	},

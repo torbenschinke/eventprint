@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 24 | 100% |
-| Normative requirements covered | 24 | 100% |
-| … claimed by a test | 24 | 100% |
-| … demonstrated by a run | 24 | 100% |
-| … read by a person | 24 | 0% |
+| Source segments accounted for | 39 | 100% |
+| Normative requirements covered | 38 | 100% |
+| … claimed by a test | 38 | 100% |
+| … demonstrated by a run | 38 | 100% |
+| … read by a person | 38 | 0% |
 
 ## Gaps
 
@@ -41,25 +41,39 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 - R-ARCHIV-LOESCHEN
 - R-ARCHIV-PLATZ
 - R-DEC-ZUSTANDSABLAGE
+- R-DRUCK-ABBRUCH
 - R-DRUCK-AUFTRAG
 - R-DRUCK-DIAGNOSE
 - R-DRUCK-FREIGABE
+- R-DRUCK-GESTALTUNG
 - R-DRUCK-KEIN-NACHDRUCK
+- R-DRUCK-KIOSK
+- R-DRUCK-PAPIER
 - R-DRUCK-STATUS
 - R-DRUCK-VORSCHAU
 - R-DRUCK-WIEDERHOLUNG
 - R-FOTO-DRUCKVORLAGE
+- R-FOTO-EINGANG
 - R-FOTO-EINZELBILD
 - R-FOTO-HISTORIE
 - R-FOTO-IMPORT
 - R-FOTO-LOESCHEN
+- R-MODUS-BETREUUNG
+- R-MODUS-EINSTELLUNGEN
+- R-MODUS-HEIM
+- R-MODUS-KIOSK
+- R-MODUS-PRIVAT
 - R-NETZ-BETREUUNG
 - R-NETZ-SUCHE
 - R-NETZ-VERBINDEN
 - R-NETZ-ZUSTAND
+- R-QUELLEN-LIGHTROOM
+- R-QUELLEN-LIGHTROOM-ANMELDUNG
+- R-QUELLEN-USB
 - R-UPLOAD-ABHOLUNG
 - R-UPLOAD-BESTAETIGUNG
 - R-UPLOAD-BILD
+- R-UPLOAD-EINGANG
 - R-UPLOAD-SITZUNG
 
 ## What has actually been run
@@ -68,9 +82,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 24 |  |
-| … a test claims | 24 | 100% |
-| … a run demonstrated | 24 | 100% |
+| Normative requirements | 38 |  |
+| … a test claims | 38 | 100% |
+| … a run demonstrated | 38 | 100% |
 
 ### How much of the code a run went through
 
@@ -81,11 +95,13 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | Document | Kind | Segments | Cited | Read | Drifted |
 |---|---|---:|---:|---:|---:|
 | `requirements/_sources/archiv.md` | markdown | 3 | 3 | 0 | 0 |
-| `requirements/_sources/druck.md` | markdown | 7 | 7 | 0 | 0 |
-| `requirements/_sources/entscheidungen.md` | markdown | 1 | 1 | 0 | 0 |
-| `requirements/_sources/foto.md` | markdown | 5 | 5 | 0 | 0 |
+| `requirements/_sources/druck.md` | markdown | 11 | 11 | 0 | 0 |
+| `requirements/_sources/entscheidungen.md` | markdown | 2 | 2 | 0 | 0 |
+| `requirements/_sources/foto.md` | markdown | 6 | 6 | 0 | 0 |
+| `requirements/_sources/modus.md` | markdown | 5 | 5 | 0 | 0 |
 | `requirements/_sources/netz.md` | markdown | 4 | 4 | 0 | 0 |
-| `requirements/_sources/upload.md` | markdown | 4 | 4 | 0 | 0 |
+| `requirements/_sources/quellen.md` | markdown | 3 | 3 | 0 | 0 |
+| `requirements/_sources/upload.md` | markdown | 5 | 5 | 0 | 0 |
 
 ## Themes
 
@@ -99,15 +115,17 @@ _No standard is declared, so no external clause is answered here._
 
 This module builds 2 programs.
 
-### photobox
+### gift-app
 
-Command photobox ist die Fotobox-Anwendung für Hochzeiten, Jubiläen und ähnliche Veranstaltungen.
+Command gift-app ist die Oberfläche des Fotodruckers auf dem Touchscreen.
 
-Built from `cmd/photobox`.
+Built from `cmd/gift-app`.
 
-**Assembles** `photobox`
+**Assembles** `device`
 
-_How this program is invoked could not be read from the source. That is a limit of the reading, not a statement that it takes no arguments._
+**Appears to accept** — inferred from the code rather than declared, so treat it as a starting point and not as a contract.
+
+Flags: `-window`
 
 ### photoupld
 
@@ -165,165 +183,439 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-24 packages in 6 bounded contexts, and 44 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+30 packages in 10 bounded contexts, and 65 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
-6 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
+8 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
 _No diagram is included in this document. Pass -figures to speclink generate, after rendering the sources written by speclink diagrams._
 
 ### Where one context reaches into another
 
-17 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
+23 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
 
 | From | To |
 |---|---|
-| `app/photobox/cfg` | `app/photo` |
-| `app/photobox/cfg` | `app/printing` |
-| `app/photobox/cfg` | `app/wifi` |
-| `app/photobox/cfg` | `app/wifi/ui` |
-| `app/photobox/cfg/camera` | `app/photo` |
-| `app/photobox/cfg/camera` | `app/printing` |
-| `app/photobox/cfg/remote` | `app/photo` |
-| `app/photobox/cfg/remote` | `app/printing` |
-| `app/photobox/ui` | `app/photo` |
-| `app/photobox/ui` | `app/printing` |
-| `app/photobox/ui/preview` | `app/printing` |
+| `app/device` | `app/photo` |
+| `app/device` | `app/printing` |
+| `app/device/cfg` | `app/camera` |
+| `app/device/cfg` | `app/lightroom` |
+| `app/device/cfg` | `app/photo` |
+| `app/device/cfg` | `app/printing` |
+| `app/device/cfg` | `app/relay` |
+| `app/device/cfg` | `app/usb` |
+| `app/device/cfg` | `app/wifi` |
+| `app/device/ui` | `app/camera` |
+| `app/device/ui` | `app/lightroom` |
+| `app/device/ui` | `app/photo` |
+| `app/device/ui` | `app/printing` |
+| `app/device/ui` | `app/relay` |
+| `app/device/ui` | `app/usb` |
+| `app/device/ui` | `app/wifi` |
 | `app/photoupld/cfg` | `app/upld` |
-| `app/photoupld/ui` | `app/photobox/ui/preview` |
 | `app/photoupld/ui` | `app/printing` |
 | `app/photoupld/ui` | `app/upld` |
+| `app/photoupld/ui/preview` | `app/printing` |
 | `app/printing` | `app/photo` |
+| `app/relay` | `app/printing` |
 | `app/upld` | `app/printing` |
 
 ## What the code declares
 
-49 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+112 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+
+### app/device
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-consumepaper"></a>
+#### ConsumePaper
+
+_use case_ — `app/device/uc_consume_paper.go:13`
+
+**Answers to** [R-DRUCK-PAPIER](#req-R-DRUCK-PAPIER)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-currentkiosk"></a>
+#### CurrentKiosk
+
+_query_ — `app/device/uc_current_kiosk.go:7`
+
+**Answers to** [R-MODUS-HEIM](#req-R-MODUS-HEIM)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-intake"></a>
+#### Intake
+
+_query_ — `app/device/uc_intake.go:38`
+
+**Answers to** [R-DRUCK-KIOSK](#req-R-DRUCK-KIOSK), [R-FOTO-EINGANG](#req-R-FOTO-EINGANG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-loadsettings"></a>
+#### LoadSettings
+
+_query_ — `app/device/uc_load_settings.go:6`
+
+**Answers to** [R-MODUS-EINSTELLUNGEN](#req-R-MODUS-EINSTELLUNGEN)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-preflight"></a>
+#### Preflight
+
+_query_ — `app/device/uc_preflight.go:50`
+
+**Answers to** [R-MODUS-KIOSK](#req-R-MODUS-KIOSK)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-refillpaper"></a>
+#### RefillPaper
+
+_query_ — `app/device/uc_refill_paper.go:10`
+
+**Answers to** [R-DRUCK-PAPIER](#req-R-DRUCK-PAPIER)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-savesettings"></a>
+#### SaveSettings
+
+_query_ — `app/device/uc_save_settings.go:17`
+
+**Answers to** [R-MODUS-EINSTELLUNGEN](#req-R-MODUS-EINSTELLUNGEN)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-setpin"></a>
+#### SetPin
+
+_use case_ — `app/device/uc_set_pin.go:13`
+
+**Answers to** [R-MODUS-BETREUUNG](#req-R-MODUS-BETREUUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-startkiosk"></a>
+#### StartKiosk
+
+_query_ — `app/device/uc_start_kiosk.go:25`
+
+**Answers to** [R-MODUS-KIOSK](#req-R-MODUS-KIOSK)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-stopkiosk"></a>
+#### StopKiosk
+
+_use case_ — `app/device/uc_stop_kiosk.go:9`
+
+**Answers to** [R-MODUS-BETREUUNG](#req-R-MODUS-BETREUUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-device-unlock"></a>
+#### Unlock
+
+_use case_ — `app/device/uc_unlock.go:10`
+
+**Answers to** [R-MODUS-BETREUUNG](#req-R-MODUS-BETREUUNG)
+
+<a id="req-code-de-torbenschinke-eventprint-device-consume-paper"></a>
+#### de.torbenschinke.eventprint.device.consume\_paper
+
+_permission_ — `app/device/perm.go:87`
+
+<a id="req-code-de-torbenschinke-eventprint-device-current-kiosk"></a>
+#### de.torbenschinke.eventprint.device.current\_kiosk
+
+_permission_ — `app/device/perm.go:59`
+
+<a id="req-code-de-torbenschinke-eventprint-device-intake"></a>
+#### de.torbenschinke.eventprint.device.intake
+
+_permission_ — `app/device/perm.go:95`
+
+<a id="req-code-de-torbenschinke-eventprint-device-load-settings"></a>
+#### de.torbenschinke.eventprint.device.load\_settings
+
+_permission_ — `app/device/perm.go:24`
+
+<a id="req-code-de-torbenschinke-eventprint-device-preflight"></a>
+#### de.torbenschinke.eventprint.device.preflight
+
+_permission_ — `app/device/perm.go:73`
+
+<a id="req-code-de-torbenschinke-eventprint-device-refill-paper"></a>
+#### de.torbenschinke.eventprint.device.refill\_paper
+
+_permission_ — `app/device/perm.go:80`
+
+<a id="req-code-de-torbenschinke-eventprint-device-save-settings"></a>
+#### de.torbenschinke.eventprint.device.save\_settings
+
+_permission_ — `app/device/perm.go:31`
+
+<a id="req-code-de-torbenschinke-eventprint-device-set-pin"></a>
+#### de.torbenschinke.eventprint.device.set\_pin
+
+_permission_ — `app/device/perm.go:38`
+
+<a id="req-code-de-torbenschinke-eventprint-device-start-kiosk"></a>
+#### de.torbenschinke.eventprint.device.start\_kiosk
+
+_permission_ — `app/device/perm.go:45`
+
+<a id="req-code-de-torbenschinke-eventprint-device-stop-kiosk"></a>
+#### de.torbenschinke.eventprint.device.stop\_kiosk
+
+_permission_ — `app/device/perm.go:52`
+
+<a id="req-code-de-torbenschinke-eventprint-device-unlock"></a>
+#### de.torbenschinke.eventprint.device.unlock
+
+_permission_ — `app/device/perm.go:66`
+
+### app/lightroom
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-account"></a>
+#### Account
+
+_query_ — `app/lightroom/uc_account.go:12`
+
+**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-albums"></a>
+#### Albums
+
+_query_ — `app/lightroom/uc_albums.go:19`
+
+**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-assets"></a>
+#### Assets
+
+_query_ — `app/lightroom/uc_assets.go:18`
+
+**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-awaitconnect"></a>
+#### AwaitConnect
+
+_query_ — `app/lightroom/uc_await_connect.go:17`
+
+**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-beginconnect"></a>
+#### BeginConnect
+
+_query_ — `app/lightroom/uc_begin_connect.go:16`
+
+**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-disconnect"></a>
+#### Disconnect
+
+_use case_ — `app/lightroom/uc_disconnect.go:12`
+
+**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-download"></a>
+#### Download
+
+_query_ — `app/lightroom/uc_download.go:15`
+
+**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-lightroom-openthumbnail"></a>
+#### OpenThumbnail
+
+_query_ — `app/lightroom/uc_open_thumbnail.go:15`
+
+**Answers to** [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM)
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-account"></a>
+#### de.torbenschinke.eventprint.lightroom.account
+
+_permission_ — `app/lightroom/perm.go:45`
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-albums"></a>
+#### de.torbenschinke.eventprint.lightroom.albums
+
+_permission_ — `app/lightroom/perm.go:52`
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-assets"></a>
+#### de.torbenschinke.eventprint.lightroom.assets
+
+_permission_ — `app/lightroom/perm.go:59`
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-await-connect"></a>
+#### de.torbenschinke.eventprint.lightroom.await\_connect
+
+_permission_ — `app/lightroom/perm.go:31`
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-begin-connect"></a>
+#### de.torbenschinke.eventprint.lightroom.begin\_connect
+
+_permission_ — `app/lightroom/perm.go:24`
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-disconnect"></a>
+#### de.torbenschinke.eventprint.lightroom.disconnect
+
+_permission_ — `app/lightroom/perm.go:38`
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-download"></a>
+#### de.torbenschinke.eventprint.lightroom.download
+
+_permission_ — `app/lightroom/perm.go:73`
+
+<a id="req-code-de-torbenschinke-eventprint-lightroom-open-thumbnail"></a>
+#### de.torbenschinke.eventprint.lightroom.open\_thumbnail
+
+_permission_ — `app/lightroom/perm.go:66`
 
 ### app/photo
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-delete"></a>
 #### Delete
 
-_use case_ — `app/photo/uc_delete.go:11`
+_use case_ — `app/photo/uc_delete.go:14`
 
 **Answers to** [R-FOTO-LOESCHEN](#req-R-FOTO-LOESCHEN)
-
-<a id="req-code-github-com-torbenschinke-eventprint-app-photo-exportarchive"></a>
-#### ExportArchive
-
-_query_ — `app/photo/uc_export_archive.go:14`
-
-**Answers to** [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-findall"></a>
 #### FindAll
 
-_query_ — `app/photo/uc_find_all.go:13`
+_query_ — `app/photo/uc_find_all.go:14`
 
 **Answers to** [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-findbyid"></a>
 #### FindByID
 
-_query_ — `app/photo/uc_find_by_id.go:9`
+_query_ — `app/photo/uc_find_by_id.go:10`
 
-**Answers to** [R-FOTO-EINZELBILD](#req-R-FOTO-EINZELBILD)
+**Answers to** [R-FOTO-EINZELBILD](#req-R-FOTO-EINZELBILD), [R-MODUS-PRIVAT](#req-R-MODUS-PRIVAT)
 
-<a id="req-code-github-com-torbenschinke-eventprint-app-photo-findlatest"></a>
-#### FindLatest
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-findevent"></a>
+#### FindEvent
 
-_query_ — `app/photo/uc_find_latest.go:6`
+_query_ — `app/photo/uc_find_event.go:14`
 
-**Answers to** [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE)
+**Answers to** [R-MODUS-PRIVAT](#req-R-MODUS-PRIVAT)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-import"></a>
 #### Import
 
-_query_ — `app/photo/uc_import.go:25`
+_query_ — `app/photo/uc_import.go:48`
 
 **Answers to** [R-FOTO-IMPORT](#req-R-FOTO-IMPORT)
 
-<a id="req-code-github-com-torbenschinke-eventprint-app-photo-inspectarchive"></a>
-#### InspectArchive
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-inspectstorage"></a>
+#### InspectStorage
 
-_query_ — `app/photo/uc_inspect_archive.go:10`
+_query_ — `app/photo/uc_inspect_storage.go:11`
 
 **Answers to** [R-ARCHIV-PLATZ](#req-R-ARCHIV-PLATZ)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-locate"></a>
+#### Locate
+
+_query_ — `app/photo/uc_locate.go:23`
+
+**Answers to** [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT), [R-FOTO-DRUCKVORLAGE](#req-R-FOTO-DRUCKVORLAGE), [R-MODUS-PRIVAT](#req-R-MODUS-PRIVAT)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-markprinted"></a>
+#### MarkPrinted
+
+_use case_ — `app/photo/uc_mark_printed.go:10`
+
+**Answers to** [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-markseen"></a>
+#### MarkSeen
+
+_use case_ — `app/photo/uc_mark_seen.go:14`
+
+**Answers to** [R-FOTO-EINGANG](#req-R-FOTO-EINGANG)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-openoriginal"></a>
 #### OpenOriginal
 
-_query_ — `app/photo/uc_open_original.go:13`
+_query_ — `app/photo/uc_open_original.go:16`
 
 **Answers to** [R-FOTO-DRUCKVORLAGE](#req-R-FOTO-DRUCKVORLAGE)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-purgeevent"></a>
 #### PurgeEvent
 
-_query_ — `app/photo/uc_purge_event.go:48`
+_query_ — `app/photo/uc_purge_event.go:16`
 
 **Answers to** [R-ARCHIV-LOESCHEN](#req-R-ARCHIV-LOESCHEN)
 
-<a id="req-code-de-torbenschinke-eventprint-photo-archive-export"></a>
-#### de.torbenschinke.eventprint.photo.archive.export
+<a id="req-code-github-com-torbenschinke-eventprint-app-photo-setfavorite"></a>
+#### SetFavorite
 
-_permission_ — `app/photo/perm.go:75`
+_use case_ — `app/photo/uc_set_favorite.go:10`
 
-<a id="req-code-de-torbenschinke-eventprint-photo-archive-inspect"></a>
-#### de.torbenschinke.eventprint.photo.archive.inspect
-
-_permission_ — `app/photo/perm.go:68`
+**Answers to** [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE)
 
 <a id="req-code-de-torbenschinke-eventprint-photo-delete"></a>
 #### de.torbenschinke.eventprint.photo.delete
 
-_permission_ — `app/photo/perm.go:54`
+_permission_ — `app/photo/perm.go:55`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-find-all"></a>
 #### de.torbenschinke.eventprint.photo.find\_all
 
-_permission_ — `app/photo/perm.go:40`
+_permission_ — `app/photo/perm.go:34`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-find-by-id"></a>
 #### de.torbenschinke.eventprint.photo.find\_by\_id
 
-_permission_ — `app/photo/perm.go:33`
+_permission_ — `app/photo/perm.go:48`
 
-<a id="req-code-de-torbenschinke-eventprint-photo-find-latest"></a>
-#### de.torbenschinke.eventprint.photo.find\_latest
+<a id="req-code-de-torbenschinke-eventprint-photo-find-event"></a>
+#### de.torbenschinke.eventprint.photo.find\_event
 
-_permission_ — `app/photo/perm.go:47`
+_permission_ — `app/photo/perm.go:41`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-import"></a>
 #### de.torbenschinke.eventprint.photo.import
 
-_permission_ — `app/photo/perm.go:26`
+_permission_ — `app/photo/perm.go:27`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-inspect-storage"></a>
+#### de.torbenschinke.eventprint.photo.inspect\_storage
+
+_permission_ — `app/photo/perm.go:97`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-locate"></a>
+#### de.torbenschinke.eventprint.photo.locate
+
+_permission_ — `app/photo/perm.go:90`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-mark-printed"></a>
+#### de.torbenschinke.eventprint.photo.mark\_printed
+
+_permission_ — `app/photo/perm.go:76`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-mark-seen"></a>
+#### de.torbenschinke.eventprint.photo.mark\_seen
+
+_permission_ — `app/photo/perm.go:69`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-open-original"></a>
 #### de.torbenschinke.eventprint.photo.open\_original
 
-_permission_ — `app/photo/perm.go:61`
+_permission_ — `app/photo/perm.go:83`
 
 <a id="req-code-de-torbenschinke-eventprint-photo-purge-event"></a>
 #### de.torbenschinke.eventprint.photo.purge\_event
 
-_permission_ — `app/photo/perm.go:82`
+_permission_ — `app/photo/perm.go:104`
+
+<a id="req-code-de-torbenschinke-eventprint-photo-set-favorite"></a>
+#### de.torbenschinke.eventprint.photo.set\_favorite
+
+_permission_ — `app/photo/perm.go:62`
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-photo-photo"></a>
 #### Photo
 
-_aggregate_ — `app/photo/model.go:57`
+_aggregate_ — `app/photo/model.go:116`
 
 **Answers to** [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE)
 
-### app/photobox/cfg
-
-<a id="req-code-de-torbenschinke-eventprint-booth-configure"></a>
-#### de.torbenschinke.eventprint.booth.configure
-
-_permission_ — `app/photobox/cfg/perm_configure.go:20`
-
 ### app/printing
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-cancel"></a>
+#### Cancel
+
+_use case_ — `app/printing/uc_cancel.go:17`
+
+**Answers to** [R-DRUCK-ABBRUCH](#req-R-DRUCK-ABBRUCH)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-printing-diagnose"></a>
 #### Diagnose
@@ -349,16 +641,23 @@ _query_ — `app/printing/uc_find_job_by_id.go:9`
 <a id="req-code-github-com-torbenschinke-eventprint-app-printing-preview"></a>
 #### Preview
 
-_query_ — `app/printing/uc_preview.go:14`
+_query_ — `app/printing/uc_preview.go:28`
 
 **Answers to** [R-DRUCK-VORSCHAU](#req-R-DRUCK-VORSCHAU)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-printing-print"></a>
 #### Print
 
-_query_ — `app/printing/uc_print.go:19`
+_query_ — `app/printing/uc_print.go:43`
 
-**Answers to** [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG), [R-DRUCK-KEIN-NACHDRUCK](#req-R-DRUCK-KEIN-NACHDRUCK)
+**Answers to** [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG), [R-DRUCK-GESTALTUNG](#req-R-DRUCK-GESTALTUNG), [R-DRUCK-KEIN-NACHDRUCK](#req-R-DRUCK-KEIN-NACHDRUCK)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-printsimple"></a>
+#### PrintSimple
+
+_query_ — `app/printing/uc_print_simple.go:26`
+
+**Answers to** [R-DRUCK-KIOSK](#req-R-DRUCK-KIOSK), [R-MODUS-PRIVAT](#req-R-MODUS-PRIVAT)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-printing-resume"></a>
 #### Resume
@@ -374,40 +673,50 @@ _use case_ — `app/printing/uc_retry.go:15`
 
 **Answers to** [R-DRUCK-WIEDERHOLUNG](#req-R-DRUCK-WIEDERHOLUNG)
 
+<a id="req-code-de-torbenschinke-eventprint-printing-cancel"></a>
+#### de.torbenschinke.eventprint.printing.cancel
+
+_permission_ — `app/printing/perm.go:78`
+
 <a id="req-code-de-torbenschinke-eventprint-printing-diagnose"></a>
 #### de.torbenschinke.eventprint.printing.diagnose
 
-_permission_ — `app/printing/perm.go:55`
+_permission_ — `app/printing/perm.go:57`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-find-all-jobs"></a>
 #### de.torbenschinke.eventprint.printing.find\_all\_jobs
 
-_permission_ — `app/printing/perm.go:27`
+_permission_ — `app/printing/perm.go:29`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-find-job-by-id"></a>
 #### de.torbenschinke.eventprint.printing.find\_job\_by\_id
 
-_permission_ — `app/printing/perm.go:34`
+_permission_ — `app/printing/perm.go:36`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-preview"></a>
 #### de.torbenschinke.eventprint.printing.preview
 
-_permission_ — `app/printing/perm.go:48`
+_permission_ — `app/printing/perm.go:50`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-print"></a>
 #### de.torbenschinke.eventprint.printing.print
 
-_permission_ — `app/printing/perm.go:20`
+_permission_ — `app/printing/perm.go:22`
+
+<a id="req-code-de-torbenschinke-eventprint-printing-print-simple"></a>
+#### de.torbenschinke.eventprint.printing.print\_simple
+
+_permission_ — `app/printing/perm.go:71`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-resume"></a>
 #### de.torbenschinke.eventprint.printing.resume
 
-_permission_ — `app/printing/perm.go:62`
+_permission_ — `app/printing/perm.go:64`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-retry"></a>
 #### de.torbenschinke.eventprint.printing.retry
 
-_permission_ — `app/printing/perm.go:41`
+_permission_ — `app/printing/perm.go:43`
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-printing-job"></a>
 #### Job
@@ -415,6 +724,20 @@ _permission_ — `app/printing/perm.go:41`
 _aggregate_ — `app/printing/model.go:63`
 
 **Answers to** [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE)
+
+### app/relay
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-relay-uploadaddress"></a>
+#### UploadAddress
+
+_query_ — `app/relay/uc_upload_address.go:25`
+
+**Answers to** [R-UPLOAD-EINGANG](#req-R-UPLOAD-EINGANG), [R-UPLOAD-SITZUNG](#req-R-UPLOAD-SITZUNG)
+
+<a id="req-code-de-torbenschinke-eventprint-relay-upload-address"></a>
+#### de.torbenschinke.eventprint.relay.upload\_address
+
+_permission_ — `app/relay/perm.go:13`
 
 ### app/upld
 
@@ -424,6 +747,13 @@ _aggregate_ — `app/printing/model.go:63`
 _use case_ — `app/upld/uc_ack_job.go:9`
 
 **Answers to** [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-upld-collectlogin"></a>
+#### CollectLogin
+
+_query_ — `app/upld/uc_collect_login.go:12`
+
+**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-upld-findpendingjobs"></a>
 #### FindPendingJobs
@@ -446,25 +776,104 @@ _query_ — `app/upld/uc_open_session.go:11`
 
 **Answers to** [R-UPLOAD-SITZUNG](#req-R-UPLOAD-SITZUNG)
 
+<a id="req-code-github-com-torbenschinke-eventprint-app-upld-registerlogin"></a>
+#### RegisterLogin
+
+_use case_ — `app/upld/uc_register_login.go:11`
+
+**Answers to** [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG)
+
 <a id="req-code-de-torbenschinke-photoupld-ack"></a>
 #### de.torbenschinke.photoupld.ack
 
-_permission_ — `app/upld/perm.go:38`
+_permission_ — `app/upld/perm.go:41`
 
 <a id="req-code-de-torbenschinke-photoupld-fetch"></a>
 #### de.torbenschinke.photoupld.fetch
 
-_permission_ — `app/upld/perm.go:31`
+_permission_ — `app/upld/perm.go:34`
+
+<a id="req-code-de-torbenschinke-photoupld-oauth-collect"></a>
+#### de.torbenschinke.photoupld.oauth.collect
+
+_permission_ — `app/upld/perm.go:55`
+
+<a id="req-code-de-torbenschinke-photoupld-oauth-register"></a>
+#### de.torbenschinke.photoupld.oauth.register
+
+_permission_ — `app/upld/perm.go:48`
 
 <a id="req-code-de-torbenschinke-photoupld-poll"></a>
 #### de.torbenschinke.photoupld.poll
 
-_permission_ — `app/upld/perm.go:24`
+_permission_ — `app/upld/perm.go:27`
 
 <a id="req-code-de-torbenschinke-photoupld-session"></a>
 #### de.torbenschinke.photoupld.session
 
-_permission_ — `app/upld/perm.go:17`
+_permission_ — `app/upld/perm.go:20`
+
+### app/usb
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-usb-drives"></a>
+#### Drives
+
+_query_ — `app/usb/uc_drives.go:13`
+
+**Answers to** [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT), [R-QUELLEN-USB](#req-R-QUELLEN-USB)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-usb-eject"></a>
+#### Eject
+
+_use case_ — `app/usb/uc_eject.go:15`
+
+**Answers to** [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-usb-export"></a>
+#### Export
+
+_query_ — `app/usb/uc_export.go:22`
+
+**Answers to** [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-usb-images"></a>
+#### Images
+
+_query_ — `app/usb/uc_images.go:15`
+
+**Answers to** [R-QUELLEN-USB](#req-R-QUELLEN-USB)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-usb-read"></a>
+#### Read
+
+_query_ — `app/usb/uc_read.go:16`
+
+**Answers to** [R-QUELLEN-USB](#req-R-QUELLEN-USB)
+
+<a id="req-code-de-torbenschinke-eventprint-usb-drives"></a>
+#### de.torbenschinke.eventprint.usb.drives
+
+_permission_ — `app/usb/perm.go:23`
+
+<a id="req-code-de-torbenschinke-eventprint-usb-eject"></a>
+#### de.torbenschinke.eventprint.usb.eject
+
+_permission_ — `app/usb/perm.go:37`
+
+<a id="req-code-de-torbenschinke-eventprint-usb-export"></a>
+#### de.torbenschinke.eventprint.usb.export
+
+_permission_ — `app/usb/perm.go:30`
+
+<a id="req-code-de-torbenschinke-eventprint-usb-images"></a>
+#### de.torbenschinke.eventprint.usb.images
+
+_permission_ — `app/usb/perm.go:44`
+
+<a id="req-code-de-torbenschinke-eventprint-usb-read"></a>
+#### de.torbenschinke.eventprint.usb.read
+
+_permission_ — `app/usb/perm.go:51`
 
 ### app/wifi
 
@@ -515,6 +924,7 @@ _No topology is declared, so what this system talks to is stated nowhere._
 | `DELETE /api/v1/job` | — | `AckResponse` | [AckJob](#req-code-github-com-torbenschinke-eventprint-app-upld-ackjob) | R-UPLOAD-BESTAETIGUNG |
 | `GET /api/v1/job/image` | — | — | [OpenJobImage](#req-code-github-com-torbenschinke-eventprint-app-upld-openjobimage) | R-UPLOAD-BILD |
 | `GET /api/v1/jobs` | — | `JobResponse` | [FindPendingJobs](#req-code-github-com-torbenschinke-eventprint-app-upld-findpendingjobs) | R-UPLOAD-ABHOLUNG |
+| `POST /api/v1/oauth/adobe` | `OAuthRegisterRequest` | `OAuthRegisterResponse` | [RegisterLogin](#req-code-github-com-torbenschinke-eventprint-app-upld-registerlogin) | R-QUELLEN-LIGHTROOM-ANMELDUNG |
 | `POST /api/v1/session` | — | `SessionResponse` | [OpenSession](#req-code-github-com-torbenschinke-eventprint-app-upld-opensession) | R-UPLOAD-SITZUNG |
 
 ### What crosses each address
@@ -541,6 +951,23 @@ Reaches `FindPendingJobs`.
 
 **Returns** `JobResponse` — `[]{id:string,template:string,filename:string,createdAt:string}`
 
+#### POST /api/v1/oauth/adobe
+
+Reaches `RegisterLogin`.
+
+**Takes** `OAuthRegisterRequest`
+
+| Field | Wire | Shape | Omitted when empty |
+|---|---|---|---:|
+| `State` | `state` | `string` | no |
+| `AuthorizeURL` | `authorizeUrl` | `string` | no |
+
+**Returns** `OAuthRegisterResponse`
+
+| Field | Wire | Shape | Omitted when empty |
+|---|---|---|---:|
+| `StartURL` | `startUrl` | `string` | no |
+
 #### POST /api/v1/session
 
 Reaches `OpenSession`.
@@ -564,29 +991,44 @@ Every requirement that was read, and how far each one has got. A mark states wha
 
 | Requirement | Kind | Field | Status | Built | Tested | Run | Read |
 |---|---|---|---|---:|---:|---:|---:|
-| [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT) | functional | mixed | normative | yes | yes | yes | no |
-| [R-ARCHIV-LOESCHEN](#req-R-ARCHIV-LOESCHEN) | functional | mixed | normative | yes | yes | yes | no |
-| [R-ARCHIV-PLATZ](#req-R-ARCHIV-PLATZ) | functional | mixed | normative | yes | yes | yes | no |
+| [R-ARCHIV-EXPORT](#req-R-ARCHIV-EXPORT) | functional | business | normative | yes | yes | yes | no |
+| [R-ARCHIV-LOESCHEN](#req-R-ARCHIV-LOESCHEN) | functional | business | normative | yes | yes | yes | no |
+| [R-ARCHIV-PLATZ](#req-R-ARCHIV-PLATZ) | functional | business | normative | yes | yes | yes | no |
+| [R-DEC-OBERFLAECHE](#req-R-DEC-OBERFLAECHE) | decision | technical | informative | n/a | n/a | n/a | n/a |
 | [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE) | decision | technical | normative | yes | no | n/a | no |
+| [R-DRUCK-ABBRUCH](#req-R-DRUCK-ABBRUCH) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-DIAGNOSE](#req-R-DRUCK-DIAGNOSE) | functional | mixed | normative | yes | yes | yes | no |
 | [R-DRUCK-FREIGABE](#req-R-DRUCK-FREIGABE) | functional | mixed | normative | yes | yes | yes | no |
+| [R-DRUCK-GESTALTUNG](#req-R-DRUCK-GESTALTUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-KEIN-NACHDRUCK](#req-R-DRUCK-KEIN-NACHDRUCK) | functional | mixed | normative | yes | yes | yes | no |
+| [R-DRUCK-KIOSK](#req-R-DRUCK-KIOSK) | functional | business | normative | yes | yes | yes | no |
+| [R-DRUCK-PAPIER](#req-R-DRUCK-PAPIER) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-STATUS](#req-R-DRUCK-STATUS) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-VORSCHAU](#req-R-DRUCK-VORSCHAU) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-WIEDERHOLUNG](#req-R-DRUCK-WIEDERHOLUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-DRUCKVORLAGE](#req-R-FOTO-DRUCKVORLAGE) | functional | mixed | normative | yes | yes | yes | no |
+| [R-FOTO-EINGANG](#req-R-FOTO-EINGANG) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-EINZELBILD](#req-R-FOTO-EINZELBILD) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-IMPORT](#req-R-FOTO-IMPORT) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-LOESCHEN](#req-R-FOTO-LOESCHEN) | functional | business | normative | yes | yes | yes | no |
+| [R-MODUS-BETREUUNG](#req-R-MODUS-BETREUUNG) | functional | business | normative | yes | yes | yes | no |
+| [R-MODUS-EINSTELLUNGEN](#req-R-MODUS-EINSTELLUNGEN) | functional | business | normative | yes | yes | yes | no |
+| [R-MODUS-HEIM](#req-R-MODUS-HEIM) | functional | business | normative | yes | yes | yes | no |
+| [R-MODUS-KIOSK](#req-R-MODUS-KIOSK) | functional | business | normative | yes | yes | yes | no |
+| [R-MODUS-PRIVAT](#req-R-MODUS-PRIVAT) | functional | business | normative | yes | yes | yes | no |
 | [R-NETZ-BETREUUNG](#req-R-NETZ-BETREUUNG) | functional | mixed | normative | yes | yes | yes | no |
 | [R-NETZ-SUCHE](#req-R-NETZ-SUCHE) | functional | mixed | normative | yes | yes | yes | no |
 | [R-NETZ-VERBINDEN](#req-R-NETZ-VERBINDEN) | functional | mixed | normative | yes | yes | yes | no |
 | [R-NETZ-ZUSTAND](#req-R-NETZ-ZUSTAND) | functional | mixed | normative | yes | yes | yes | no |
+| [R-QUELLEN-LIGHTROOM](#req-R-QUELLEN-LIGHTROOM) | functional | business | normative | yes | yes | yes | no |
+| [R-QUELLEN-LIGHTROOM-ANMELDUNG](#req-R-QUELLEN-LIGHTROOM-ANMELDUNG) | functional | mixed | normative | yes | yes | yes | no |
+| [R-QUELLEN-USB](#req-R-QUELLEN-USB) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-ABHOLUNG](#req-R-UPLOAD-ABHOLUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-BILD](#req-R-UPLOAD-BILD) | functional | business | normative | yes | yes | yes | no |
+| [R-UPLOAD-EINGANG](#req-R-UPLOAD-EINGANG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-SITZUNG](#req-R-UPLOAD-SITZUNG) | functional | business | normative | yes | yes | yes | no |
 
 ### Reading the marks
@@ -605,40 +1047,62 @@ Every requirement that was read, and how far each one has got. A mark states wha
 ## Requirements
 
 <a id="req-R-ARCHIV-EXPORT"></a>
-### R-ARCHIV-EXPORT — Fotoarchiv als eine Datei herunterladen
+### R-ARCHIV-EXPORT — Fotos auf einen USB-Stick kopieren
 
-Das gesamte Fotoarchiv MUSS sich als einzelne Datei herunterladen lassen.
+Die Fotos einer Feier, eine Auswahl oder alle Fotos MÜSSEN sich im Original auf einen USB-Stick kopieren lassen; ein Abbruch MUSS sich ohne doppelte Dateien wiederholen lassen, und der Stick MUSS sich sicher auswerfen lassen.
 
-_functional, mixed, normative._
+_functional, business, normative._
 
-- **Asked for in** requirements/\_sources/archiv.md#archiv-weitergeben
+- **Asked for in** requirements/\_sources/archiv.md#fotos-weitergeben
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/app/photo.ExportArchive`
-- **Demonstrated by** TestZipContainsEveryPhotoOnce
+  - `github.com/torbenschinke/eventprint/app/photo.Locate`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Name`
+  - `github.com/torbenschinke/eventprint/app/usb.Drives`
+  - `github.com/torbenschinke/eventprint/app/usb.Eject`
+  - `github.com/torbenschinke/eventprint/app/usb.Export`
+- **Demonstrated by** TestEject, TestEjectUnmountsAndPowersOff, TestExportCountsOnlyMissingFilesAgainstFreeSpace, TestExportFailsEarlyWhenTheStickIsFull, TestExportIsIdempotent, TestExportMountsOnDemandAndCopies, TestExportNeverOverwrites, TestExportRefusesTheSystemDisk, TestExportStopsWhenCancelled
 
 <a id="req-R-ARCHIV-LOESCHEN"></a>
-### R-ARCHIV-LOESCHEN — Fotoarchiv nach Rückfrage löschen
+### R-ARCHIV-LOESCHEN — Feier abschließen
 
-Das Fotoarchiv MUSS sich vollständig löschen lassen. Dem Löschen MUSS eine ausdrückliche, gesonderte Bestätigung vorausgehen, da die Bilder danach unwiederbringlich fort sind.
+Die Fotos einer Feier MÜSSEN sich gesammelt löschen lassen; private Fotos DÜRFEN davon nicht betroffen sein.
 
-_functional, mixed, normative._
+_functional, business, normative._
 
-- **Asked for in** requirements/\_sources/archiv.md#archiv-freigeben
+- **Asked for in** requirements/\_sources/archiv.md#feier-abschließen
 - **Implemented by**
   - `github.com/torbenschinke/eventprint/app/photo.PurgeEvent`
-- **Demonstrated by** TestPurgeEventClearsEverythingThatCostsSpace
+- **Demonstrated by** TestPurgeEventRemovesOnlyThatEvent
 
 <a id="req-R-ARCHIV-PLATZ"></a>
 ### R-ARCHIV-PLATZ — Speicherplatz einsehen
 
-Die Betreuung MUSS sehen können, wie viel Speicherplatz insgesamt vorhanden ist, wie viel das Fotoarchiv belegt und wie viel auf das übrige System entfällt.
+Es MUSS sichtbar sein, wie viel Platz die Fotos belegen und wie viel frei ist.
 
-_functional, mixed, normative._
+_functional, business, normative._
 
 - **Asked for in** requirements/\_sources/archiv.md#speicherplatz-einsehen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/app/photo.InspectArchive`
-- **Demonstrated by** TestPartialFilesAreNeverCounted
+  - `github.com/torbenschinke/eventprint/app/photo.InspectStorage`
+- **Demonstrated by** TestInspectStorageReportsPhotosAndDisk
+
+<a id="req-R-DEC-OBERFLAECHE"></a>
+### R-DEC-OBERFLAECHE — Die Oberfläche wird mit gift gezeichnet, nicht im Browser
+
+Die Oberfläche am Gerät wird mit gift direkt auf die GPU gezeichnet; es gibt keinen Browser und keinen lokalen Webserver mehr.
+
+_decision, technical, informative._
+
+**Why.** Ohne Chromium startet das Gerät schneller, braucht weniger Speicher und
+kann nicht versehentlich eine Webseite verlassen. Ein Absturz des Browsers,
+eine Wiederherstellungsfrage nach dem harten Ausschalten und die Ableitung der
+öffentlichen Adresse aus der ersten Verbindung entfallen als Fehlerquellen.
+
+**What it costs.** Die Oberfläche lässt sich nicht mehr aus der Ferne im Browser öffnen.
+Oberflächentests laufen mit dem Test-Harness von gift statt mit Playwright.
+Der Upload-Dienst im Internet bleibt eine Nago-Anwendung.
+
+- **Asked for in** requirements/\_sources/entscheidungen.md#oberfläche-ohne-browser
 
 <a id="req-R-DEC-ZUSTANDSABLAGE"></a>
 ### R-DEC-ZUSTANDSABLAGE — Aggregate werden als Zustand abgelegt, nicht als Ereignisfolge
@@ -665,6 +1129,18 @@ Ereignisse enthalten, aus denen sich ein Verlauf bilden ließe.
   - `github.com/torbenschinke/eventprint/app/photo.Photo`
   - `github.com/torbenschinke/eventprint/app/printing.Job`
 
+<a id="req-R-DRUCK-ABBRUCH"></a>
+### R-DRUCK-ABBRUCH — Auftrag abbrechen
+
+Ein noch nicht gedruckter Auftrag MUSS sich abbrechen lassen und darf danach nicht doch noch gedruckt werden.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/druck.md#auftrag-abbrechen
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/printing.Cancel`
+- **Demonstrated by** TestCancelQueuedJobIsNeverPrinted, TestCancelWhilePrintingWithdrawsPrinterJob
+
 <a id="req-R-DRUCK-AUFTRAG"></a>
 ### R-DRUCK-AUFTRAG — Druckauftrag annehmen und im Hintergrund abarbeiten
 
@@ -674,8 +1150,7 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#druckauftrag-erteilen
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/app/printing.Job.Photo`
-  - `github.com/torbenschinke/eventprint/app/printing.Job.Template`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Photos`
   - `github.com/torbenschinke/eventprint/app/printing.Print`
   - `github.com/torbenschinke/eventprint/app/printing.Print`
 - **Demonstrated by** TestWorkerReportsSuccess
@@ -705,6 +1180,22 @@ _functional, mixed, normative._
   - `github.com/torbenschinke/eventprint/app/printing.Resume`
 - **Demonstrated by** TestAwaitJobPausesDeadlineWhileStopped, TestResumeGuardReleasesStoppedQueue, TestResumeUseCase
 
+<a id="req-R-DRUCK-GESTALTUNG"></a>
+### R-DRUCK-GESTALTUNG — Gestaltung des Blattes
+
+Das Blatt MUSS sich in Format, Rahmen und Rahmenfarbe, Farbanmutung, Beschriftung, Datumsstempel und Oberfläche gestalten lassen; alle Formate teilen sich das eine Papier des Druckers.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/druck.md#gestaltung-des-blattes
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Height`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Width`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Layout`
+  - `github.com/torbenschinke/eventprint/app/printing.Print`
+  - `github.com/torbenschinke/eventprint/app/printing.Print`
+- **Demonstrated by** TestPolaroidFallsBackWhenFacesDoNotFit, TestPrintSheetsFollowTheFormat, TestPrintSplitsBatchIntoSheets
+
 <a id="req-R-DRUCK-KEIN-NACHDRUCK"></a>
 ### R-DRUCK-KEIN-NACHDRUCK — Kein Ausdruck ohne Auslösung
 
@@ -717,7 +1208,33 @@ _functional, mixed, normative._
   - `github.com/torbenschinke/eventprint/app/printing.Job.PrinterJob`
   - `github.com/torbenschinke/eventprint/app/printing.Print`
   - `github.com/torbenschinke/eventprint/app/printing.Print`
-- **Demonstrated by** TestAwaitJobCancelsAbandonedJob
+- **Demonstrated by** TestAwaitJobCancelsAbandonedJob, TestCancelQueuedJobIsNeverPrinted, TestCancelWhilePrintingWithdrawsPrinterJob, TestRecoverStaleJobsOnRestart
+
+<a id="req-R-DRUCK-KIOSK"></a>
+### R-DRUCK-KIOSK — Drucken im Kiosk
+
+Gäste MÜSSEN ein Foto mit einem Tipp in einem freigegebenen Kiosk-Layout in begrenzter Anzahl drucken können; im Kiosk MÜSSEN Bilder von Handy und Kamera je nach Einstellung sofort gedruckt werden.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/druck.md#drucken-im-kiosk
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.Intake`
+  - `github.com/torbenschinke/eventprint/app/printing.PrintSimple`
+- **Demonstrated by** TestIntakeKiosk, TestIntakePrintFailure, TestKioskGuestSeesOnlyPhotosOfTheEvent, TestPolaroidFallsBackWhenFacesDoNotFit, TestPrintSimpleClampsCopies, TestPrintSimpleWithoutLimitPrintsOnce
+
+<a id="req-R-DRUCK-PAPIER"></a>
+### R-DRUCK-PAPIER — Papiervorrat
+
+Der verbleibende Papiervorrat MUSS sichtbar sein; ein neu eingelegtes Set MUSS sich melden lassen.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/druck.md#papiervorrat
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.ConsumePaper`
+  - `github.com/torbenschinke/eventprint/app/device.RefillPaper`
+- **Demonstrated by** TestPaper
 
 <a id="req-R-DRUCK-STATUS"></a>
 ### R-DRUCK-STATUS — Zustand der Druckaufträge einsehen
@@ -732,13 +1249,15 @@ _functional, business, normative._
   - `github.com/torbenschinke/eventprint/app/printing.FindAllJobs`
   - `github.com/torbenschinke/eventprint/app/printing.FindJobByID`
   - `github.com/torbenschinke/eventprint/app/printing.FindJobByID`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Batch`
   - `github.com/torbenschinke/eventprint/app/printing.Job.CreatedAt`
   - `github.com/torbenschinke/eventprint/app/printing.Job.FinishedAt`
   - `github.com/torbenschinke/eventprint/app/printing.Job.ID`
   - `github.com/torbenschinke/eventprint/app/printing.Job.Message`
   - `github.com/torbenschinke/eventprint/app/printing.Job.Printer`
   - `github.com/torbenschinke/eventprint/app/printing.Job.Reason`
-  - `github.com/torbenschinke/eventprint/app/printing.Job.RequestedBy`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Sheet`
+  - `github.com/torbenschinke/eventprint/app/printing.Job.Sheets`
   - `github.com/torbenschinke/eventprint/app/printing.Job.State`
 - **Demonstrated by** TestJobsAreListedNewestFirst
 
@@ -751,8 +1270,6 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/druck.md#vorschau-des-ergebnisses
 - **Implemented by**
-  - `github.com/torbenschinke/eventprint/app/photo.Photo.Height`
-  - `github.com/torbenschinke/eventprint/app/photo.Photo.Width`
   - `github.com/torbenschinke/eventprint/app/printing.Preview`
   - `github.com/torbenschinke/eventprint/app/printing.Preview`
 - **Demonstrated by** TestPreviewRendersWithoutPrinting
@@ -771,48 +1288,62 @@ _functional, business, normative._
 - **Demonstrated by** TestRetryCancelsPreviousPrinterJob
 
 <a id="req-R-FOTO-DRUCKVORLAGE"></a>
-### R-FOTO-DRUCKVORLAGE — Originaldaten als Vorlage für den Druck
+### R-FOTO-DRUCKVORLAGE — Druck aus den Originaldaten
 
-Der Druck MUSS aus den unveränderten Originaldaten desselben Bildes erfolgen, das die Historie zeigt.
+Das Bild, das der Drucker bekommt, MUSS aus derselben unveränderten Quelle stammen wie das, was die Mediathek zeigt.
 
 _functional, mixed, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#vorlage-für-den-druck
 - **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/photo.Locate`
   - `github.com/torbenschinke/eventprint/app/photo.OpenOriginal`
-  - `github.com/torbenschinke/eventprint/app/photo.OpenOriginal`
-  - `github.com/torbenschinke/eventprint/app/photo.Photo.Image`
-- **Demonstrated by** TestOpenOriginalDeliversThePrintSource
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.File`
+- **Demonstrated by** TestOriginalIsThePrintSource
+
+<a id="req-R-FOTO-EINGANG"></a>
+### R-FOTO-EINGANG — Eingang im Heimbetrieb
+
+Im Heimbetrieb MÜSSEN Bilder von Handy und Kamera im Eingang landen, ohne von allein gedruckt zu werden, und als neu gelten, bis sie für den Druck ausgewählt werden.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/foto.md#eingang
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.Intake`
+  - `github.com/torbenschinke/eventprint/app/photo.MarkSeen`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Unseen`
+- **Demonstrated by** TestHomeModeShowsInboxAfterStart, TestInboxCollectsPrivatePhotosFromPhoneAndCamera, TestInboxPhotoStaysNewUntilSelected, TestIntakeHome
 
 <a id="req-R-FOTO-EINZELBILD"></a>
-### R-FOTO-EINZELBILD — Einzelnes Bild anhand seiner Kennung finden
+### R-FOTO-EINZELBILD — Einzelnes Bild über seine Kennung finden
 
-Ein einzelnes Bild MUSS anhand seiner Kennung auffindbar sein, damit ein Nachdruck ohne Durchsuchen der Historie möglich ist.
+Ein einzelnes Bild MUSS anhand seiner Kennung auffindbar sein.
 
 _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#einzelnes-bild
 - **Implemented by**
   - `github.com/torbenschinke/eventprint/app/photo.FindByID`
-  - `github.com/torbenschinke/eventprint/app/photo.FindByID`
   - `github.com/torbenschinke/eventprint/app/photo.Photo.ID`
-- **Demonstrated by** TestFindByIDReturnsTheImportedPhoto
+- **Demonstrated by** TestFindByIDReturnsTheSinglePhoto
 
 <a id="req-R-FOTO-HISTORIE"></a>
-### R-FOTO-HISTORIE — Historie der Bilder, die neuesten zuerst
+### R-FOTO-HISTORIE — Mediathek mit Favoriten und gedruckten Fotos
 
-Die entstandenen Bilder MÜSSEN abrufbar sein, beginnend mit dem neuesten; wahlweise vollständig oder auf die jüngsten begrenzt.
+Alle Fotos MÜSSEN in einer Mediathek sichtbar sein, die neuesten zuerst; Fotos MÜSSEN sich als Favorit markieren lassen, gedruckte Fotos MÜSSEN erkennbar sein.
 
 _functional, business, normative._
 
-- **Asked for in** requirements/\_sources/foto.md#historie
+- **Asked for in** requirements/\_sources/foto.md#mediathek
 - **Implemented by**
   - `github.com/torbenschinke/eventprint/app/photo.FindAll`
-  - `github.com/torbenschinke/eventprint/app/photo.FindAll`
-  - `github.com/torbenschinke/eventprint/app/photo.FindLatest`
-  - `github.com/torbenschinke/eventprint/app/photo.FindLatest`
+  - `github.com/torbenschinke/eventprint/app/photo.MarkPrinted`
   - `github.com/torbenschinke/eventprint/app/photo.Photo.CreatedAt`
-- **Demonstrated by** TestHistoryListsNewestFirst
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Favorite`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Prints`
+  - `github.com/torbenschinke/eventprint/app/photo.SetFavorite`
+- **Demonstrated by** TestConcurrentUpdatesAreNotLost, TestHistoryNewestFirstWithFavoritesAndPrinted
 
 <a id="req-R-FOTO-IMPORT"></a>
 ### R-FOTO-IMPORT — Eingehende Bilder aufnehmen und im Original sichern
@@ -824,23 +1355,88 @@ _functional, business, normative._
 - **Asked for in** requirements/\_sources/foto.md#bilder-aufnehmen
 - **Implemented by**
   - `github.com/torbenschinke/eventprint/app/photo.Import`
-  - `github.com/torbenschinke/eventprint/app/photo.Import`
-  - `github.com/torbenschinke/eventprint/app/photo.Photo.Name`
   - `github.com/torbenschinke/eventprint/app/photo.Photo.Source`
-- **Demonstrated by** TestImportArchivesUntouchedOriginal
+- **Demonstrated by** TestImportHonoursExifOrientationWithoutTouchingTheFile, TestImportKeepsHEICAsHEIC, TestImportRejectsWhatIsNoPhoto, TestImportStoresOriginalByteForByteFromEverySource
 
 <a id="req-R-FOTO-LOESCHEN"></a>
-### R-FOTO-LOESCHEN — Bild aus der Historie entfernen
+### R-FOTO-LOESCHEN — Bilder endgültig entfernen
 
-Ein Bild MUSS sich aus der Historie entfernen lassen, damit eine Fehlaufnahme nicht den ganzen Abend sichtbar bleibt.
+Ein Bild MUSS sich samt gesicherter Datei endgültig entfernen lassen.
 
 _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/foto.md#bilder-entfernen
 - **Implemented by**
   - `github.com/torbenschinke/eventprint/app/photo.Delete`
-  - `github.com/torbenschinke/eventprint/app/photo.Delete`
-- **Demonstrated by** TestDeleteRemovesPhotoFromHistory
+- **Demonstrated by** TestDeleteRemovesMetadataAndOriginal
+
+<a id="req-R-MODUS-BETREUUNG"></a>
+### R-MODUS-BETREUUNG — Betreuung im Kiosk nur mit PIN
+
+Im Kiosk MÜSSEN Einstellungen und Mediathek gesperrt sein; mit einer PIN MUSS sich die Betreuung befristet freischalten lassen, und Fehleingaben MÜSSEN das Raten ausbremsen.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/modus.md#betreuung-im-kiosk
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.SetPin`
+  - `github.com/torbenschinke/eventprint/app/device.StopKiosk`
+  - `github.com/torbenschinke/eventprint/app/device.Unlock`
+- **Demonstrated by** TestKioskOperatorNeedsThePin, TestPinNotInClearText, TestSetPinValidation, TestStopKiosk, TestUnlock, TestUnlockStaysThrottledAfterManyGuesses, TestUnlockThrottlesGuessing
+
+<a id="req-R-MODUS-EINSTELLUNGEN"></a>
+### R-MODUS-EINSTELLUNGEN — Einstellungen am Gerät
+
+Alle Einstellungen MÜSSEN sich am Gerät selbst vornehmen lassen, ohne Terminal und ohne zweiten Rechner.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/modus.md#einstellungen-am-gerät
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.LoadSettings`
+  - `github.com/torbenschinke/eventprint/app/device.SaveSettings`
+- **Demonstrated by** TestLoadSettingsDefaults, TestNormalized, TestSaveSettings, TestSettingsAreChangedOnTheDevice
+
+<a id="req-R-MODUS-HEIM"></a>
+### R-MODUS-HEIM — Heimbetrieb nach dem Einschalten
+
+Nach jedem Einschalten MUSS das Gerät im Heimbetrieb starten; ein Neustart allein der Anwendung darf einen laufenden Kiosk nicht beenden.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/modus.md#heimbetrieb-nach-dem-start
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.CurrentKiosk`
+- **Demonstrated by** TestHomeAfterBoot, TestHomeModeShowsInboxAfterStart
+
+<a id="req-R-MODUS-KIOSK"></a>
+### R-MODUS-KIOSK — Kiosk bis zum nächsten Einschalten, mit Vorabprüfung
+
+Der Besitzer MUSS das Gerät in den Kiosk versetzen können, der bis zum nächsten Einschalten gilt; vorher MUSS das Gerät Drucker, Papier, Upload-Dienst und Kamera prüfen und das Ergebnis zeigen.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/modus.md#kiosk-starten
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.Preflight`
+  - `github.com/torbenschinke/eventprint/app/device.StartKiosk`
+- **Demonstrated by** TestKioskHidesTheLibraryFromGuests, TestPreflight, TestStartKiosk
+
+<a id="req-R-MODUS-PRIVAT"></a>
+### R-MODUS-PRIVAT — Gäste sehen nur die Fotos der Feier
+
+Im Kiosk DÜRFEN Gäste ausschließlich die Fotos der laufenden Feier sehen und drucken; private Fotos und die anderer Feiern MÜSSEN verborgen bleiben, auch bei bekannter Kennung.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/modus.md#feier-und-mediathek-getrennt
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/photo.FindByID`
+  - `github.com/torbenschinke/eventprint/app/photo.FindEvent`
+  - `github.com/torbenschinke/eventprint/app/photo.Locate`
+  - `github.com/torbenschinke/eventprint/app/photo.Photo.Event`
+  - `github.com/torbenschinke/eventprint/app/printing.PrintSimple`
+- **Demonstrated by** TestGuestSeesOnlyTheRunningEvent, TestKioskGuestSeesOnlyPhotosOfTheEvent, TestKioskHidesTheLibraryFromGuests
 
 <a id="req-R-NETZ-BETREUUNG"></a>
 ### R-NETZ-BETREUUNG — Funknetz nur durch die Betreuung wechseln
@@ -892,6 +1488,52 @@ _functional, mixed, normative._
   - `github.com/torbenschinke/eventprint/app/wifi.Current`
 - **Demonstrated by** TestStatusJoinsDeviceAndSignal
 
+<a id="req-R-QUELLEN-LIGHTROOM"></a>
+### R-QUELLEN-LIGHTROOM — Lightroom durchsuchen und bearbeitete Fassung drucken
+
+Alben und Fotos aus Lightroom MÜSSEN sich am Gerät durchsuchen lassen; gedruckt werden MUSS die in Lightroom bearbeitete Fassung.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/quellen.md#lightroom-durchsuchen
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/lightroom.Albums`
+  - `github.com/torbenschinke/eventprint/app/lightroom.Assets`
+  - `github.com/torbenschinke/eventprint/app/lightroom.Download`
+  - `github.com/torbenschinke/eventprint/app/lightroom.OpenThumbnail`
+- **Demonstrated by** TestAlbumsFollowAllPagesAndSkipFolders, TestAssets, TestDownload, TestOpenThumbnail
+
+<a id="req-R-QUELLEN-LIGHTROOM-ANMELDUNG"></a>
+### R-QUELLEN-LIGHTROOM-ANMELDUNG — Lightroom per Handy verbinden
+
+Das Lightroom-Konto MUSS sich verbinden lassen, ohne am Gerät ein Kennwort einzugeben; die Rückmeldung der Anmeldung MUSS über den Upload-Dienst laufen, und die Verbindung MUSS sich trennen lassen.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/quellen.md#lightroom-verbinden
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/lightroom.Account`
+  - `github.com/torbenschinke/eventprint/app/lightroom.AwaitConnect`
+  - `github.com/torbenschinke/eventprint/app/lightroom.BeginConnect`
+  - `github.com/torbenschinke/eventprint/app/lightroom.Disconnect`
+  - `github.com/torbenschinke/eventprint/app/upld.CollectLogin`
+  - `github.com/torbenschinke/eventprint/app/upld.RegisterLogin`
+- **Demonstrated by** TestConnectViaRelay, TestDisconnect, TestOAuthFlowDeliversCodeExactlyOnce, TestOAuthForeignTokenCannotCollect, TestOAuthRelayRoundTrip, TestOAuthUseCasesSeparateBoxes
+
+<a id="req-R-QUELLEN-USB"></a>
+### R-QUELLEN-USB — Bilder vom USB-Stick übernehmen
+
+Bilder auf einem USB-Stick MÜSSEN sich durchsuchen und übernehmen lassen; gelesen werden darf nur der Stick.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/quellen.md#usb-stick-als-quelle
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/usb.Drives`
+  - `github.com/torbenschinke/eventprint/app/usb.Images`
+  - `github.com/torbenschinke/eventprint/app/usb.Read`
+- **Demonstrated by** TestDrivesListsOnlyTheStick, TestImagesFindsPrintableImagesNewestFirst, TestReadStaysOnTheStick
+
 <a id="req-R-UPLOAD-ABHOLUNG"></a>
 ### R-UPLOAD-ABHOLUNG — Wartende Aufträge abholen
 
@@ -931,6 +1573,18 @@ _functional, business, normative._
   - `github.com/torbenschinke/eventprint/app/upld.OpenJobImage`
 - **Demonstrated by** TestOpenJobImageDeliversTheOriginal
 
+<a id="req-R-UPLOAD-EINGANG"></a>
+### R-UPLOAD-EINGANG — Upload mehrerer Bilder in den Eingang
+
+Im Heimbetrieb MUSS die Upload-Seite mehrere Bilder auf einmal ohne Abfrage der Gestaltung annehmen; welche Art von Upload gemeint ist, MUSS die Adresse im QR-Code bestimmen.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/upload.md#upload-in-den-eingang
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/relay.UploadAddress`
+- **Demonstrated by** TestEnqueueKeepsInboxTemplate, TestInboxAddressAddsModeAndKeepsSession, TestInboxTakesSeveralImagesWithoutLayout, TestJobsAreDeliveredOnceAndAcknowledged, TestRemainingCountsDownToFull, TestUploadAddressSelectsInbox
+
 <a id="req-R-UPLOAD-SITZUNG"></a>
 ### R-UPLOAD-SITZUNG — Kurzlebige Upload-Adresse je Fotobox
 
@@ -940,9 +1594,10 @@ _functional, business, normative._
 
 - **Asked for in** requirements/\_sources/upload.md#upload-sitzung
 - **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/relay.UploadAddress`
   - `github.com/torbenschinke/eventprint/app/upld.OpenSession`
   - `github.com/torbenschinke/eventprint/app/upld.OpenSession`
-- **Demonstrated by** TestOpenSessionGivesEachBoxExactlyOneAddress
+- **Demonstrated by** TestChangedSettingsOpenANewSession, TestExpiredSessionIsReplaced, TestInboxAddressAddsModeAndKeepsSession, TestOpenSessionGivesEachBoxExactlyOneAddress, TestSessionProvidesTheUploadAddress, TestUploadAddressExplainsWhyThereIsNoCode/Token\_fehlt, TestUploadAddressExplainsWhyThereIsNoCode/nicht\_eingerichtet, TestUploadAddressExplainsWhyThereIsNoCode/noch\_keine\_Sitzung, TestUploadAddressExplainsWhyThereIsNoCode/nur\_Leerzeichen, TestUploadAddressReportsRejectedToken
 
 ## Source documents
 
@@ -952,10 +1607,10 @@ What people wrote, and what became of each part of it.
 
 | section | became |
 |---|---|
-| Fotoarchiv | _nothing, and says so_ |
-| Archiv weitergeben | R-ARCHIV-EXPORT |
+| Weitergabe | _nothing, and says so_ |
+| Fotos weitergeben | R-ARCHIV-EXPORT |
 | Speicherplatz einsehen | R-ARCHIV-PLATZ |
-| Archiv freigeben | R-ARCHIV-LOESCHEN |
+| Feier abschließen | R-ARCHIV-LOESCHEN |
 
 ### requirements/\_sources/druck.md
 
@@ -963,6 +1618,10 @@ What people wrote, and what became of each part of it.
 |---|---|
 | Drucken | _nothing, and says so_ |
 | Druckauftrag erteilen | R-DRUCK-AUFTRAG |
+| Gestaltung des Blattes | R-DRUCK-GESTALTUNG |
+| Drucken im Kiosk | R-DRUCK-KIOSK |
+| Auftrag abbrechen | R-DRUCK-ABBRUCH |
+| Papiervorrat | R-DRUCK-PAPIER |
 | Kein ungewollter Ausdruck | R-DRUCK-KEIN-NACHDRUCK |
 | Zustand der Aufträge | R-DRUCK-STATUS |
 | Auftrag wiederholen | R-DRUCK-WIEDERHOLUNG |
@@ -976,6 +1635,7 @@ What people wrote, and what became of each part of it.
 |---|---|
 | Entscheidungen | _nothing, and says so_ |
 | Form der Ablage | R-DEC-ZUSTANDSABLAGE |
+| Oberfläche ohne Browser | R-DEC-OBERFLAECHE |
 
 ### requirements/\_sources/foto.md
 
@@ -983,10 +1643,22 @@ What people wrote, and what became of each part of it.
 |---|---|
 | Fotos | _nothing, and says so_ |
 | Bilder aufnehmen | R-FOTO-IMPORT |
-| Historie | R-FOTO-HISTORIE |
+| Eingang | R-FOTO-EINGANG |
+| Mediathek | R-FOTO-HISTORIE |
 | Einzelnes Bild | R-FOTO-EINZELBILD |
 | Bilder entfernen | R-FOTO-LOESCHEN |
 | Vorlage für den Druck | R-FOTO-DRUCKVORLAGE |
+
+### requirements/\_sources/modus.md
+
+| section | became |
+|---|---|
+| Betriebsarten | _nothing, and says so_ |
+| Heimbetrieb nach dem Start | R-MODUS-HEIM |
+| Kiosk starten | R-MODUS-KIOSK |
+| Feier und Mediathek getrennt | R-MODUS-PRIVAT |
+| Betreuung im Kiosk | R-MODUS-BETREUUNG |
+| Einstellungen am Gerät | R-MODUS-EINSTELLUNGEN |
 
 ### requirements/\_sources/netz.md
 
@@ -998,6 +1670,15 @@ What people wrote, and what became of each part of it.
 | Verbindung herstellen | R-NETZ-VERBINDEN |
 | Nur für die Betreuung | R-NETZ-BETREUUNG |
 
+### requirements/\_sources/quellen.md
+
+| section | became |
+|---|---|
+| Quellen | _nothing, and says so_ |
+| Lightroom verbinden | R-QUELLEN-LIGHTROOM-ANMELDUNG |
+| Lightroom durchsuchen | R-QUELLEN-LIGHTROOM |
+| USB-Stick als Quelle | R-QUELLEN-USB |
+
 ### requirements/\_sources/upload.md
 
 | section | became |
@@ -1007,4 +1688,5 @@ What people wrote, and what became of each part of it.
 | Wartende Aufträge abholen | R-UPLOAD-ABHOLUNG |
 | Bild eines Auftrags laden | R-UPLOAD-BILD |
 | Übernahme bestätigen | R-UPLOAD-BESTAETIGUNG |
+| Upload in den Eingang | R-UPLOAD-EINGANG |
 

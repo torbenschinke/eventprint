@@ -12,10 +12,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/worldiety/speclink/spec"
 	"go.wdy.de/nago/application/permission"
 	"go.wdy.de/nago/application/user"
 
 	"github.com/torbenschinke/eventprint/app/usb"
+	"github.com/torbenschinke/eventprint/requirements/fun/archiv"
+	"github.com/torbenschinke/eventprint/requirements/fun/quellen"
 )
 
 // guest ist ein Subject ohne jede Berechtigung.
@@ -140,6 +143,8 @@ func TestDrivesListsOnlyTheStick(t *testing.T) {
 	if len(s.calls) != 1 || s.calls[0] != want {
 		t.Fatalf("calls = %q", s.calls)
 	}
+
+	spec.Verified(t, quellen.RQuellenUsb)
 }
 
 func TestExportMountsOnDemandAndCopies(t *testing.T) {
@@ -186,6 +191,8 @@ func TestExportMountsOnDemandAndCopies(t *testing.T) {
 	if len(entries) != 2 {
 		t.Fatalf("im Zielordner liegen Reste: %v", entries)
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 func TestExportFindsMountPointViaLsblkWhenOutputIsUnknown(t *testing.T) {
@@ -238,6 +245,8 @@ func TestExportIsIdempotent(t *testing.T) {
 	if len(entries) != 2 {
 		t.Fatalf("Dateien = %v", entries)
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 // TestExportNeverOverwrites: Auf dem Stick liegen womöglich Fotos einer
@@ -295,6 +304,8 @@ func TestExportNeverOverwrites(t *testing.T) {
 	if again.Copied != 0 || again.Skipped != 3 {
 		t.Fatalf("Wiederholung = %+v", again)
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 func TestExportFailsEarlyWhenTheStickIsFull(t *testing.T) {
@@ -315,6 +326,8 @@ func TestExportFailsEarlyWhenTheStickIsFull(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(s.mount, "fotos")); !os.IsNotExist(err) {
 		t.Fatal("trotz fehlenden Platzes wurde auf den Stick geschrieben")
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 // TestExportCountsOnlyMissingFilesAgainstFreeSpace: Nach einem Abbruch ist
@@ -332,6 +345,8 @@ func TestExportCountsOnlyMissingFilesAgainstFreeSpace(t *testing.T) {
 	if err != nil || report.Skipped != 1 {
 		t.Fatalf("report = %+v, err = %v", report, err)
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 func TestExportRefusesTheSystemDisk(t *testing.T) {
@@ -350,6 +365,8 @@ func TestExportRefusesTheSystemDisk(t *testing.T) {
 	if s.called("udisksctl") {
 		t.Fatalf("udisksctl wurde aufgerufen: %q", s.calls)
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 func TestExportStopsWhenCancelled(t *testing.T) {
@@ -373,6 +390,8 @@ func TestExportStopsWhenCancelled(t *testing.T) {
 	if len(entries) != 0 {
 		t.Fatalf("nach dem Abbruch liegen Reste: %v", entries)
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 func TestSanitizeFolder(t *testing.T) {
@@ -419,6 +438,8 @@ func TestEjectUnmountsAndPowersOff(t *testing.T) {
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("calls = %q", got)
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 func TestEject(t *testing.T) {
@@ -479,6 +500,8 @@ func TestEject(t *testing.T) {
 			}
 		})
 	}
+
+	spec.Verified(t, archiv.RArchivExport)
 }
 
 func TestImagesFindsPrintableImagesNewestFirst(t *testing.T) {
@@ -490,11 +513,12 @@ func TestImagesFindsPrintableImagesNewestFirst(t *testing.T) {
 	photo(t, root, "DCIM/100CANON/IMG_0002.jpeg", "bb", base.Add(2*time.Hour))
 	photo(t, root, "urlaub.png", "ccc", base.Add(time.Hour))
 	photo(t, root, "a/b/c/d/e/f/tief.jpg", "6 Ebenen", base)
+	// Telefone speichern HEIC; die Box wandelt es beim Übernehmen um.
+	photo(t, root, "iphone.heic", "x", base)
 
 	// All das darf nicht erscheinen.
 	photo(t, root, "a/b/c/d/e/f/g/zu tief.jpg", "7 Ebenen", base)
 	photo(t, root, "notizen.txt", "x", base)
-	photo(t, root, "iphone.heic", "x", base)
 	photo(t, root, "DCIM/100CANON/._IMG_0001.JPG", "AppleDouble", base)
 	photo(t, root, ".versteckt/x.jpg", "x", base)
 	photo(t, root, "System Volume Information/x.jpg", "x", base)
@@ -513,7 +537,7 @@ func TestImagesFindsPrintableImagesNewestFirst(t *testing.T) {
 		got = append(got, filepath.ToSlash(rel))
 	}
 
-	want := []string{"DCIM/100CANON/IMG_0002.jpeg", "urlaub.png", "DCIM/100CANON/IMG_0001.JPG", "a/b/c/d/e/f/tief.jpg"}
+	want := []string{"DCIM/100CANON/IMG_0002.jpeg", "urlaub.png", "DCIM/100CANON/IMG_0001.JPG", "a/b/c/d/e/f/tief.jpg", "iphone.heic"}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
@@ -525,6 +549,8 @@ func TestImagesFindsPrintableImagesNewestFirst(t *testing.T) {
 	if !s.called("udisksctl mount") {
 		t.Fatal("der Stick wurde nicht eingehängt")
 	}
+
+	spec.Verified(t, quellen.RQuellenUsb)
 }
 
 func TestReadStaysOnTheStick(t *testing.T) {
@@ -575,6 +601,8 @@ func TestReadStaysOnTheStick(t *testing.T) {
 	if _, err := read(user.SU(), context.Background(), inside); err == nil {
 		t.Error("ein Bild eines nicht eingehängten Sticks wurde gelesen")
 	}
+
+	spec.Verified(t, quellen.RQuellenUsb)
 }
 
 // TestGuestMayDoNothing hält fest, dass jede Berechtigung greift, bevor

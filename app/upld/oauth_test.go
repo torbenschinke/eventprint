@@ -5,6 +5,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/worldiety/speclink/spec"
+
+	"github.com/torbenschinke/eventprint/requirements/fun/quellen"
 )
 
 const (
@@ -70,6 +74,8 @@ func TestOAuthFlowDeliversCodeExactlyOnce(t *testing.T) {
 	if _, err := r.Collect("box", testState); !errors.Is(err, ErrOAuthUnknown) {
 		t.Fatalf("zweites Collect: %v, erwartet ErrOAuthUnknown", err)
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroomAnmeldung)
 }
 
 func TestOAuthForeignTokenCannotCollect(t *testing.T) {
@@ -96,6 +102,8 @@ func TestOAuthForeignTokenCannotCollect(t *testing.T) {
 	if code, err := r.Collect("box-a", testState); err != nil || code != "der-code" {
 		t.Fatalf("Collect der eigenen Box = %q, %v", code, err)
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroomAnmeldung)
 }
 
 func TestOAuthFlowExpires(t *testing.T) {
@@ -277,25 +285,27 @@ func TestOAuthUseCasesSeparateBoxes(t *testing.T) {
 
 	a, b := newBox("box-a"), newBox("box-b")
 
-	if err := uc.RegisterOAuth(a, testState, testAuthorize); err != nil {
-		t.Fatalf("RegisterOAuth: %v", err)
+	if err := uc.RegisterLogin(a, testState, testAuthorize); err != nil {
+		t.Fatalf("RegisterLogin: %v", err)
 	}
 
-	target, err := uc.StartOAuth(testState)
+	target, err := uc.StartLogin(testState)
 	if err != nil || target != testAuthorize {
-		t.Fatalf("StartOAuth = %q, %v", target, err)
+		t.Fatalf("StartLogin = %q, %v", target, err)
 	}
 
-	if err := uc.CompleteOAuth(testState, "der-code"); err != nil {
-		t.Fatalf("CompleteOAuth: %v", err)
+	if err := uc.CompleteLogin(testState, "der-code"); err != nil {
+		t.Fatalf("CompleteLogin: %v", err)
 	}
 
-	if _, err := uc.CollectOAuth(b, testState); !errors.Is(err, ErrOAuthUnknown) {
-		t.Fatalf("CollectOAuth der fremden Box: %v, erwartet ErrOAuthUnknown", err)
+	if _, err := uc.CollectLogin(b, testState); !errors.Is(err, ErrOAuthUnknown) {
+		t.Fatalf("CollectLogin der fremden Box: %v, erwartet ErrOAuthUnknown", err)
 	}
 
-	code, err := uc.CollectOAuth(a, testState)
+	code, err := uc.CollectLogin(a, testState)
 	if err != nil || code != "der-code" {
-		t.Fatalf("CollectOAuth = %q, %v", code, err)
+		t.Fatalf("CollectLogin = %q, %v", code, err)
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroomAnmeldung)
 }

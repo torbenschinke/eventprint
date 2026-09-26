@@ -1,4 +1,4 @@
-// Package foto hält die Anforderungen rund um die Bilder der Fotobox.
+// Package foto hält die Anforderungen rund um die Fotos des Geräts.
 package foto
 
 import "github.com/worldiety/speclink/spec"

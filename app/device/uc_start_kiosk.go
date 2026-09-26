@@ -26,10 +26,17 @@ type StartKiosk func(subject permission.Auditable, cmd StartKioskCmd) (Kiosk, er
 
 // NewStartKiosk erzeugt den [StartKiosk] Anwendungsfall.
 func NewStartKiosk(mutex *sync.Mutex, settings SettingsStore, kiosk KioskStore, now func() time.Time) StartKiosk {
+	var startMu sync.Mutex
+
 	return func(subject permission.Auditable, cmd StartKioskCmd) (Kiosk, error) {
 		if err := subject.Audit(PermStartKiosk); err != nil {
 			return Kiosk{}, err
 		}
+
+		// Prüfen und Umschalten unter einer Sperre: Ein doppelter Tipp auf
+		// "Kiosk starten" darf keine zwei Feiern anlegen.
+		startMu.Lock()
+		defer startMu.Unlock()
 
 		current, err := kiosk.Load()
 		if err != nil {
@@ -46,7 +53,9 @@ func NewStartKiosk(mutex *sync.Mutex, settings SettingsStore, kiosk KioskStore, 
 		}
 
 		at := now()
-		k := Kiosk{Event: photo.EventID(at.UTC().Format("20060102-150405")), Title: title, Since: at}
+		// Millisekunden in der Kennung: Beenden und sofort neu starten ergibt
+		// eine neue Feier und nicht dieselbe.
+		k := Kiosk{Event: photo.EventID(at.UTC().Format("20060102-150405.000")), Title: title, Since: at}
 
 		// Zuerst die Feier eintragen, dann umschalten: Ein Kiosk, dessen
 		// Feier nirgends steht, hinterließe Fotos ohne Namen.

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/worldiety/speclink/spec"
 	"go.wdy.de/nago/application/hapi"
 	"go.wdy.de/nago/application/image"
 	"go.wdy.de/nago/application/permission"
@@ -18,6 +19,7 @@ import (
 	oas "go.wdy.de/nago/pkg/oas/v31"
 
 	"github.com/torbenschinke/eventprint/app/upld"
+	"github.com/torbenschinke/eventprint/requirements/fun/quellen"
 )
 
 const (
@@ -179,6 +181,8 @@ func TestOAuthRelayRoundTrip(t *testing.T) {
 	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "Dieser Link ist abgelaufen.") {
 		t.Fatalf("Start nach Abschluss: %d %s", rec.Code, rec.Body.String())
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroomAnmeldung)
 }
 
 func TestOAuthRelayRejectsBadRegistrations(t *testing.T) {

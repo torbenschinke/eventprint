@@ -7,8 +7,8 @@ var RFotoDruckvorlage = spec.Requirement{
 	Kind:       spec.Functional,
 	Discipline: spec.Mixed,
 	Status:     spec.Normative,
-	Title:      "Originaldaten als Vorlage für den Druck",
-	Text:       "Der Druck MUSS aus den unveränderten Originaldaten desselben Bildes erfolgen, das die Historie zeigt.",
+	Title:      "Druck aus den Originaldaten",
+	Text:       "Das Bild, das der Drucker bekommt, MUSS aus derselben unveränderten Quelle stammen wie das, was die Mediathek zeigt.",
 	Sources: []spec.Source{
 		{Doc: "requirements/_sources/foto.md", Anchor: "vorlage-für-den-druck"},
 	},

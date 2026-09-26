@@ -28,7 +28,7 @@ func NewFindByID(repo Repository) FindByID {
 		// Private Fotos nur für die, die die Mediathek sehen dürfen; siehe
 		// [Locate].
 		p := opt.Unwrap()
-		if p.Private() && !subject.HasPermission(PermFindAll) {
+		if !visibleTo(subject, p) {
 			return Photo{}, false, nil
 		}
 

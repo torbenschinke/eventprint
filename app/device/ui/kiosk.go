@@ -42,7 +42,7 @@ func (a *App) kioskScreen(ctx *gift.Context, st *states, k device.Kiosk) gift.Vi
 	d := res.Value()
 
 	g := a.gallery("kiosk")
-	if a.refill("kiosk", [2]any{res, res.Version()}) && res.Err() == nil {
+	if a.refill("kiosk", locationKey(d.photos)) && res.Err() == nil {
 		fillGallery(g, d.photos)
 	}
 
@@ -69,7 +69,7 @@ func (a *App) kioskScreen(ctx *gift.Context, st *states, k device.Kiosk) gift.Vi
 		).Gap(u(16)).Align(geom.Center).Flex(1)
 	} else {
 		grid = ui.ImageGallery(g).
-			Layout(squareGrid(u(150)).Gap(u(14))).
+			Layout(brickRows(u(170)).Gap(u(14))).
 			Tile(ui.TileStyle{CornerRadius: u(16), Palette: []ui.Color{kioskCard, kioskRaised}}).
 			OnSelect(func(id asset.ID) {
 				xgift.ShowSelection(g, nil)
@@ -289,8 +289,10 @@ func (a *App) kioskPrintSheet(ctx *gift.Context, st *states) gift.View {
 func (a *App) pinSheet(ctx *gift.Context, st *states) gift.View {
 	pin := ctx.Read(st.pin)
 
-	return sheetCard(u(420),
-		ui.VStack(title("Betreuung", 24), muted("PIN eingeben", 15)).Gap(u(4)).Align(geom.Center),
+	// So breit wie das Tastenfeld und nicht breiter: drei Tasten, zwei
+	// Abstände, der Innenrand des Dialogs.
+	return sheetCard(3*u(72)+2*u(24)+2*u(28),
+		ui.HStack(fill(), ui.VStack(title("Betreuung", 24), muted("PIN eingeben", 15)).Gap(u(4)).Align(geom.Center), fill()),
 		xgift.PinPad(device.PinLength, pin, u(72), st.pin.Set, func(full string) {
 			err := a.dev.Device.Unlock(a.dev.Subject(), full)
 			st.pin.Set("")
@@ -300,7 +302,7 @@ func (a *App) pinSheet(ctx *gift.Context, st *states) gift.View {
 
 			a.openSheet(SheetOperator)
 		}),
-		ui.VStack(link("Abbrechen", func() { a.dismissSheet() })).Align(geom.Center),
+		ui.HStack(fill(), link("Abbrechen", func() { a.dismissSheet() }), fill()),
 	)
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 var _ = spec.For[Print](
-	spec.Satisfies(druck.RDruckAuftrag, druck.RDruckKeinNachdruck),
+	spec.Satisfies(druck.RDruckAuftrag, druck.RDruckKeinNachdruck, druck.RDruckGestaltung),
 	spec.Help(`Stellt ein Foto mit dem gewählten Layout in die Warteschlange.
 Der Aufruf kehrt sofort zurück; gedruckt wird im Hintergrund. Gibt die Fotobox
 den Auftrag später auf, nimmt sie ihn auch beim Druckdienst zurück.`),

@@ -155,7 +155,11 @@ func (l *Lock) verify(pin string, hash PinHash) error {
 	if !hash.Matches(pin) {
 		l.failures++
 		if l.failures >= PinMaxAttempts {
-			d := time.Duration(1<<(l.failures-PinMaxAttempts)) * 15 * time.Second
+			// Der Exponent wird vor dem Schieben begrenzt. Danach begrenzt,
+			// liefe die Multiplikation nach gut dreißig Fehlversuchen über,
+			// die Wartezeit würde negativ – und das Raten wäre unbegrenzt.
+			shift := min(l.failures-PinMaxAttempts, 6)
+			d := time.Duration(1<<shift) * 15 * time.Second
 			l.blockedTil = now.Add(min(d, 15*time.Minute))
 		}
 

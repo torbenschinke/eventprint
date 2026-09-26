@@ -1,7 +1,168 @@
 {
   "version": 8,
-  "types": {},
+  "types": {
+    "github.com/torbenschinke/eventprint/app/photo.Photo": {
+      "discriminator": "",
+      "fields": [
+        {
+          "name": "ID",
+          "wire": "id",
+          "shape": "string"
+        },
+        {
+          "name": "Name",
+          "wire": "name",
+          "shape": "string"
+        },
+        {
+          "name": "File",
+          "wire": "file",
+          "shape": "string"
+        },
+        {
+          "name": "Source",
+          "wire": "src",
+          "shape": "string"
+        },
+        {
+          "name": "Event",
+          "wire": "event",
+          "shape": "string"
+        },
+        {
+          "name": "Unseen",
+          "wire": "unseen",
+          "shape": "bool"
+        },
+        {
+          "name": "Favorite",
+          "wire": "fav",
+          "shape": "bool"
+        },
+        {
+          "name": "Prints",
+          "wire": "prints",
+          "shape": "int"
+        },
+        {
+          "name": "Width",
+          "wire": "w",
+          "shape": "int"
+        },
+        {
+          "name": "Height",
+          "wire": "h",
+          "shape": "int"
+        },
+        {
+          "name": "CreatedAt",
+          "wire": "createdAt",
+          "shape": "string"
+        }
+      ]
+    },
+    "github.com/torbenschinke/eventprint/app/printing.Job": {
+      "discriminator": "",
+      "fields": [
+        {
+          "name": "ID",
+          "wire": "id",
+          "shape": "string"
+        },
+        {
+          "name": "Photos",
+          "wire": "photos",
+          "shape": "[]string"
+        },
+        {
+          "name": "Layout",
+          "wire": "layout",
+          "shape": "{format:string,design:string,frame:string,filter:string,caption:string,font:string,stamp:bool,finish:string,faceCrop:bool}"
+        },
+        {
+          "name": "Batch",
+          "wire": "batch",
+          "shape": "string"
+        },
+        {
+          "name": "Sheet",
+          "wire": "sheet",
+          "shape": "int"
+        },
+        {
+          "name": "Sheets",
+          "wire": "sheets",
+          "shape": "int"
+        },
+        {
+          "name": "Printer",
+          "wire": "printer",
+          "shape": "string"
+        },
+        {
+          "name": "State",
+          "wire": "state",
+          "shape": "string"
+        },
+        {
+          "name": "Message",
+          "wire": "msg",
+          "shape": "string"
+        },
+        {
+          "name": "PrinterJob",
+          "wire": "printerJob",
+          "shape": "string"
+        },
+        {
+          "name": "Reason",
+          "wire": "reason",
+          "shape": "string"
+        },
+        {
+          "name": "CreatedAt",
+          "wire": "createdAt",
+          "shape": "string"
+        },
+        {
+          "name": "FinishedAt",
+          "wire": "finishedAt",
+          "shape": "string"
+        }
+      ]
+    }
+  },
   "requirements": {
+    "R-ARCHIV-EXPORT": {
+      "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984",
+      "title": "Fotos auf einen USB-Stick kopieren",
+      "from": "requirements/_sources/archiv.md#fotos-weitergeben"
+    },
+    "R-ARCHIV-LOESCHEN": {
+      "text": "a4996987dd4cdfdf7859d5155cbde0f3c6850ecf036dd0fab6122a337cd79c06",
+      "title": "Feier abschließen",
+      "from": "requirements/_sources/archiv.md#feier-abschließen"
+    },
+    "R-ARCHIV-PLATZ": {
+      "text": "e593bf6c717a7288b4c351264fd6416edad65117d6c605188b987e05a28b28fb",
+      "title": "Speicherplatz einsehen",
+      "from": "requirements/_sources/archiv.md#speicherplatz-einsehen"
+    },
+    "R-DEC-OBERFLAECHE": {
+      "text": "0a42188fd3371bb5609b1c39037894a1378d10b22b90d8dd639f899208eb2c01",
+      "title": "Die Oberfläche wird mit gift gezeichnet, nicht im Browser",
+      "from": "requirements/_sources/entscheidungen.md#oberfläche-ohne-browser"
+    },
+    "R-DEC-ZUSTANDSABLAGE": {
+      "text": "a4858b241436f06aac2d112bbed7d4dc5aac6d901eb9870eb1deedd03b964d0c",
+      "title": "Aggregate werden als Zustand abgelegt, nicht als Ereignisfolge",
+      "from": "requirements/_sources/entscheidungen.md#form-der-ablage"
+    },
+    "R-DRUCK-ABBRUCH": {
+      "text": "368198f88ad5cb40ad45c8071fa8ed745e35b82aa6c581c17a3178a42bc9389b",
+      "title": "Auftrag abbrechen",
+      "from": "requirements/_sources/druck.md#auftrag-abbrechen"
+    },
     "R-DRUCK-AUFTRAG": {
       "text": "e98df295903b9b2055f622465a81ce8182ab8a58ce5cf15b72d86cae691b3b3d",
       "title": "Druckauftrag annehmen und im Hintergrund abarbeiten",
@@ -12,10 +173,30 @@
       "title": "Zustand des Druckers ohne Terminal erkennen",
       "from": "requirements/_sources/druck.md#zustand-des-druckers"
     },
+    "R-DRUCK-FREIGABE": {
+      "text": "e9f241d7bdd41d48fd486c2e3c1857faa5798e9d2236e4fa1baa9f794483bed3",
+      "title": "Angehaltenen Drucker ohne Terminal freigeben",
+      "from": "requirements/_sources/druck.md#drucker-freigeben"
+    },
+    "R-DRUCK-GESTALTUNG": {
+      "text": "316726dfc30eb9720f5f3357ba5be41aa9aee6a6cd763989402674e7fda5981a",
+      "title": "Gestaltung des Blattes",
+      "from": "requirements/_sources/druck.md#gestaltung-des-blattes"
+    },
     "R-DRUCK-KEIN-NACHDRUCK": {
       "text": "71e4efd188e744403ba5af4d591fe92d8c401270aafd075dc60620613d6e1b17",
       "title": "Kein Ausdruck ohne Auslösung",
       "from": "requirements/_sources/druck.md#kein-ungewollter-ausdruck"
+    },
+    "R-DRUCK-KIOSK": {
+      "text": "c4fc68f18963fa391a92c34ab8a82e38e54938e7e06b2f11bdd7039b464ccd22",
+      "title": "Drucken im Kiosk",
+      "from": "requirements/_sources/druck.md#drucken-im-kiosk"
+    },
+    "R-DRUCK-PAPIER": {
+      "text": "d8efe3c46a75b079557cbc930949c446c0032cdc4e57a8294e46a0aeb1554fcd",
+      "title": "Papiervorrat",
+      "from": "requirements/_sources/druck.md#papiervorrat"
     },
     "R-DRUCK-STATUS": {
       "text": "33e3436f456961ade6356fa5c47de28c7ed1f393b4979ba9a5b5948c52214c99",
@@ -33,19 +214,24 @@
       "from": "requirements/_sources/druck.md#auftrag-wiederholen"
     },
     "R-FOTO-DRUCKVORLAGE": {
-      "text": "f4b886c350d70a8a2519fcbaae19b39e8a02e7746d7be781367cd54e23a90af5",
-      "title": "Originaldaten als Vorlage für den Druck",
+      "text": "46f12f2bc77c310800b5e6c19184d124d62bcf9a2cb814d483d5a496e2669c0d",
+      "title": "Druck aus den Originaldaten",
       "from": "requirements/_sources/foto.md#vorlage-für-den-druck"
     },
+    "R-FOTO-EINGANG": {
+      "text": "8e19770f0fcdd3d5f78d96345ec94b6ec31f2ac22c925deb6be766c2a3673157",
+      "title": "Eingang im Heimbetrieb",
+      "from": "requirements/_sources/foto.md#eingang"
+    },
     "R-FOTO-EINZELBILD": {
-      "text": "68adc8a49b73bc0f3f4e5c897e97de50ca040d6378898326f8df3a804946c906",
-      "title": "Einzelnes Bild anhand seiner Kennung finden",
+      "text": "5c98132a9da8a90b1915566d3542765bbd26980b7d7f1dfde3eae65eeb30a79d",
+      "title": "Einzelnes Bild über seine Kennung finden",
       "from": "requirements/_sources/foto.md#einzelnes-bild"
     },
     "R-FOTO-HISTORIE": {
-      "text": "2da0540539fe43308789a3d87b73875247b43583f904e414b86a3843010ffdb0",
-      "title": "Historie der Bilder, die neuesten zuerst",
-      "from": "requirements/_sources/foto.md#historie"
+      "text": "e6d6d34f68ee5240b720ded0655eeeabd2ba1c150f6b2b978d9442b378c508d5",
+      "title": "Mediathek mit Favoriten und gedruckten Fotos",
+      "from": "requirements/_sources/foto.md#mediathek"
     },
     "R-FOTO-IMPORT": {
       "text": "6ac50331554e9c916e72e8f62b1f7717020f8fc501883adca984a49dc3945986",
@@ -53,9 +239,69 @@
       "from": "requirements/_sources/foto.md#bilder-aufnehmen"
     },
     "R-FOTO-LOESCHEN": {
-      "text": "cb8d3cab10b8d5b1a047661c23a020ba14c7b407482003c8848d89d284034e2a",
-      "title": "Bild aus der Historie entfernen",
+      "text": "29e9470424a1435e7f5267e8ffb6b1880bbb580dd9d3b76937be5caca86d310f",
+      "title": "Bilder endgültig entfernen",
       "from": "requirements/_sources/foto.md#bilder-entfernen"
+    },
+    "R-MODUS-BETREUUNG": {
+      "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638",
+      "title": "Betreuung im Kiosk nur mit PIN",
+      "from": "requirements/_sources/modus.md#betreuung-im-kiosk"
+    },
+    "R-MODUS-EINSTELLUNGEN": {
+      "text": "ca887231e318a99cf3669247f7a45bc3785045de294f8d712c7cea86d2d0c4ba",
+      "title": "Einstellungen am Gerät",
+      "from": "requirements/_sources/modus.md#einstellungen-am-gerät"
+    },
+    "R-MODUS-HEIM": {
+      "text": "90fe61b101a0cee9481a50499bddadf96c5f495f7811d827cb3b1c5e615d4d88",
+      "title": "Heimbetrieb nach dem Einschalten",
+      "from": "requirements/_sources/modus.md#heimbetrieb-nach-dem-start"
+    },
+    "R-MODUS-KIOSK": {
+      "text": "92a7b5f42531cb024a297ed7e2e4ae5be194ad733254fb4b6d6ab45a108943fa",
+      "title": "Kiosk bis zum nächsten Einschalten, mit Vorabprüfung",
+      "from": "requirements/_sources/modus.md#kiosk-starten"
+    },
+    "R-MODUS-PRIVAT": {
+      "text": "cb3edd476f08c8ee0b4c37d79da9151621022f03bc5ef264ad28f735591287d5",
+      "title": "Gäste sehen nur die Fotos der Feier",
+      "from": "requirements/_sources/modus.md#feier-und-mediathek-getrennt"
+    },
+    "R-NETZ-BETREUUNG": {
+      "text": "bb02038fed1a14d444657a28ad840cb51fb778a47df13ec3a85f79b376aecd2d",
+      "title": "Funknetz nur durch die Betreuung wechseln",
+      "from": "requirements/_sources/netz.md#nur-für-die-betreuung"
+    },
+    "R-NETZ-SUCHE": {
+      "text": "ec734947b6659dc91b10a58fee00aae34781abe579e1be21fea8eeb6dd177273",
+      "title": "Verfügbare Funknetze auflisten",
+      "from": "requirements/_sources/netz.md#netze-finden"
+    },
+    "R-NETZ-VERBINDEN": {
+      "text": "db307d57c1d852f22191b8ba094193cbb478c55af4cc01a261af33b93be1faae",
+      "title": "Mit einem Funknetz verbinden",
+      "from": "requirements/_sources/netz.md#verbindung-herstellen"
+    },
+    "R-NETZ-ZUSTAND": {
+      "text": "aa7a3fe53a03831ea0cf4f8bfd4ebe64cbb008227f485c54a77a71774000f8e3",
+      "title": "Bestehende Funkverbindung erkennen",
+      "from": "requirements/_sources/netz.md#verbindung-erkennen"
+    },
+    "R-QUELLEN-LIGHTROOM": {
+      "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966",
+      "title": "Lightroom durchsuchen und bearbeitete Fassung drucken",
+      "from": "requirements/_sources/quellen.md#lightroom-durchsuchen"
+    },
+    "R-QUELLEN-LIGHTROOM-ANMELDUNG": {
+      "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd",
+      "title": "Lightroom per Handy verbinden",
+      "from": "requirements/_sources/quellen.md#lightroom-verbinden"
+    },
+    "R-QUELLEN-USB": {
+      "text": "fdd2ea2c5846d3cb151896d36cd2d59f1e5a98a61a3d7d0211864faa4990e287",
+      "title": "Bilder vom USB-Stick übernehmen",
+      "from": "requirements/_sources/quellen.md#usb-stick-als-quelle"
     },
     "R-UPLOAD-ABHOLUNG": {
       "text": "1238916c3927fb9ffe15dd4d140ebdae723c2b294d2cd5ee47e82be1cb5ef325",
@@ -72,6 +318,11 @@
       "title": "Originalbild eines wartenden Auftrags laden",
       "from": "requirements/_sources/upload.md#bild-eines-auftrags-laden"
     },
+    "R-UPLOAD-EINGANG": {
+      "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216",
+      "title": "Upload mehrerer Bilder in den Eingang",
+      "from": "requirements/_sources/upload.md#upload-in-den-eingang"
+    },
     "R-UPLOAD-SITZUNG": {
       "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3",
       "title": "Kurzlebige Upload-Adresse je Fotobox",
@@ -79,20 +330,56 @@
     }
   },
   "sources": {
+    "requirements/_sources/archiv.md#feier-abschließen": {
+      "fingerprint": "fa34137abefc2970644121c56d5bd9000146bca70dbcc1a84599b2bfd5d3969c",
+      "kind": "markdown"
+    },
+    "requirements/_sources/archiv.md#fotos-weitergeben": {
+      "fingerprint": "62bbb75b202bc65b71de5a32a6432d72f3c27b1ac4aebc6fbe3cc25a34044359",
+      "kind": "markdown"
+    },
+    "requirements/_sources/archiv.md#speicherplatz-einsehen": {
+      "fingerprint": "8dc78266cbd1cc83c2bb7024305e9fbee27ada4d24a3286e776f64253c5fa33f",
+      "kind": "markdown"
+    },
+    "requirements/_sources/archiv.md#weitergabe": {
+      "fingerprint": "f2f96828e862a707ad6c8a480fe6480c1d37e363b2550ac81bedb9663cda7f79",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#auftrag-abbrechen": {
+      "fingerprint": "f42372258f8120ca8b1e5552c778ea648ab5fbfd7e50cb7600ba8bfea3550f95",
+      "kind": "markdown"
+    },
     "requirements/_sources/druck.md#auftrag-wiederholen": {
       "fingerprint": "a27e20ea5a8011aa31e16b59d95a11690e1d93d5bf00d402599b4737d3b4541d",
       "kind": "markdown"
     },
     "requirements/_sources/druck.md#druckauftrag-erteilen": {
-      "fingerprint": "b00eb7136633cf2d170fd0c2f3d3db415c8f1d0120ea2a09798a77f97523b233",
+      "fingerprint": "b2bd57dffa0fc39a4af2ed943e856c16d30edc16c94722ae52bf138654ebdb0e",
       "kind": "markdown"
     },
     "requirements/_sources/druck.md#drucken": {
-      "fingerprint": "a84716b4cb054c2f860000fd0d89d2762e37aea1cd84bee8f38925aa16e3efad",
+      "fingerprint": "da14ce7d190d7a3877c6325cd1ac746c85c8b67c2735b3d965df0f89fea0b0a1",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#drucken-im-kiosk": {
+      "fingerprint": "b926dfec1e8c7007169e26e6e7c5d40a7bea402af8ef82fca8ae3c0796b43f40",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#drucker-freigeben": {
+      "fingerprint": "92144362311228c27fb6f36a3b0956519060fc6692ed41f21ec98e66c1dd61c6",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#gestaltung-des-blattes": {
+      "fingerprint": "067dad10f84491a67eb3f1de92f7120fb88459144407881523895b52d8f128c6",
       "kind": "markdown"
     },
     "requirements/_sources/druck.md#kein-ungewollter-ausdruck": {
       "fingerprint": "01cd19cc96b26ee19d3d139af927c8aa2e3ffa81d0ea1823af093812f8fe4248",
+      "kind": "markdown"
+    },
+    "requirements/_sources/druck.md#papiervorrat": {
+      "fingerprint": "8fce782c6d5e61be5095d752e759b5683a3623f2d10eb0d7953f6dfe10144dc6",
       "kind": "markdown"
     },
     "requirements/_sources/druck.md#vorschau-des-ergebnisses": {
@@ -100,39 +387,123 @@
       "kind": "markdown"
     },
     "requirements/_sources/druck.md#zustand-der-aufträge": {
-      "fingerprint": "da7afc29b4905091581f62719896e668b1f050d2142c8687aefb6149496e5c79",
+      "fingerprint": "2baddafe27e964623c90e492a6ad16792ee7105de093d2cecc002b60963fb60c",
       "kind": "markdown"
     },
     "requirements/_sources/druck.md#zustand-des-druckers": {
       "fingerprint": "6121b4e8cb18b070bba1197dd4add384f942c96228fcc08685268bbe5248fe68",
       "kind": "markdown"
     },
+    "requirements/_sources/entscheidungen.md#entscheidungen": {
+      "fingerprint": "e0cf354c5f351af6ad171b901230ec8d1e6f525d9967b31a27eb1a057c18db20",
+      "kind": "markdown"
+    },
+    "requirements/_sources/entscheidungen.md#form-der-ablage": {
+      "fingerprint": "8bd12b4e558d18240e6b0538eff086c80c82a5827b738967c17d603510c813c2",
+      "kind": "markdown"
+    },
+    "requirements/_sources/entscheidungen.md#oberfläche-ohne-browser": {
+      "fingerprint": "57ee0dc25a70d389632615e356acd8dd42857de3f11c2dc897f26303fa482b37",
+      "kind": "markdown"
+    },
     "requirements/_sources/foto.md#bilder-aufnehmen": {
-      "fingerprint": "be649aad97932d22732714dfa49c4f651a8659f8112644c1fe0ff36edf21142b",
+      "fingerprint": "5989481d1f29ca68c29619eebb6da6d539bd5aab976a734e65039c75ec7c04ea",
       "kind": "markdown"
     },
     "requirements/_sources/foto.md#bilder-entfernen": {
-      "fingerprint": "01022bbd31474cb7001249c9647768032b71d747afccf185f330f3a583d87798",
+      "fingerprint": "c1c24d7c2017606204e6f5aabd16458cf89de3ca41490fd5c7f732ad36cf9cbb",
+      "kind": "markdown"
+    },
+    "requirements/_sources/foto.md#eingang": {
+      "fingerprint": "2876e275a58c360b521f7f6511dbd6196e59b94a2f0663cd120ef07aa9cc6d00",
       "kind": "markdown"
     },
     "requirements/_sources/foto.md#einzelnes-bild": {
-      "fingerprint": "c69fe647bc4ec5780037b29f4200025494e0ef28c34bc84e2abbe2da871639e4",
+      "fingerprint": "614eecfc178323db5385743bc6a581b72a0a8245b67f7969849510008b5811c9",
       "kind": "markdown"
     },
     "requirements/_sources/foto.md#fotos": {
-      "fingerprint": "f0f9dd6b12498b66876d9df78a699d40e49176f0bdc088a90f1f7a380d7039f7",
+      "fingerprint": "63bd931f105257ae38199a28d7cd9d160fc4fbbf6bc76c1638bee0c4211ab9e5",
       "kind": "markdown"
     },
     "requirements/_sources/foto.md#historie": {
       "fingerprint": "fda76b9ac3f16e0ed8b70dd131696d9d3e8e134f0ef994732bc7507a039fd2bc",
       "kind": "markdown"
     },
+    "requirements/_sources/foto.md#mediathek": {
+      "fingerprint": "d28f1820323261b7c467c25059266f0f8180d52149408334e6afe75e0b019b25",
+      "kind": "markdown"
+    },
     "requirements/_sources/foto.md#vorlage-für-den-druck": {
-      "fingerprint": "9472b0a00f6db8a66043391cbbfd65a7b62740add7aafe368a11c0a996e33480",
+      "fingerprint": "01bc2da6a0bc301d332f046a12fc0ddbda246e76d3f182c6a716f189a960562c",
+      "kind": "markdown"
+    },
+    "requirements/_sources/modus.md#betreuung-im-kiosk": {
+      "fingerprint": "ea4f91eebeb4707f7066a7ea394f00155604da86ece4830c4b64598cff5cba3b",
+      "kind": "markdown"
+    },
+    "requirements/_sources/modus.md#betriebsarten": {
+      "fingerprint": "cd73fd3a150068a3e73e7a6980d092cd359a4be881b68aac712f19d5e04f3d40",
+      "kind": "markdown"
+    },
+    "requirements/_sources/modus.md#einstellungen-am-gerät": {
+      "fingerprint": "3beab38f469254165852bd8058c2a038bd5c9cf04fdc1c5c1402213741ba4271",
+      "kind": "markdown"
+    },
+    "requirements/_sources/modus.md#feier-und-mediathek-getrennt": {
+      "fingerprint": "827f36749e2cde2ec69f5a4cecb64a8e799fdcb5a0a683bc14babdc5f84d6b03",
+      "kind": "markdown"
+    },
+    "requirements/_sources/modus.md#heimbetrieb-nach-dem-start": {
+      "fingerprint": "39611011968bbb266dae050e74fd7405aa7149551609cf41c23d55577ec6e677",
+      "kind": "markdown"
+    },
+    "requirements/_sources/modus.md#kiosk-starten": {
+      "fingerprint": "2916742fedbe81a82a34a92b7e4fd28e8b22e4db67447eabebc8e964b6484277",
+      "kind": "markdown"
+    },
+    "requirements/_sources/netz.md#funkverbindung": {
+      "fingerprint": "748fca4cb44a0b91b8d9e8ec00c02811f051e826c7b9ae6f42af983289b1da73",
+      "kind": "markdown"
+    },
+    "requirements/_sources/netz.md#netze-finden": {
+      "fingerprint": "6308840e34c565b392663e69089dbebc827ca26a77aa72e7d060160f42c89011",
+      "kind": "markdown"
+    },
+    "requirements/_sources/netz.md#nur-für-die-betreuung": {
+      "fingerprint": "7adc5fded682d5146219f58a49f158439f02196b29e7f31a105985d19828f0ad",
+      "kind": "markdown"
+    },
+    "requirements/_sources/netz.md#verbindung-erkennen": {
+      "fingerprint": "6738e829c80c8199bb5921add2d242c06d098d964b0fab635bf6bbcbee524146",
+      "kind": "markdown"
+    },
+    "requirements/_sources/netz.md#verbindung-herstellen": {
+      "fingerprint": "b20413424c5f5601e542c100f8c6fb0467f78230b97173f7249f801504907e93",
+      "kind": "markdown"
+    },
+    "requirements/_sources/quellen.md#lightroom-durchsuchen": {
+      "fingerprint": "43ebf95d5ed553f2950f3fe13b8f9dfa484daf07e5b835e403e5298256977324",
+      "kind": "markdown"
+    },
+    "requirements/_sources/quellen.md#lightroom-verbinden": {
+      "fingerprint": "75df9e99dce0600d2757035a29235b0840d0cf2a4b41a040176fe352f75d4574",
+      "kind": "markdown"
+    },
+    "requirements/_sources/quellen.md#quellen": {
+      "fingerprint": "acd37512e2c07a4d7050d6269eb914c7459872b3e7dfa9461c7d47adacbadcff",
+      "kind": "markdown"
+    },
+    "requirements/_sources/quellen.md#usb-stick-als-quelle": {
+      "fingerprint": "23eedf89720d4e23b76d505422113d5f98f715b165524000006fb70c4c7041d0",
       "kind": "markdown"
     },
     "requirements/_sources/upload.md#bild-eines-auftrags-laden": {
       "fingerprint": "fba8c392630c07df7a538c04bd0298b87c8a38d1ac3fc57f3f320f73e0d4d035",
+      "kind": "markdown"
+    },
+    "requirements/_sources/upload.md#upload-in-den-eingang": {
+      "fingerprint": "86594d3f14bba77175ac3b1cc46660d953e0a15081d4533efd5ef4af16de9432",
       "kind": "markdown"
     },
     "requirements/_sources/upload.md#upload-sitzung": {
@@ -140,7 +511,7 @@
       "kind": "markdown"
     },
     "requirements/_sources/upload.md#uploads-aus-dem-internet": {
-      "fingerprint": "a22b15111ae067e5b98a70e86619bd3d6a0afbb3d527821549ce076b2f7f11f3",
+      "fingerprint": "68ee744c93a2fcddd356e1497685d4cea2200e3dc0433834721b5ae58b53d287",
       "kind": "markdown"
     },
     "requirements/_sources/upload.md#wartende-aufträge-abholen": {
@@ -155,20 +526,62 @@
   "verifications": {
     "R-ARCHIV-EXPORT": [
       {
-        "test": "TestZipContainsEveryPhotoOnce",
-        "text": "0cc6899b7666b1e7d79b0e437496e8227465ec7ef72f6648483db59a759ef507"
+        "test": "TestEject",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestEjectUnmountsAndPowersOff",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestExportCountsOnlyMissingFilesAgainstFreeSpace",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestExportFailsEarlyWhenTheStickIsFull",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestExportIsIdempotent",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestExportMountsOnDemandAndCopies",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestExportNeverOverwrites",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestExportRefusesTheSystemDisk",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
+      },
+      {
+        "test": "TestExportStopsWhenCancelled",
+        "text": "b2260c71d2a56e1eaeb855d723d2b6ebdae3cf7298a456df4ce87d037a2eb984"
       }
     ],
     "R-ARCHIV-LOESCHEN": [
       {
-        "test": "TestPurgeEventClearsEverythingThatCostsSpace",
-        "text": "2565fc4b685d6f065a047361da2ec6c2d2849e8a129b54c8bc0b256b0262ef58"
+        "test": "TestPurgeEventRemovesOnlyThatEvent",
+        "text": "a4996987dd4cdfdf7859d5155cbde0f3c6850ecf036dd0fab6122a337cd79c06"
       }
     ],
     "R-ARCHIV-PLATZ": [
       {
-        "test": "TestPartialFilesAreNeverCounted",
-        "text": "e1edd31b8b4f9260c5229ac700b0d1796655c695207038d008ad013de3ef3c5e"
+        "test": "TestInspectStorageReportsPhotosAndDisk",
+        "text": "e593bf6c717a7288b4c351264fd6416edad65117d6c605188b987e05a28b28fb"
+      }
+    ],
+    "R-DRUCK-ABBRUCH": [
+      {
+        "test": "TestCancelQueuedJobIsNeverPrinted",
+        "text": "368198f88ad5cb40ad45c8071fa8ed745e35b82aa6c581c17a3178a42bc9389b"
+      },
+      {
+        "test": "TestCancelWhilePrintingWithdrawsPrinterJob",
+        "text": "368198f88ad5cb40ad45c8071fa8ed745e35b82aa6c581c17a3178a42bc9389b"
       }
     ],
     "R-DRUCK-AUFTRAG": [
@@ -197,10 +610,68 @@
         "text": "e9f241d7bdd41d48fd486c2e3c1857faa5798e9d2236e4fa1baa9f794483bed3"
       }
     ],
+    "R-DRUCK-GESTALTUNG": [
+      {
+        "test": "TestPolaroidFallsBackWhenFacesDoNotFit",
+        "text": "316726dfc30eb9720f5f3357ba5be41aa9aee6a6cd763989402674e7fda5981a"
+      },
+      {
+        "test": "TestPrintSheetsFollowTheFormat",
+        "text": "316726dfc30eb9720f5f3357ba5be41aa9aee6a6cd763989402674e7fda5981a"
+      },
+      {
+        "test": "TestPrintSplitsBatchIntoSheets",
+        "text": "316726dfc30eb9720f5f3357ba5be41aa9aee6a6cd763989402674e7fda5981a"
+      }
+    ],
     "R-DRUCK-KEIN-NACHDRUCK": [
       {
         "test": "TestAwaitJobCancelsAbandonedJob",
         "text": "71e4efd188e744403ba5af4d591fe92d8c401270aafd075dc60620613d6e1b17"
+      },
+      {
+        "test": "TestCancelQueuedJobIsNeverPrinted",
+        "text": "71e4efd188e744403ba5af4d591fe92d8c401270aafd075dc60620613d6e1b17"
+      },
+      {
+        "test": "TestCancelWhilePrintingWithdrawsPrinterJob",
+        "text": "71e4efd188e744403ba5af4d591fe92d8c401270aafd075dc60620613d6e1b17"
+      },
+      {
+        "test": "TestRecoverStaleJobsOnRestart",
+        "text": "71e4efd188e744403ba5af4d591fe92d8c401270aafd075dc60620613d6e1b17"
+      }
+    ],
+    "R-DRUCK-KIOSK": [
+      {
+        "test": "TestIntakeKiosk",
+        "text": "c4fc68f18963fa391a92c34ab8a82e38e54938e7e06b2f11bdd7039b464ccd22"
+      },
+      {
+        "test": "TestIntakePrintFailure",
+        "text": "c4fc68f18963fa391a92c34ab8a82e38e54938e7e06b2f11bdd7039b464ccd22"
+      },
+      {
+        "test": "TestKioskGuestSeesOnlyPhotosOfTheEvent",
+        "text": "c4fc68f18963fa391a92c34ab8a82e38e54938e7e06b2f11bdd7039b464ccd22"
+      },
+      {
+        "test": "TestPolaroidFallsBackWhenFacesDoNotFit",
+        "text": "c4fc68f18963fa391a92c34ab8a82e38e54938e7e06b2f11bdd7039b464ccd22"
+      },
+      {
+        "test": "TestPrintSimpleClampsCopies",
+        "text": "c4fc68f18963fa391a92c34ab8a82e38e54938e7e06b2f11bdd7039b464ccd22"
+      },
+      {
+        "test": "TestPrintSimpleWithoutLimitPrintsOnce",
+        "text": "c4fc68f18963fa391a92c34ab8a82e38e54938e7e06b2f11bdd7039b464ccd22"
+      }
+    ],
+    "R-DRUCK-PAPIER": [
+      {
+        "test": "TestPaper",
+        "text": "d8efe3c46a75b079557cbc930949c446c0032cdc4e57a8294e46a0aeb1554fcd"
       }
     ],
     "R-DRUCK-STATUS": [
@@ -223,32 +694,152 @@
     ],
     "R-FOTO-DRUCKVORLAGE": [
       {
-        "test": "TestOpenOriginalDeliversThePrintSource",
-        "text": "f4b886c350d70a8a2519fcbaae19b39e8a02e7746d7be781367cd54e23a90af5"
+        "test": "TestOriginalIsThePrintSource",
+        "text": "46f12f2bc77c310800b5e6c19184d124d62bcf9a2cb814d483d5a496e2669c0d"
+      }
+    ],
+    "R-FOTO-EINGANG": [
+      {
+        "test": "TestHomeModeShowsInboxAfterStart",
+        "text": "8e19770f0fcdd3d5f78d96345ec94b6ec31f2ac22c925deb6be766c2a3673157"
+      },
+      {
+        "test": "TestInboxCollectsPrivatePhotosFromPhoneAndCamera",
+        "text": "8e19770f0fcdd3d5f78d96345ec94b6ec31f2ac22c925deb6be766c2a3673157"
+      },
+      {
+        "test": "TestInboxPhotoStaysNewUntilSelected",
+        "text": "8e19770f0fcdd3d5f78d96345ec94b6ec31f2ac22c925deb6be766c2a3673157"
+      },
+      {
+        "test": "TestIntakeHome",
+        "text": "8e19770f0fcdd3d5f78d96345ec94b6ec31f2ac22c925deb6be766c2a3673157"
       }
     ],
     "R-FOTO-EINZELBILD": [
       {
-        "test": "TestFindByIDReturnsTheImportedPhoto",
-        "text": "68adc8a49b73bc0f3f4e5c897e97de50ca040d6378898326f8df3a804946c906"
+        "test": "TestFindByIDReturnsTheSinglePhoto",
+        "text": "5c98132a9da8a90b1915566d3542765bbd26980b7d7f1dfde3eae65eeb30a79d"
       }
     ],
     "R-FOTO-HISTORIE": [
       {
-        "test": "TestHistoryListsNewestFirst",
-        "text": "2da0540539fe43308789a3d87b73875247b43583f904e414b86a3843010ffdb0"
+        "test": "TestConcurrentUpdatesAreNotLost",
+        "text": "e6d6d34f68ee5240b720ded0655eeeabd2ba1c150f6b2b978d9442b378c508d5"
+      },
+      {
+        "test": "TestHistoryNewestFirstWithFavoritesAndPrinted",
+        "text": "e6d6d34f68ee5240b720ded0655eeeabd2ba1c150f6b2b978d9442b378c508d5"
       }
     ],
     "R-FOTO-IMPORT": [
       {
-        "test": "TestImportArchivesUntouchedOriginal",
+        "test": "TestImportHonoursExifOrientationWithoutTouchingTheFile",
+        "text": "6ac50331554e9c916e72e8f62b1f7717020f8fc501883adca984a49dc3945986"
+      },
+      {
+        "test": "TestImportKeepsHEICAsHEIC",
+        "text": "6ac50331554e9c916e72e8f62b1f7717020f8fc501883adca984a49dc3945986"
+      },
+      {
+        "test": "TestImportRejectsWhatIsNoPhoto",
+        "text": "6ac50331554e9c916e72e8f62b1f7717020f8fc501883adca984a49dc3945986"
+      },
+      {
+        "test": "TestImportStoresOriginalByteForByteFromEverySource",
         "text": "6ac50331554e9c916e72e8f62b1f7717020f8fc501883adca984a49dc3945986"
       }
     ],
     "R-FOTO-LOESCHEN": [
       {
-        "test": "TestDeleteRemovesPhotoFromHistory",
-        "text": "cb8d3cab10b8d5b1a047661c23a020ba14c7b407482003c8848d89d284034e2a"
+        "test": "TestDeleteRemovesMetadataAndOriginal",
+        "text": "29e9470424a1435e7f5267e8ffb6b1880bbb580dd9d3b76937be5caca86d310f"
+      }
+    ],
+    "R-MODUS-BETREUUNG": [
+      {
+        "test": "TestKioskOperatorNeedsThePin",
+        "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638"
+      },
+      {
+        "test": "TestPinNotInClearText",
+        "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638"
+      },
+      {
+        "test": "TestSetPinValidation",
+        "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638"
+      },
+      {
+        "test": "TestStopKiosk",
+        "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638"
+      },
+      {
+        "test": "TestUnlock",
+        "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638"
+      },
+      {
+        "test": "TestUnlockStaysThrottledAfterManyGuesses",
+        "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638"
+      },
+      {
+        "test": "TestUnlockThrottlesGuessing",
+        "text": "20283acba21b4ac10b4b2c08a6259608ed2804239934c460cc0424cb3dfe9638"
+      }
+    ],
+    "R-MODUS-EINSTELLUNGEN": [
+      {
+        "test": "TestLoadSettingsDefaults",
+        "text": "ca887231e318a99cf3669247f7a45bc3785045de294f8d712c7cea86d2d0c4ba"
+      },
+      {
+        "test": "TestNormalized",
+        "text": "ca887231e318a99cf3669247f7a45bc3785045de294f8d712c7cea86d2d0c4ba"
+      },
+      {
+        "test": "TestSaveSettings",
+        "text": "ca887231e318a99cf3669247f7a45bc3785045de294f8d712c7cea86d2d0c4ba"
+      },
+      {
+        "test": "TestSettingsAreChangedOnTheDevice",
+        "text": "ca887231e318a99cf3669247f7a45bc3785045de294f8d712c7cea86d2d0c4ba"
+      }
+    ],
+    "R-MODUS-HEIM": [
+      {
+        "test": "TestHomeAfterBoot",
+        "text": "90fe61b101a0cee9481a50499bddadf96c5f495f7811d827cb3b1c5e615d4d88"
+      },
+      {
+        "test": "TestHomeModeShowsInboxAfterStart",
+        "text": "90fe61b101a0cee9481a50499bddadf96c5f495f7811d827cb3b1c5e615d4d88"
+      }
+    ],
+    "R-MODUS-KIOSK": [
+      {
+        "test": "TestKioskHidesTheLibraryFromGuests",
+        "text": "92a7b5f42531cb024a297ed7e2e4ae5be194ad733254fb4b6d6ab45a108943fa"
+      },
+      {
+        "test": "TestPreflight",
+        "text": "92a7b5f42531cb024a297ed7e2e4ae5be194ad733254fb4b6d6ab45a108943fa"
+      },
+      {
+        "test": "TestStartKiosk",
+        "text": "92a7b5f42531cb024a297ed7e2e4ae5be194ad733254fb4b6d6ab45a108943fa"
+      }
+    ],
+    "R-MODUS-PRIVAT": [
+      {
+        "test": "TestGuestSeesOnlyTheRunningEvent",
+        "text": "cb3edd476f08c8ee0b4c37d79da9151621022f03bc5ef264ad28f735591287d5"
+      },
+      {
+        "test": "TestKioskGuestSeesOnlyPhotosOfTheEvent",
+        "text": "cb3edd476f08c8ee0b4c37d79da9151621022f03bc5ef264ad28f735591287d5"
+      },
+      {
+        "test": "TestKioskHidesTheLibraryFromGuests",
+        "text": "cb3edd476f08c8ee0b4c37d79da9151621022f03bc5ef264ad28f735591287d5"
       }
     ],
     "R-NETZ-BETREUUNG": [
@@ -275,6 +866,64 @@
         "text": "aa7a3fe53a03831ea0cf4f8bfd4ebe64cbb008227f485c54a77a71774000f8e3"
       }
     ],
+    "R-QUELLEN-LIGHTROOM": [
+      {
+        "test": "TestAlbumsFollowAllPagesAndSkipFolders",
+        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
+      },
+      {
+        "test": "TestAssets",
+        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
+      },
+      {
+        "test": "TestDownload",
+        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
+      },
+      {
+        "test": "TestOpenThumbnail",
+        "text": "92ded1261a3bb852f01b72c21539ccf874512f8826c7d51ce245094ff8cf1966"
+      }
+    ],
+    "R-QUELLEN-LIGHTROOM-ANMELDUNG": [
+      {
+        "test": "TestConnectViaRelay",
+        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
+      },
+      {
+        "test": "TestDisconnect",
+        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
+      },
+      {
+        "test": "TestOAuthFlowDeliversCodeExactlyOnce",
+        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
+      },
+      {
+        "test": "TestOAuthForeignTokenCannotCollect",
+        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
+      },
+      {
+        "test": "TestOAuthRelayRoundTrip",
+        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
+      },
+      {
+        "test": "TestOAuthUseCasesSeparateBoxes",
+        "text": "f49fabf55c04dc442374bb6f90c1343d5689659f352c55a72166427ff1a01ccd"
+      }
+    ],
+    "R-QUELLEN-USB": [
+      {
+        "test": "TestDrivesListsOnlyTheStick",
+        "text": "fdd2ea2c5846d3cb151896d36cd2d59f1e5a98a61a3d7d0211864faa4990e287"
+      },
+      {
+        "test": "TestImagesFindsPrintableImagesNewestFirst",
+        "text": "fdd2ea2c5846d3cb151896d36cd2d59f1e5a98a61a3d7d0211864faa4990e287"
+      },
+      {
+        "test": "TestReadStaysOnTheStick",
+        "text": "fdd2ea2c5846d3cb151896d36cd2d59f1e5a98a61a3d7d0211864faa4990e287"
+      }
+    ],
     "R-UPLOAD-ABHOLUNG": [
       {
         "test": "TestFindPendingJobsShowsOnlyOwnJobs",
@@ -293,9 +942,71 @@
         "text": "47ac06d00ed54c9f288a051eb27372d1fa8eaa260e868a128dc9b33a72a30118"
       }
     ],
+    "R-UPLOAD-EINGANG": [
+      {
+        "test": "TestEnqueueKeepsInboxTemplate",
+        "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216"
+      },
+      {
+        "test": "TestInboxAddressAddsModeAndKeepsSession",
+        "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216"
+      },
+      {
+        "test": "TestInboxTakesSeveralImagesWithoutLayout",
+        "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216"
+      },
+      {
+        "test": "TestJobsAreDeliveredOnceAndAcknowledged",
+        "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216"
+      },
+      {
+        "test": "TestRemainingCountsDownToFull",
+        "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216"
+      },
+      {
+        "test": "TestUploadAddressSelectsInbox",
+        "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216"
+      }
+    ],
     "R-UPLOAD-SITZUNG": [
       {
+        "test": "TestChangedSettingsOpenANewSession",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestExpiredSessionIsReplaced",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestInboxAddressAddsModeAndKeepsSession",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
         "test": "TestOpenSessionGivesEachBoxExactlyOneAddress",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestSessionProvidesTheUploadAddress",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestUploadAddressExplainsWhyThereIsNoCode/Token_fehlt",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestUploadAddressExplainsWhyThereIsNoCode/nicht_eingerichtet",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestUploadAddressExplainsWhyThereIsNoCode/noch_keine_Sitzung",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestUploadAddressExplainsWhyThereIsNoCode/nur_Leerzeichen",
+        "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
+      },
+      {
+        "test": "TestUploadAddressReportsRejectedToken",
         "text": "e0b1bad68959e57d8ff26b961de52e7ee015ad25f4f9c7c92ed12af7eb6fbca3"
       }
     ]
@@ -332,6 +1043,39 @@
       "response": {
         "type": "[]github.com/torbenschinke/eventprint/app/photoupld/cfg.JobResponse",
         "shape": "[]{id:string,template:string,filename:string,createdAt:string}"
+      }
+    },
+    "POST /api/v1/oauth/adobe": {
+      "useCases": [
+        "github.com/torbenschinke/eventprint/app/upld.RegisterLogin"
+      ],
+      "package": "github.com/torbenschinke/eventprint/app/photoupld/cfg",
+      "request": {
+        "type": "github.com/torbenschinke/eventprint/app/photoupld/cfg.OAuthRegisterRequest",
+        "shape": "{state:string,authorizeUrl:string}",
+        "fields": [
+          {
+            "name": "State",
+            "wire": "state",
+            "shape": "string"
+          },
+          {
+            "name": "AuthorizeURL",
+            "wire": "authorizeUrl",
+            "shape": "string"
+          }
+        ]
+      },
+      "response": {
+        "type": "github.com/torbenschinke/eventprint/app/photoupld/cfg.OAuthRegisterResponse",
+        "shape": "{startUrl:string}",
+        "fields": [
+          {
+            "name": "StartURL",
+            "wire": "startUrl",
+            "shape": "string"
+          }
+        ]
       }
     },
     "POST /api/v1/session": {

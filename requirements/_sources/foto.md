@@ -2,35 +2,39 @@
 
 <!-- speclink:informative -->
 
-Die Fotobox steht auf einer Feier. Gäste bedienen sie selbst, ohne Anleitung
-und ohne Anmeldung. Alles, was hier steht, ist aus dieser Lage heraus zu lesen.
+Das Gerät ist zuerst ein Fotodrucker für zuhause und auf Wunsch eine Fotobox
+für Feiern. Bilder kommen von der angeschlossenen Kamera, vom Handy über den
+Upload-Dienst, aus Adobe Lightroom und von einem USB-Stick. Woher ein Bild
+kommt, darf für alles Weitere keine Rolle spielen.
 
 ## Bilder aufnehmen
 
-Bilder erreichen die Fotobox aus drei Richtungen: von der angeschlossenen
-Kamera, vom Smartphone eines Gastes im selben Netz und über das Internet.
-Woher ein Bild kommt, darf für alles Weitere keine Rolle spielen.
+Jedes eingehende Bild MUSS unverändert gesichert werden, gleich aus welcher
+Quelle es stammt. Die gesicherte Datei ist zugleich die Vorlage für Anzeige,
+Druck und Weitergabe.
 
-Jedes eingehende Bild MUSS unverändert gesichert werden, damit die Bilder nach
-der Feier digital weitergegeben werden können.
+## Eingang
 
-## Historie
+Im Heimbetrieb MÜSSEN Bilder, die von selbst ankommen – vom Handy oder von der
+Kamera –, im Eingang landen und dürfen nicht von allein gedruckt werden. Ein
+Bild MUSS als neu gelten, bis jemand es für den Druck auswählt.
 
-Die zuletzt entstandenen Bilder MÜSSEN sichtbar sein, die neuesten zuerst.
-Der Startbildschirm zeigt eine kurze Auswahl, eine eigene Seite alle.
+## Mediathek
+
+Alle Fotos MÜSSEN in einer Mediathek sichtbar sein, die neuesten zuerst. Fotos
+MÜSSEN sich als Favorit markieren lassen, und gedruckte Fotos MÜSSEN als solche
+erkennbar sein.
 
 ## Einzelnes Bild
 
 Ein einzelnes Bild MUSS anhand seiner Kennung auffindbar sein, damit ein
-Nachdruck möglich ist, ohne die Historie zu durchsuchen.
+Nachdruck möglich ist, ohne die Mediathek zu durchsuchen.
 
 ## Bilder entfernen
 
-Ein Bild MUSS sich aus der Historie entfernen lassen. Auf einer Feier entstehen
-Fehlaufnahmen, und niemand möchte sie den ganzen Abend auf dem Startbildschirm
-sehen.
+Ein Bild MUSS sich samt gesicherter Datei endgültig entfernen lassen.
 
 ## Vorlage für den Druck
 
 Gedruckt wird aus den unveränderten Originaldaten. Das Bild, das der Drucker
-bekommt, MUSS aus derselben Quelle stammen wie das, was die Historie zeigt.
+bekommt, MUSS aus derselben Quelle stammen wie das, was die Mediathek zeigt.

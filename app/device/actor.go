@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"go.wdy.de/nago/application/permission"
+
+	"github.com/torbenschinke/eventprint/app/photo"
 )
 
 // Role ist die Rolle dessen, der gerade vor dem Gerät steht.
@@ -48,7 +50,18 @@ type Grants struct {
 type Actor struct {
 	role    Role
 	allowed map[permission.ID]struct{}
+	event   photo.EventID
 }
+
+// WithEvent bindet das Subjekt an eine Feier. Für Gäste ist das die Schranke,
+// hinter der sie Fotos sehen: die der laufenden Feier und keine anderen.
+func (a Actor) WithEvent(e photo.EventID) Actor {
+	a.event = e
+	return a
+}
+
+// EventScope liefert die Feier, an die das Subjekt gebunden ist.
+func (a Actor) EventScope() photo.EventID { return a.event }
 
 // NewActor erzeugt das Subjekt einer Rolle.
 func NewActor(role Role, grants Grants) Actor {

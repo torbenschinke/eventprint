@@ -13,10 +13,10 @@ type UseCases struct {
 	OpenJobImage    OpenJobImage
 	AckJob          AckJob
 
-	RegisterOAuth RegisterOAuth
-	CollectOAuth  CollectOAuth
-	StartOAuth    StartOAuth
-	CompleteOAuth CompleteOAuth
+	RegisterLogin RegisterLogin
+	CollectLogin  CollectLogin
+	StartLogin    StartLogin
+	CompleteLogin CompleteLogin
 }
 
 // NewUseCases verdrahtet die Anwendungsfälle mit den Registries.
@@ -30,10 +30,10 @@ func NewUseCases(registry *Registry, oauth *OAuthRegistry, images image.UseCases
 		OpenJobImage:    NewOpenJobImage(registry, images.OpenReader),
 		AckJob:          NewAckJob(registry),
 
-		RegisterOAuth: NewRegisterOAuth(oauth),
-		CollectOAuth:  NewCollectOAuth(oauth),
-		StartOAuth:    NewStartOAuth(oauth),
-		CompleteOAuth: NewCompleteOAuth(oauth),
+		RegisterLogin: NewRegisterLogin(oauth),
+		CollectLogin:  NewCollectLogin(oauth),
+		StartLogin:    NewStartLogin(oauth),
+		CompleteLogin: NewCompleteLogin(oauth),
 	}
 }
 

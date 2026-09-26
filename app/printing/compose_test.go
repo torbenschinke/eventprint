@@ -8,7 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/worldiety/speclink/spec"
+
 	"github.com/torbenschinke/eventprint/app/printing"
+	"github.com/torbenschinke/eventprint/requirements/fun/druck"
 )
 
 // Die Motive dieser Tests sind einfarbig. Damit lässt sich an jedem Punkt
@@ -668,4 +671,63 @@ func TestTemplateLayout(t *testing.T) {
 			t.Errorf("%q: Layout %+v ist nicht normalisiert", tpl, l)
 		}
 	}
+}
+
+// TestPolaroidFallsBackWhenFacesDoNotFit: Auf einer Feier schnitt der
+// automatische Polaroid-Ausschnitt Gesichter ab, wenn eine Gruppe
+// nebeneinander auf einem Querformatfoto stand. Passt die Gruppe nicht in das
+// Polaroidfenster, wird das Blatt ein Passepartout mit 1 cm Rand – und liegt
+// dann wie das Foto quer.
+func TestPolaroidFallsBackWhenFacesDoNotFit(t *testing.T) {
+	wide := func(img image.Image) []image.Rectangle {
+		b := img.Bounds()
+		// Fünf Gesichter über fast die ganze Breite verteilt.
+		var out []image.Rectangle
+		for i := range 5 {
+			x := b.Dx()/20 + i*b.Dx()*9/50
+			out = append(out, image.Rect(x, b.Dy()/3, x+b.Dx()/12, b.Dy()/3+b.Dy()/8))
+		}
+
+		return out
+	}
+
+	single := func(img image.Image) []image.Rectangle {
+		b := img.Bounds()
+		return []image.Rectangle{image.Rect(b.Dx()/2-100, b.Dy()/3, b.Dx()/2+100, b.Dy()/3+200)}
+	}
+
+	l := printing.TemplatePolaroid.Layout()
+	photo := solid(3000, 2000, red)
+
+	page := printing.Compose(printing.Sheet{Layout: l, Images: []image.Image{photo}}, printing.NativeRaster4x6,
+		printing.RenderOptions{AutoCrop: true, DetectFaces: wide})
+	if page.Bounds().Dx() <= page.Bounds().Dy() {
+		t.Fatal("breite Gruppe: das Blatt ist hochkant geblieben, es hätte zum querliegenden Passepartout werden müssen")
+	}
+
+	// Unten liegt jetzt ein Rand von 1 cm und kein Polaroidsteg: 200 Punkte
+	// über der Unterkante der sichtbaren Fläche ist schon Foto.
+	b := page.Bounds()
+	visBottom := b.Dy()/2 + printing.VisibleMedia4x6.Short()/2
+	if c := page.RGBAAt(b.Dx()/2, visBottom-200); c.R != red.R || c.G != red.G {
+		t.Fatalf("über dem Rand erwartet Foto, gefunden %v", c)
+	}
+
+	if c := page.RGBAAt(b.Dx()/2, visBottom-printing.PassepartoutMargin/2); c.R != 0xFF || c.G != 0xFF {
+		t.Fatalf("im Rand erwartet Weiß, gefunden %v", c)
+	}
+
+	page = printing.Compose(printing.Sheet{Layout: l, Images: []image.Image{photo}}, printing.NativeRaster4x6,
+		printing.RenderOptions{AutoCrop: true, DetectFaces: single})
+	if page.Bounds().Dx() > page.Bounds().Dy() {
+		t.Fatal("ein Gesicht passt ins Polaroid, trotzdem wurde gewechselt")
+	}
+
+	page = printing.Compose(printing.Sheet{Layout: l, Images: []image.Image{photo}}, printing.NativeRaster4x6,
+		printing.RenderOptions{AutoCrop: false, DetectFaces: wide})
+	if page.Bounds().Dx() > page.Bounds().Dy() {
+		t.Fatal("ohne Gesichtserkennung darf das Polaroid nicht wechseln")
+	}
+
+	spec.Verified(t, druck.RDruckGestaltung, druck.RDruckKiosk)
 }

@@ -1,53 +1,77 @@
-# eventprint – Fotobox für Veranstaltungen
+# eventprint – Fotodrucker für zuhause, Fotobox für Feiern
 
-Eine Nago-Anwendung für Hochzeiten, Jubiläen und ähnliche Feiern. Sie läuft auf
-dem Rechner, an dem Fotodrucker und Kamera per USB hängen, und wird von den
-Gästen selbst bedient.
+Ein Raspberry Pi mit Touchscreen und einem Citizen CZ-01 (10 × 15 cm,
+Thermosublimation). Nach dem Einschalten ist er ein **Heimdrucker**, der sich
+wie ein Tablet bedienen lässt. Für eine Feier lässt er sich in den **Kiosk**
+versetzen; dort bedienen ihn Gäste, bis er das nächste Mal eingeschaltet wird.
 
-Die Einrichtung des Druckers ist getrennt dokumentiert: **[DRUCKER.md](DRUCKER.md)**.
+Die Oberfläche zeichnet [gift](https://github.com/worldiety/gift) direkt auf
+die GPU, ohne Browser. Die Einrichtung des Druckers ist getrennt dokumentiert:
+**[DRUCKER.md](DRUCKER.md)**.
 
 ---
 
-## Was die Anwendung kann
+## Was das Gerät kann
 
-* **Fotobox-Startbildschirm** mit den zuletzt entstandenen Bildern. Ein Tippen
-  auf ein Bild druckt es erneut.
-* **QR-Code** auf dem Startbildschirm. Gäste scannen ihn und laden vom
-  Smartphone eigene Bilder hoch – ohne Anmeldung, ohne App.
-* **Drei Layouts**, vor jedem Druck in einem Dialog wählbar:
+**Im Heimbetrieb**
 
-  | Layout | Verhalten |
+* **Home-Bildschirm** mit Eingang, Druckerstand, QR-Code zum Senden vom Handy,
+  App-Symbolen und dem Start in den Kiosk.
+* **Eingang:** Fotos vom Handy (per QR-Code, mehrere auf einmal) und von der
+  Kamera landen hier und werden **nicht** von allein gedruckt.
+* **Fotos:** Mediathek mit Eingang, allen Fotos, Favoriten, Gedrucktem und den
+  Fotos vergangener Feiern, als Ziegelreihen im Seitenverhältnis der Fotos,
+  mit Mehrfachauswahl.
+* **Quellen:** Adobe Lightroom (Alben durchsuchen, gedruckt wird die in
+  Lightroom bearbeitete Fassung) und USB-Stick. Eine Netzwerkfreigabe ist
+  vorgesehen.
+* **Druck-Studio** mit echter Vorschau aus dem Renderer des Druckers:
+
+  | | |
   |---|---|
-  | Formatfüllend | randlos, das Motiv wird mittig auf 3:2 beschnitten |
-  | Passepartout | weißer Rahmen von 1 cm, ringsum exakt gleich breit |
-  | Polaroid | Sofortbild-Look, breiter Steg unten |
+  | Format | Einzelbild, Quadrat, zwei Bilder, Fotostreifen, Passfotos in echter Größe (35 × 45 mm), Collage |
+  | Design | randlos, Passepartout (1 cm), Polaroid, Film, Galerie – in Weiß, Creme oder Schwarz |
+  | Bild | Farbanmutung (Original, Schwarzweiß, warm, kühl, Vintage), Ausschnitt auf Gesichter |
+  | Text | Beschriftung im Polaroidsteg, drei Schriften, Datumsstempel |
+  | Druck | Anzahl, Oberfläche glänzend oder matt |
 
-  Bei „Formatfüllend“ und „Passepartout“ wird das Papier in die Richtung
-  gedreht, in der das Motiv liegt – ein Querformatfoto ergibt also ein quer
-  liegendes Bild. Das Polaroid bleibt immer hochkant, sonst säße der breite
-  Steg an der falschen Kante.
+  Alle Formate teilen sich das eine 10×15-Papier.
+* **Aufträge** mit Druckerzustand, Wiederholen, Abbrechen, Freigabe nach dem
+  Papierwechsel und einem selbst gezählten Papiervorrat.
+* **Einstellungen** wie auf einem Tablet: WLAN, Drucker & Papier,
+  Handy-Upload, Konten & Quellen, Kiosk-Modus, Speicher & USB, Info.
+* **Weitergabe:** Fotos einer Feier, eine Auswahl oder alle auf einen
+  USB-Stick kopieren.
+* **HEIC** von iPhones, sofern libheif installiert ist.
 
-  Beim Passepartout hat der Rahmen Vorrang vor dem Motiv: Passt das
-  Seitenverhältnis nicht zur verbleibenden Fläche, wird das Bild an den Kanten
-  beschnitten. Ein ungleichmäßiger Rand sieht auf dem Papier nach einem Fehler
-  aus, ein knapperer Ausschnitt nicht. Bei einem 4:3-Foto gehen dabei rund
-  18 % der Höhe verloren, bei 3:2 rund 8 %.
+**Im Kiosk**
 
-* **Historie** aller Fotos – Kameraaufnahmen und Gast-Uploads gleichermaßen –
-  mit Nachdruck und Löschen.
-* **Druckstatus** mit Warteschlange, Fehlerursache und Wiederholung, etwa nach
-  einem Papierwechsel.
-* **Archiv der Originale**: Jedes eingehende Bild wird zusätzlich unverändert
-  als Datei abgelegt, für die digitale Weitergabe nach der Feier.
+* Dunkler Bildschirm in der Farbe der Feier mit QR-Code und den Fotos dieser
+  Feier – nur dieser. Die Mediathek ist nicht erreichbar.
+* Ein Tipp auf ein Foto: Layout wählen (formatfüllend, Passepartout,
+  Polaroid), Anzahl bis zur eingestellten Grenze, drucken.
+* Fotos vom Handy und von der Kamera werden je nach Einstellung sofort
+  gedruckt.
+* Findet der automatische Polaroid-Ausschnitt mehr Gesichter, als ins
+  Polaroid passen, wird das Blatt zum Passepartout mit 1 cm Rand, statt
+  Gesichter abzuschneiden.
+* Fünfmal schnell auf den QR-Code tippen und die PIN eingeben öffnet die
+  Betreuung: Drucker freigeben, Papier melden, Fotos auf USB kopieren, Kiosk
+  beenden. Sonst endet der Kiosk mit dem nächsten Einschalten.
 
 ## Schnellstart
 
+Am Schreibtisch, ohne Drucker (Testbetrieb) und ohne OpenCV:
+
 ```bash
-HOST=0.0.0.0 NAGO_COOKIES_INSECURE=true go run ./cmd/photobox
+go run -tags nofacecrop ./cmd/gift-app -window
 ```
 
-Danach unter <http://localhost:3000> als Betreuer anmelden
-(`admin@localhost`, Kennwort siehe `cmd/photobox/main.go`) und einrichten.
+Die Daten liegen dann unter `~/.local/share/eventprint`. Bilder, die man in
+dessen Unterordner `camera/` legt, kommen an wie Aufnahmen einer Kamera.
+`-tags giftauto` schaltet zusätzlich die Automatisierungsschnittstelle von
+gift auf `127.0.0.1:7391` ein (Screenshots, Eingaben) – nie für das Gerät
+bauen.
 
 ## Bauen und prüfen
 
@@ -72,8 +96,8 @@ Spezifikation in [SPECIFICATION.md](SPECIFICATION.md).
 | `SKIP_TESTS=1` | nur bauen; die Spezifikation entsteht dann nicht |
 | `TARGETS` | z. B. `"linux/arm64 linux/amd64"` |
 
-`photobox` braucht cgo und OpenCV, `photoupld` nicht. Für eine fremde
-Architektur wird `photobox` deshalb übersprungen statt in einer Binärdatei zu
+`gift-app` braucht cgo und OpenCV, `photoupld` nicht. Für eine fremde
+Architektur wird `gift-app` deshalb übersprungen statt in einer Binärdatei zu
 enden, die auf dem Zielgerät nicht startet.
 
 ### speclink
@@ -171,103 +195,80 @@ den Checkout, in dem das Skript liegt.
 
 ## Einrichten
 
-Beides geschieht in der Oberfläche, wirkt sofort und überlebt einen Neustart.
-Der Weg dorthin führt über das Nutzermenü → Admin-Center → Einstellungen oder
-direkt über die Schaltflächen auf den betroffenen Seiten.
+Alles lässt sich am Gerät unter **Einstellungen** einrichten. Was man nicht
+auf einem Touchscreen tippen möchte – Tokens und Zugangsdaten –, steht besser
+in `/etc/default/eventprint`; die Werte gelten als Vorbelegung, solange in den
+Einstellungen nichts steht.
+
+| Variable | Bedeutung |
+|---|---|
+| `EVENTPRINT_PRINTER` | CUPS-Warteschlange, z. B. `CZ01`; leer = Testbetrieb |
+| `EVENTPRINT_RELAY_URL` | Basis-URL des Upload-Dienstes `photoupld` |
+| `EVENTPRINT_RELAY_TOKEN` | Zugangstoken der Box beim Upload-Dienst |
+| `EVENTPRINT_ADOBE_CLIENT_ID` | Lightroom: Client-ID aus der Adobe Developer Console |
+| `EVENTPRINT_ADOBE_SECRET` | Lightroom: Client-Secret dazu |
+| `EVENTPRINT_CAMERA_DIR` | Tethering-Ordner; `off` schaltet die Kamera ab |
+| `EVENTPRINT_UI_SCALE` | Vergrößerung der Oberfläche; Vorgabe 1,5 für 1080p |
+| `EVENTPRINT_DATA_DIR`, `EVENTPRINT_RUNTIME_DIR` | nur zum Entwickeln; unter systemd gelten `/var/lib/eventprint` und `/run/eventprint` |
 
 ### Drucker
 
-**Einstellungen → Fotodrucker.** Dort werden auch Oberflächenfinish
-(glänzend, matt, seidenmatt) und die Rastergröße gepflegt – zu letzterer siehe
-[Druckqualität](#druckqualität). Die Warteschlange wird aus `lpstat -a`
-angeboten, es lässt sich also nichts vertippen. Solange nichts gewählt ist,
-läuft die Fotobox im Testmodus: Aufträge durchlaufen dieselbe Zustandsmaschine
-inklusive Rendering, das Ergebnis wird aber verworfen. So lässt sich die
-Fotobox ohne Hardware aufbauen und vorführen – die Druckstatus-Seite weist
-deutlich darauf hin.
+**Einstellungen → Drucker & Papier.** Die Warteschlange wird aus `lpstat -a`
+angeboten. Solange keine gewählt ist, läuft das Gerät im Testbetrieb: Aufträge
+durchlaufen alles einschließlich Rendering, das Ergebnis wird verworfen.
+Dort stehen auch die Druckgeschwindigkeit und der Papiervorrat; nach dem
+Einlegen eines neuen Sets tippt man **Neues Set eingelegt**.
 
 ### Wenn der Drucker steht
 
 Bei leerem Papier oder Farbband und bei einer abgerissenen USB-Verbindung
 beendet sich das Gutenprint-Backend mit Status 4 („stop printer“), und CUPS
-**hält die Warteschlange an**. Die `abort-job`-Einstellung greift dabei nicht,
-sie gilt nur für Status 1. Die Warteschlange bleibt angehalten, auch über
-einen Neustart hinweg.
+**hält die Warteschlange an**. Das Gerät gibt sie selbst wieder frei, erst
+nach 15 Sekunden, dann mit wachsendem Abstand. Direkt nach dem Papierwechsel
+tippt man im Druckdialog **Eingelegt – weiter drucken** oder unter
+**Aufträge** auf **Drucker freigeben**. Kein Blatt wird dabei doppelt
+gedruckt.
 
-Die Fotobox gibt sie deshalb selbst wieder frei: erst nach 15 Sekunden, dann
-mit wachsendem Abstand bis zu zwei Minuten. Wer gerade Papier gewechselt hat,
-tippt auf der Druckstatus-Seite auf **Weiter drucken**. Im Terminal
-entspricht das `sudo cupsenable CZ01`.
+### Upload vom Handy
 
-Solange der Drucker angehalten ist, ruht die Frist von fünf Minuten, nach der
-die Fotobox einen Auftrag sonst aufgibt. Aufträge, die während eines
-Papierwechsels entstehen, werden danach also gedruckt statt als gescheitert
-geführt.
-
-### Öffentliche Adresse für den QR-Code
-
-**Einstellungen → Fotobox → Öffentliche Adresse.** Ohne Angabe leitet Nago die
-Adresse aus der ersten Verbindung ab. Hinter einem Reverse Proxy stimmt die
-nicht, und wer die Fotobox zuerst lokal öffnet, bekommt `localhost` in den
-QR-Code – kein Gast kommt dann auf die Upload-Seite. Deshalb hier die von
-außen erreichbare Adresse vollständig eintragen, z. B.
-`https://fotobox.example.de`. Steht eine lokale Adresse im QR-Code, warnt der
-Startbildschirm den angemeldeten Betreuer.
-
-### Umgebungsvariablen
-
-Sie sind nur noch Vorbelegung für den unbeaufsichtigten Betrieb (systemd,
-Container) und greifen ausschließlich, solange in den Einstellungen nichts
-steht. Danach hat die Oberfläche Vorrang.
-
-| Variable | Bedeutung |
-|---|---|
-| `EVENTPRINT_TITLE` | Überschrift auf dem Startbildschirm |
-| `EVENTPRINT_PRINTER` | CUPS-Warteschlange, z. B. `CZ01` |
-| `NO_SSL` | `true` liefert Sitzungscookies ohne `Secure`-Flag aus |
-| `HOST` | Bind-Adresse. Für Gäste im WLAN `0.0.0.0` |
-| `NAGO_COOKIES_INSECURE` | `true`, solange ohne HTTPS betrieben |
-
-## Rollen
-
-| Rolle | Rechte |
-|---|---|
-| `Fotobox-Gast` | Hochladen, Ansehen, Drucken – automatisch für jeden nicht angemeldeten Besucher |
-| `Fotobox-Betreuer` | zusätzlich Löschen, Druckaufträge wiederholen, Einrichten |
-
-Die Betreuer-Rolle wird beim Start automatisch dem Bootstrap-Administrator
-zugewiesen. Das ist notwendig, weil Nago diesem Konto absichtlich nur
-`nago.*`-Berechtigungen gibt: Ohne die Zuweisung zeigte die Anwendung nach dem
-Anmelden auf jeder Seite „Zugriff verweigert". Weitere Betreuer bekommen die
-Rolle über die Nutzerverwaltung.
-
-## Uploads aus dem Internet
-
-`photoupld` ist eine zweite Nago-Anwendung für Installationen, bei denen die
-Fotobox hinter NAT in einem privaten Gastnetz steht. Nur `photoupld` muss aus
-dem Internet erreichbar sein; die Fotobox baut ausschließlich ausgehende
-HTTPS-Verbindungen auf.
+`photoupld` ist ein kleiner Nago-Dienst im Internet; das Gerät selbst bleibt
+von außen unerreichbar und fragt ihn regelmäßig ab.
 
 1. `go run ./cmd/photoupld` auf dem öffentlichen Server starten.
 2. Als `admin@localhost` anmelden und unter **Einstellungen → Foto-Upload** die
    öffentliche Basis-URL eintragen.
 3. Im Admin-Center einen Access Token ohne Impersonation erstellen und ihm die
-   Rolle **Fotobox-Relay** zuweisen. Den Klartext-Token sofort sicher ablegen.
-4. In der Fotobox unter **Einstellungen → Fotobox** die Felder
-   **Upload-Service** und **Upload-Token** ausfüllen. Die Verbindung wird ohne
-   Neustart aufgebaut; der Token wird in der Oberfläche als Geheimnisfeld
-   behandelt.
+   Rolle **Fotobox-Relay** zuweisen.
+4. URL und Token am Gerät unter **Einstellungen → Handy-Upload** eintragen
+   oder in `/etc/default/eventprint`.
 
-Die Fotobox fordert beim Start eine zufällige Upload-ID an und setzt den
-QR-Code automatisch auf die zurückgelieferte URL. Sie fragt alle zehn Sekunden
-nach neuen Aufträgen. Nach einem Neustart einer der Anwendungen wird eine neue
-ID erzeugt; alte Links zeigen Gästen ausdrücklich, dass sie den QR-Code erneut
-scannen müssen.
+Der QR-Code im Heimbetrieb trägt `m=inbox`: Die Upload-Seite fragt dann keine
+Gestaltung ab und nimmt mehrere Bilder auf einmal, die im Eingang landen. Im
+Kiosk fehlt der Parameter, und die Seite fragt wie bisher nach dem Layout;
+das Bild wird sofort gedruckt. Für HEIC braucht auch der Server libheif
+(`apt install libheif1`); fehlt sie, meldet das Protokoll es beim Start.
 
-Upload-IDs und Warteschlangen existieren nur im Arbeitsspeicher. Bilder liegen
-für Vorschau und Abholung kurzfristig im Nago-Image-Store: nach erfolgreicher
-Übernahme werden Original und Bildpyramide gelöscht, unabgeholte Daten nach 30
-Minuten. Beim Neustart entfernt `photoupld` verbliebene Relay-Bilder.
+### Adobe Lightroom
+
+1. In der [Adobe Developer Console](https://developer.adobe.com/console) ein
+   Projekt mit der Lightroom-API anlegen (OAuth Web). Als Redirect-URI
+   `<öffentliche Adresse von photoupld>/oauth/adobe/callback` eintragen; der
+   Dienst schreibt die genaue Adresse beim Start ins Protokoll.
+2. Client-ID und Secret als `EVENTPRINT_ADOBE_CLIENT_ID` und
+   `EVENTPRINT_ADOBE_SECRET` eintragen.
+3. Am Gerät **Einstellungen → Konten & Quellen → Mit dem Handy anmelden** und
+   den QR-Code scannen. Die Anmeldung geschieht auf dem Handy, kein Kennwort
+   wird an der Box getippt.
+
+Die Lightroom-API verlangt eine Freigabe durch Adobe; die Anbindung ist gegen
+eine nachgebildete API getestet, noch nicht gegen die echte.
+
+### HEIC
+
+iPhones speichern HEIC. `pkg/heif` lädt dafür die Systembibliothek libheif
+zur Laufzeit (purego, kein cgo). Ohne sie bleibt es bei JPEG und PNG. Das
+Format ist patentbelastet; ob die Nutzung des installierten Codecs zulässig
+ist, verantwortet der Betreiber.
 
 ## Kamera anschließen
 
@@ -287,9 +288,9 @@ gebaute Upload-Service benötigt OpenCV nicht.
 Die Kamera kann jederzeit an- oder abgesteckt werden. Spätestens nach zehn
 Sekunden startet die Fotobox den Tethering-Betrieb. Beim Auslösen lädt
 `gphoto2` die Aufnahme herunter, belässt das Original auf der Speicherkarte
-und die Fotobox übernimmt sie in Historie und Galerie. Der Startbildschirm
-zeigt unter dem QR-Code, ob die Kamera bereit ist und wann zuletzt eine
-Aufnahme angekommen ist.
+und das Gerät übernimmt sie: im Heimbetrieb in den Eingang, im Kiosk in die
+Feier und je nach Einstellung sofort in den Druck. Der Kiosk zeigt, ob die
+Kamera bereit ist.
 
 Die zehn Sekunden gelten ausschließlich für die **Suche**, solange keine
 Kamera am USB hängt. Reißt ein **laufendes** Tethering ab, wird es sofort
@@ -326,8 +327,7 @@ USB-Hub mit eigenem Netzteil.
 
 Zur Prüfung meldet `gphoto2 --auto-detect` die Kamera, und
 `journalctl -u eventprint -f` zeigt `camera connected` beziehungsweise
-`camera tethering dropped`. Die Zeile unter dem QR-Code zählt die Abrisse mit —
-sie ist die Ferndiagnose, wenn niemand auf die Box kommt.
+`camera tethering dropped`.
 
 ## Wie Änderungen auf die Box kommen
 
@@ -383,129 +383,77 @@ Polaroid-Bildausschnitt deaktiviert werden. Er ist standardmäßig aktiv und
 richtet Gruppen sowie Einzelpersonen anhand erkannter Gesichter aus. Werden
 keine Gesichter erkannt, bleibt es beim mittigen Standardausschnitt.
 
-## Archiv der Originale
+## Fotos weitergeben
 
-Jedes Bild – von der Kamera, vom Gast-Upload und aus dem Internet – wird beim
-Import zusätzlich unverändert in einem gewöhnlichen Ordner gesichert:
+Jedes Bild liegt unverändert als Datei unter
+`/var/lib/eventprint/photos/originals/` – mit EXIF-Block und ursprünglicher
+Kompression, HEIC bleibt HEIC. Gedruckt, angezeigt und weitergegeben wird aus
+genau dieser Datei.
 
-```
-<Datenverzeichnis>/photos/originals/
-```
-
-Das Datenverzeichnis nennt die Anwendung beim Start (`photo archive ready`);
-die Historie zeigt den Pfad nach der Anmeldung als Betreuer ebenfalls an.
-
-Gesichert wird die Datei **vor** jeder Verarbeitung, also mit EXIF-Block,
-Aufnahmezeit und ursprünglicher Kompression. Das unterscheidet den Ordner vom
-internen Bildspeicher, in dem gedrehte Aufnahmen aufgerichtet und dabei neu
-kodiert werden.
-
-Der Dateiname beginnt mit der Foto-ID, die den Zeitstempel in Millisekunden
-enthält:
-
-```
-1788201767405-176029a2a2b47578_DSC02301.jpg
-```
-
-Damit entspricht die alphabetische Sortierung im Dateimanager der zeitlichen,
-und der ursprüngliche Name bleibt zur Wiedererkennung erhalten. Nach der Feier
-genügt es, den Ordner zu kopieren.
-
-Zwei Eigenschaften sind bewusst so gewählt:
-
-* **Der Ordner wird nur beschrieben.** Wird ein Foto in der Historie gelöscht,
-  verschwindet es aus der Fotobox, die Datei im Archiv bleibt. Soll ein Bild
-  wirklich verschwinden, muss es dort von Hand entfernt werden.
-* **Ein Fehler beim Sichern bricht den Import nicht ab.** Eine volle Platte
-  darf nicht dazu führen, dass auf einer Feier nichts mehr gedruckt wird. Der
-  Fehler steht im Protokoll (`cannot archive original photo`).
+Nach einer Feier: USB-Stick einstecken, **Einstellungen → Speicher & USB**,
+die Feier wählen, **kopieren**, **auswerfen**. Im Kiosk geht das über die
+Betreuung. Die Fotos landen in `eventprint/<Datum> <Feier>/` und heißen
+`<Aufnahmezeit>_<ursprünglicher Name>`; ein abgebrochener Vorgang lässt sich
+wiederholen, schon kopierte Dateien werden übersprungen. Das Gerät hängt den
+Stick über udisks ein; die nötige polkit-Freigabe steht in
+`deploy/polkit/51-eventprint-udisks.rules`.
 
 ## Aufbau
 
 Die Anwendung folgt dem Layout, das speclink unter dem Profil `go_nago_ddd1`
-prüft: Fachlichkeit unter `app/<kontext>/`, ein Anwendungsfall je Datei mit dem
-Namen des Anwendungsfalls, Verdrahtung an genau einer Stelle.
+prüft: Fachlichkeit unter `app/<kontext>/`, ein Anwendungsfall je Datei,
+Verdrahtung an genau einer Stelle. Die Domäne nutzt Nagos kleine
+Grundtypen (`permission.Auditable`, `data.Repository`), aber keinen
+Nago-Webserver.
 
 ```
-app/photo/                  Domäne der Fotos (Import, Historie, Originaldaten)
-app/printing/               Layouts, Rendering, Druckaufträge, CUPS-Anbindung
-app/upld/                   Transiente Sitzungen und Upload-Warteschlangen
+app/device/          Betriebsart, Einstellungen, PIN, Rollen, Annahme eingehender Bilder
+app/device/cfg/      Verdrahtung aller Kontexte (die einzige Stelle, die Adapter wählt)
+app/device/ui/       Oberfläche mit gift (Heimbetrieb und Kiosk)
+app/photo/           Fotos: Import, Mediathek, Eingang, Feiern, Originale
+app/printing/        Gestaltung, Renderer, Druckaufträge, CUPS-Anbindung
+app/relay/           Box-Seite des Upload-Dienstes
+app/camera/          Tethering mit gphoto2
+app/lightroom/       Adobe Lightroom, Anmeldung per Handy
+app/usb/             USB-Sticks: erkennen, kopieren, auswerfen, lesen
+app/wifi/            Funknetz über NetworkManager
+app/upld/            Upload-Dienst: Sitzungen, Warteschlangen, Anmelde-Weiterleitung
+app/photoupld/       Upload-Dienst: Verdrahtung und Seite für das Handy
 
-app/photobox/cfg/           Enable() – verdrahtet die Fotobox
-app/photobox/cfg/camera/    Übernahme der Kamerabilder aus dem Tethering-Ordner
-scripts/provision.sh        Systemkonfiguration als root, laeuft bei jedem Start
-app/photobox/cfg/remote/    Ausgehender photoupld-Client und Abfrage
-app/photobox/ui/            Oberfläche der Fotobox (Paket uiphotobox)
+pkg/xgift/           generische gift-Bausteine, gedacht für upstream
+pkg/heif/            HEIF über libheif per purego
+pkg/orient/          EXIF-Ausrichtung
+pkg/facecrop/        Gesichtserkennung (OpenCV)
 
-app/photoupld/cfg/          Enable() und REST-API des Upload-Relais
-app/photoupld/ui/           Upload-Seite für das Smartphone (Paket uiphotoupld)
-
-pkg/orient/                 EXIF-Ausrichtung, ohne Bezug zur Domäne
-pkg/facecrop/               Gesichtserkennung, ohne Bezug zur Domäne
-pkg/permtext/               Übersetzbare Texte für Berechtigungen
-
-requirements/               Anforderungen und ihre Quelldokumente
-cmd/photobox/               Startpunkt inkl. Scaffold-Menü
-cmd/photoupld/              Startpunkt des öffentlichen Upload-Relais
+cmd/gift-app/        das Gerät
+cmd/photoupld/       der Upload-Dienst im Internet
+requirements/        Anforderungen und ihre Quelldokumente
 ```
 
-Drei Regeln daraus, die beim Lesen sonst überraschen:
+Einige Entscheidungen, die beim Lesen sonst überraschen:
 
-* **Ein Anwendungsfall je Datei, benannt nach ihm.** `FindAllJobs` steht in
-  `uc_find_all_jobs.go`, samt Typ, Konstruktor und der Anmerkung
-  `uc_find_all_jobs.annotation.go`, die ihn an eine Anforderung bindet.
-* **Je Anwendungsfall genau eine Berechtigung**, geprüft in seiner
-  Umsetzung. Das macht Rechte zuteilbar, statt sie in der Oberfläche zu
-  verstecken.
-* **`camera` und `remote` liegen unter `cfg/`**, nicht unter `pkg/`. Sie rufen
-  Anwendungsfälle auf und sind damit Verdrahtung, keine Infrastruktur. Was
-  unter `pkg/` liegt, kennt die Domäne nicht – das ist prüfbar und wird
-  geprüft.
-
-Einige Entwurfsentscheidungen, die beim Lesen sonst überraschen:
-
-* **IDs sind zeitlich sortierbar** (`<unix-millis>-<zufall>`). Dadurch liefert
-  die lexikographische Iteration des Repositories die chronologische
-  Reihenfolge – ohne zusätzlichen Index.
-* **Gedruckt wird aus dem Original**, nicht aus einer der verkleinerten
-  Varianten des Nago-Image-Subsystems. Nur so werden die 300 dpi des
-  Dye-Sublimation-Druckers ausgenutzt.
-* **Der Zuschnitt passiert in der Anwendung**, nicht im Druckertreiber. CUPS
-  würde ein abweichendes Seitenverhältnis einpassen und weiße Balken erzeugen;
-  siehe [DRUCKER.md](DRUCKER.md).
-* **Das gerenderte JPEG bekommt ein JFIF-Segment.** Gos `image/jpeg` schreibt
-  hinter den Startmarker direkt die Quantisierungstabelle; die Datei beginnt
-  also mit `FF D8 FF DB`. CUPS erkennt `image/jpeg` aber nur, wenn das vierte
-  Byte ein Anwendungsmarker aus `0xE0`–`0xEF` ist
-  (`/usr/share/cups/mime/mime.types`). Ohne das Segment scheitert die
-  Typerkennung, CUPS meldet „The print file could not be opened" und der
-  Auftrag verschwindet.
-* **Die EXIF-Ausrichtung wird beim Import aufgelöst**, nicht erst beim Druck.
-  Gos `image/jpeg` ignoriert den EXIF-Block, Nagos Bild-Subsystem ebenfalls –
-  ein hochkant gehaltenes Smartphone speichert aber quer und vermerkt die Lage
-  nur als Zahl. Ohne Korrektur läge ein Hochformat auf der langen Papierkante,
-  würde dort formatfüllend beschnitten und käme gedreht sowie stark vergrößert
-  aus dem Drucker. Durch die Normalisierung beim Import zeigen Galerie,
-  Vorschau und Ausdruck dieselbe Lage. `printing.Render` prüft zusätzlich, weil
-  vorher gespeicherte Fotos sonst weiterhin falsch gedruckt würden.
-* **Der Druck läuft asynchron** über einen einzelnen Worker. Der Klick kehrt
-  sofort zurück, der Fortschritt ist auf der Druckstatus-Seite sichtbar. Nach
-  einem Neustart werden wartende Aufträge erneut eingereiht, unterbrochene als
-  fehlgeschlagen markiert – ob das Papier verbraucht wurde, ist nicht bekannt.
-* **Gäste arbeiten anonym.** Beim Start legt die Anwendung die Rolle
-  `Fotobox-Gast` an und weist sie allen nicht angemeldeten Besuchern zu. Sie
-  enthält gezielt nur Hochladen, Ansehen und Drucken – das Löschen bleibt dem
-  angemeldeten Betreuer vorbehalten.
-* **Der Drucker wird pro Auftrag aus den Einstellungen gelesen**, nicht beim
-  Start zwischengespeichert. Wer die Fotobox mitten auf der Feier
-  umkonfiguriert, sieht das Ergebnis sofort. Am Auftrag selbst bleibt das
-  damals verwendete Ziel gespeichert – die Historie bleibt dadurch wahr.
-* **Jeder Einstellungstyp braucht `enum.Rename`.** Nago serialisiert die
-  globalen Einstellungen als offenen Summentyp und nutzt dabei standardmäßig
-  den bloßen Go-Typnamen als Diskriminator. Da mehrere Pakete ihren Typ
-  `Settings` nennen, überschreiben sie sich sonst gegenseitig; beim Lesen
-  entsteht dann ein `interface conversion`-Panic. `cfg/settings_enum_test.go`
-  prüft das für alle registrierten Varianten.
+* **Es gibt keine Benutzerkonten.** Wer vor dem Bildschirm steht, ergibt sich
+  aus der Betriebsart: im Heimbetrieb der Besitzer, im Kiosk ein Gast, nach
+  der PIN die Betreuung. Diese Rolle ist das Subjekt, gegen das jeder
+  Anwendungsfall seine Berechtigung prüft. Dass Gäste die Mediathek nicht
+  sehen, hängt deshalb an den Anwendungsfällen und nicht an der Oberfläche –
+  auch ein privates Foto, dessen Kennung ein Gast kennt, bleibt verborgen.
+* **Der Kiosk-Zustand liegt in `/run/eventprint`.** Ein Neustart des Dienstes
+  (Absturz) findet ihn wieder, ein Neustart des Geräts nicht. Genau das ist
+  der Weg zurück in den Heimbetrieb.
+* **Ein Renderer für alles.** Die drei Kiosk-Layouts sind Kombinationen des
+  allgemeinen Layouts, und die Vorschau entsteht mit demselben Renderer wie
+  der Ausdruck.
+* **Ein Auftrag je Blatt.** Ein Papierwechsel mitten im Stapel wiederholt
+  genau das fehlende Blatt.
+* **Gedruckt wird aus dem Original**, aufgerichtet erst beim Rendern. Die
+  Datei bleibt, was Kamera oder Handy geliefert haben.
+* **Das gerenderte JPEG bekommt ein JFIF-Segment**, sonst erkennt CUPS den
+  Typ nicht; siehe [DRUCKER.md](DRUCKER.md).
+* **Die Oberfläche läuft im Dienst, nicht in der Sitzung.** `eventprint.service`
+  startet `gift-app` als Nutzer `eventprint` und zeichnet in die X-Sitzung des
+  Kiosk-Nutzers, die ihm das mit `xhost` erlaubt. So behält der Dienst seine
+  Daten, seine polkit-Freigaben und einen Aufpasser, der ihn neu startet.
 
 ## Druckqualität
 
@@ -579,172 +527,69 @@ sudo cupsenable CZ01               # angehaltenen Drucker freigeben
 
 ## Betrieb vor Ort
 
-### Kiosk
+### Bildschirm
 
-`install.sh` richtet ein eigenes, eingeschränktes Konto `fotobox` ein: keine
-Shell, gesperrtes Passwort, kein sudo. Es meldet sich automatisch an und
-startet Chromium im Vollbild auf `http://localhost:3000`.
+`install.sh` richtet ein eigenes, eingeschränktes Konto `fotobox` ein:
+gesperrtes Passwort, kein sudo. Es meldet sich automatisch in einer
+Openbox-Sitzung an, die nur den Bildschirm bereitstellt, die Anzeige spiegelt
+und `eventprint` per `xhost +SI:localuser:eventprint` zeichnen lässt.
 
 **X11 statt Wayland, und das ist keine Geschmacksfrage.** labwc und wlroots
-kennen keinen Clone-Modus; zwei Ausgänge zeigen dort zwangsläufig
-verschiedene Ausschnitte. Der Fernseher als gespiegelter zweiter Bildschirm
-verlangt `xrandr --same-as` und damit X11. Als Fenstersteuerung dient openbox
-mit einer `rc.xml` **ohne jede Tastenbindung** – der Raspberry Pi 400 ist
-selbst eine Tastatur, ein Gast hat sie also immer in der Hand.
-
-`eventprint-mirror-displays` läuft als Schleife und sucht die beste Auflösung,
-die *beide* Geräte können. Ein Fernseher mit 4K würde sonst das Layout des
-Touchscreens verschieben und die Bedienflächen unerreichbar machen. Er darf
-beim Hochfahren fehlen und später dazukommen.
-
-### Anmeldung bricht ab, wenn man die Box über ihre IP aufruft
-
-Ein Sitzungscookie mit `Secure`-Flag ist über reines HTTP nicht zustellbar.
-Browser machen für `localhost` eine Ausnahme – deshalb funktioniert die
-Anmeldung auf dem Touchscreen, während sie bei einem Zugriff über
-`http://<ip>:3000` sofort wieder weg ist.
-
-`install.sh` setzt deshalb `NO_SSL=true` in `/etc/default/eventprint`. Das
-Cookie läuft damit im Klartext über das Netz; neu ist das nicht, denn die
-gesamte Oberfläche tut das ohnehin, solange kein TLS im Spiel ist.
-
-Steht die Fotobox hinter einem HTTPS-Proxy, gehört das Flag gesetzt. Dann
-installieren mit:
-
-```bash
-sudo NO_SSL=0 ./scripts/install.sh
-```
+kennen keinen Clone-Modus; der Fernseher als gespiegelter zweiter Bildschirm
+verlangt `xrandr --same-as`. Openbox läuft mit einer `rc.xml` **ohne jede
+Tastenbindung** – der Raspberry Pi 400 ist selbst eine Tastatur.
 
 ### Wenn der Bildschirm schwarz bleibt
 
-Zuerst ins Journal sehen – die Kiosk-Sitzung schreibt dorthin:
-
 ```bash
-journalctl -b -t eventprint-kiosk -t eventprint-kiosk-display
+journalctl -b -u eventprint -t eventprint-kiosk -t eventprint-kiosk-display
 ```
 
-Nach dem Einschalten dauert es rund **eine Minute**, bis die Oberfläche steht:
+Nach dem Einschalten dauert es rund eine Minute, bis die Oberfläche steht:
 Erst holt `eventprint-update.service` den aktuellen Stand, dann startet der
-Dienst. Die Sitzung wartet darauf und startet Chromium erst danach. Ein
-schwarzer Bildschirm in der ersten Minute ist also normal.
+Dienst. Solange die Sitzung noch nicht steht, scheitert sein Start am
+fehlenden Bildschirm, und systemd versucht es nach drei Sekunden erneut.
 
-Zwei Fallen, die beim Einrichten Zeit gekostet haben und beide nur beim echten
-Kaltstart auffallen – ein Probelauf zeigt sie nicht, weil er nichts startet:
-
-* **lightdm liest `/etc/lightdm/lightdm.conf` zuletzt.** Eine Datei in
-  `lightdm.conf.d` wird davon überschrieben, nicht umgekehrt. Raspberry Pi OS
-  trägt dort ab Werk den Erstbenutzer und eine Wayland-Sitzung ein. Was
-  tatsächlich gilt, verrät `sudo lightdm --show-config` – es nennt zu jedem
-  Wert die Quelle.
-* **`install -d -o nutzer a/b` setzt den Besitzer nur auf `b`.** Ein dabei neu
-  angelegtes `a` gehört weiter root. So gehörte `~/.config` root, Chromium
-  konnte sein Profil nicht anlegen und starb mit `--database is required` –
-  sichtbar war nur der Mauszeiger auf schwarzem Grund.
-
-Stirbt Chromium im Betrieb, startet die Sitzung ihn neu; die Wartezeit steigt
-bis auf 30 Sekunden. Ein dauerhaft kaputter Browser belegt so nicht die
-Maschine, eine vorübergehende Ursache heilt sich selbst.
+`lightdm` liest `/etc/lightdm/lightdm.conf` **zuletzt**; eine Datei in
+`lightdm.conf.d` wird davon überschrieben. Was tatsächlich gilt, verrät
+`sudo lightdm --show-config`.
 
 ### Betreuer-PIN
 
-Die Fotobox hat ab Werk **keine** PIN. Wer davorsteht, vergibt sie:
-fünfmal zügig den QR-Code antippen, dann das Ziffernfeld. Ab der ersten
-Vergabe kommt nur noch hinein, wer die bisherige PIN kennt.
+Ab Werk gibt es **keine** PIN. Man vergibt sie im Heimbetrieb unter
+**Einstellungen → Kiosk-Modus**, bevor die Box auf eine Feier geht; die
+Vorabprüfung beim Kiosk-Start warnt, wenn sie fehlt. Ohne PIN beendet den
+Kiosk nur ein Neustart.
 
-> Das gehört an den Aufbau, nicht auf den Abend. Bis die PIN vergeben ist,
-> könnte sie jeder vergeben, der davorsteht – anders ginge es nicht, denn ein
-> Geheimnis, das niemand kennt, sperrt auch den Aufbauenden aus.
-
-Die PIN liegt als Argon2-Ableitung in den Einstellungen, nie im Klartext. Nach
-drei Fehlversuchen sperrt die Eingabe für wachsende Zeit, gedeckelt bei 15
-Minuten; der Zähler gilt anwendungsweit, damit ein privates Fenster ihn nicht
-umgeht. Eine Freischaltung verfällt nach 30 Minuten, weil die Box
-unbeaufsichtigt steht.
+Die PIN liegt als Argon2-Ableitung in den Einstellungen. Nach drei
+Fehlversuchen sperrt die Eingabe für wachsende Zeit, gedeckelt bei 15
+Minuten. Eine Freischaltung verfällt nach zehn Minuten.
 
 ### Drucker
 
 Die CUPS-Warteschlange richtet `install.sh` selbst ein: `lpinfo` liefert das
-USB-Ziel, daraus folgt die Gutenprint-PPD. Sie wird gegen das Format
-`w288h432` geprüft, für das die Anwendung ihren Raster baut – sonst fiele der
-Fehler erst beim ersten Druckversuch auf. Der Name der Warteschlange landet als
-`EVENTPRINT_PRINTER` in `/etc/default/eventprint`.
-
-Findet das Skript keinen oder mehrere Drucker, richtet es **nichts** ein und
-sagt das. Raten wäre hier schlimmer als nichts zu tun.
+USB-Ziel, daraus folgt die Gutenprint-PPD. Findet das Skript keinen oder
+mehrere Drucker, richtet es **nichts** ein und sagt das.
 
 ## Tests
 
-Die Aufteilung folgt einer Regel: **Im Browser steht nur, was ein Browser
-beweisen muss.** Alles, was eine Aussage über Go-Werte ist, gehört in
-`go test` – dort kostet es Millisekunden statt einen Anwendungsstart.
-
-| Frage | Wo sie beantwortet wird |
-|---|---|
-| Erscheint die Oberfläche überhaupt? | Browser |
-| Sind alle Seiten über das Menü erreichbar? | Browser |
-| Funktioniert der Ablauf eines Abends im Zusammenspiel? | Browser |
-| Kommt eine Vorbelegung aus der Umgebung an? | Go |
-| Ist jede Berechtigung einer Rolle zugeteilt? | Go |
-| Was meldet eine unbekannte CUPS-Warteschlange? | Go |
-| Wird aus einem Import ein fertiger Druckauftrag? | Go |
-| Wie sieht ein Layout auf dem Papier aus? | Go, am Pixel |
-
-### Fachlichkeit (Go)
-
 ```bash
-go test ./...
+go test -tags nofacecrop ./...
 ```
 
-Die Tests des Renderers prüfen die Kernanforderung direkt am Pixel: exakte
-Papiergeometrie (1200x1800 @ 300 dpi), keine weißen Ecken beim formatfüllenden
-Layout, ringsum exakt gleich breiter Rahmen beim Passepartout, breiterer Steg
-unten beim Polaroid.
-
-Dazu kommen die Prüfungen, die früher nur der Browser abdeckte:
-
-* `app/photobox/cfg/perm_test.go` – jede deklarierte Berechtigung erreicht eine
-  Rolle. Ohne das bleibt eine Seite im Betrieb leer, und zwar erst dann, wenn
-  ein Gast davorsteht.
-* `app/photobox/cfg/defaults_test.go` – eine Vorbelegung aus der Umgebung
-  überschreibt nie eine getroffene Wahl, und eine abgeschaltete Automatik
-  springt beim nächsten Start nicht wieder an.
-* `app/photobox/cfg/flow_test.go` – der Weg vom Import über den Druck bis in
-  die Historie, beide Kontexte verdrahtet wie im Betrieb.
-* `app/printing/cups_printer_status_test.go` – was eine fehlende oder
-  angehaltene Warteschlange meldet, gegen ein vorgetäuschtes `lpstat`.
+* **Fachlichkeit:** jeder Anwendungsfall mit seinen Berechtigungen, gegen
+  vorgetäuschte Befehle (`lpstat`, `lsblk`, `udisksctl`, `nmcli`) und
+  nachgebildete Dienste (Upload-Dienst, Adobe).
+* **Renderer:** am Pixel – Papiergeometrie, gleichmäßiger
+  Passepartout-Rand, Passfotos in echter Größe, Filter, Beschriftung,
+  Datumsstempel, der Rückfall vom Polaroid zum Passepartout.
+* **Oberfläche:** mit `gifttest`, dem Test-Harness von gift, ohne Fenster und
+  ohne GPU: Heimbetrieb nach dem Start, Kiosk-Start, Gäste sehen nur die
+  Feier, PIN-Tür zur Betreuung, Einstellungen am Gerät
+  (`app/device/ui/ui_test.go`).
 
 Zum Ansehen der gerenderten Layouts:
 
 ```bash
 EVENTPRINT_TEST_OUTPUT=/tmp/tpl go test ./app/printing/
 ```
-
-### Oberfläche (Playwright)
-
-Nago ist eine Single-Page-Anwendung, die ihren gesamten Zustand über eine
-WebSocket-Verbindung bezieht. Ein HTTP-Abruf sagt darüber nichts – diese Tests
-steuern einen echten Browser.
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install playwright pytest
-.venv/bin/playwright install chromium
-
-.venv/bin/python -m pytest
-```
-
-Es sind bewusst nur vier Tests. Jeder startet die Anwendung in einem leeren
-Datenverzeichnis auf einem freien Port, denn Fotos und Druckaufträge bleiben
-gespeichert und die Tests hingen sonst voneinander ab. Ein Test kostet damit
-rund acht Sekunden, und das ist der Grund, warum hier nichts steht, was auch
-in Go stehen könnte.
-
-> **Stolperfalle:** Nago mountet die SPA nicht, wenn der User-Agent als Crawler
-> erkannt wird – der Bundle prüft ihn gegen eine Bot-Liste und ruft
-> `mount("#app")` gar nicht erst auf. Playwrights Standard-User-Agent enthält
-> `HeadlessChrome` und fällt in genau dieses Raster; die Seite bleibt dann
-> dauerhaft leer, ohne jede Fehlermeldung. `e2e/conftest.py` setzt deshalb
-> einen realistischen User-Agent.
->
-> Ebenfalls beachten: Die Menüeinträge des Scaffolds sind keine `<a>`-Elemente,
-> sondern klickbare Container. `get_by_role("link", …)` findet sie nicht.

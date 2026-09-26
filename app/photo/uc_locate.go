@@ -46,7 +46,7 @@ func NewLocate(repo Repository, originals Originals) Locate {
 			// auch dann nicht, wenn er ihre Kennung kennt. Im Kiosk kennt die
 			// Oberfläche nur Fotos der Feier; diese Prüfung ist der Riegel
 			// dafür, dass das nicht an der Oberfläche allein hängt.
-			if p.Private() && !subject.HasPermission(PermFindAll) {
+			if !visibleTo(subject, p) {
 				continue
 			}
 

@@ -23,6 +23,7 @@ import (
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/app/printing"
 	"github.com/torbenschinke/eventprint/requirements/fun/druck"
+	"github.com/torbenschinke/eventprint/requirements/fun/modus"
 )
 
 // fakePrinter ersetzt CUPS. Er nimmt jeden Auftrag an und meldet den zuvor
@@ -199,8 +200,15 @@ func newLibrary(t *testing.T, n int, w, h int) *library {
 			t.Fatal(err)
 		}
 
+		// Nur das erste Foto gehört zur Feier, die übrigen sind privat: So
+		// zeigt sich, dass ein Gast im Kiosk nur an die Fotos der Feier kommt.
+		var event photo.EventID
+		if i == 0 {
+			event = testEvent
+		}
+
 		lib.files[id] = photo.Location{
-			Photo: photo.Photo{ID: id, CreatedAt: time.Date(2026, 9, 5, 20, 15, 0, 0, time.Local)},
+			Photo: photo.Photo{ID: id, Event: event, CreatedAt: time.Date(2026, 9, 5, 20, 15, 0, 0, time.Local)},
 			Path:  path,
 		}
 		lib.ids = append(lib.ids, id)
@@ -209,8 +217,12 @@ func newLibrary(t *testing.T, n int, w, h int) *library {
 	return lib
 }
 
+// testEvent ist die Feier, zu der das erste Foto der [library] gehört.
+const testEvent photo.EventID = "sommerfest"
+
 // locate verhält sich wie der echte Anwendungsfall: Verschwundene Fotos
-// werden übergangen, nicht als Fehler gemeldet.
+// werden übergangen, nicht als Fehler gemeldet, und wer nicht die ganze
+// Mediathek sehen darf, bekommt private Fotos nicht heraus.
 func (l *library) locate(subject permission.Auditable, ids ...photo.ID) ([]photo.Location, error) {
 	if err := subject.Audit(photo.PermLocate); err != nil {
 		return nil, err
@@ -221,9 +233,16 @@ func (l *library) locate(subject permission.Auditable, ids ...photo.ID) ([]photo
 
 	var out []photo.Location
 	for _, id := range ids {
-		if loc, ok := l.files[id]; ok {
-			out = append(out, loc)
+		loc, ok := l.files[id]
+		if !ok {
+			continue
 		}
+
+		if loc.Photo.Private() && !subject.HasPermission(photo.PermFindAll) {
+			continue
+		}
+
+		out = append(out, loc)
 	}
 
 	return out, nil
@@ -773,6 +792,8 @@ func TestPrintSplitsBatchIntoSheets(t *testing.T) {
 	if printer.printedCount() != 4 {
 		t.Errorf("es wurden %d Blätter übergeben, erwartet 4", printer.printedCount())
 	}
+
+	spec.Verified(t, druck.RDruckGestaltung)
 }
 
 // TestPrintSheetsFollowTheFormat prüft die Aufteilung der übrigen Formate:
@@ -820,6 +841,8 @@ func TestPrintSheetsFollowTheFormat(t *testing.T) {
 			}
 		}
 	}
+
+	spec.Verified(t, druck.RDruckGestaltung)
 }
 
 // TestPrintLimitsCopies: Ein Tippfehler im Zähler soll kein ganzes
@@ -913,6 +936,8 @@ func TestPrintSimpleClampsCopies(t *testing.T) {
 			t.Errorf("Vorlage %q: Photos = %v", tpl, job.Photos)
 		}
 	}
+
+	spec.Verified(t, druck.RDruckKiosk)
 }
 
 // TestPrintSimpleWithoutLimitPrintsOnce: Fehlt die Einstellung ganz, ist
@@ -932,6 +957,81 @@ func TestPrintSimpleWithoutLimitPrintsOnce(t *testing.T) {
 	if len(batch.Jobs) != 1 {
 		t.Fatalf("ohne Grenze %d Aufträge, erwartet 1", len(batch.Jobs))
 	}
+
+	spec.Verified(t, druck.RDruckKiosk)
+}
+
+// kioskGuest hat genau die Rechte eines Gastes im Kiosk: drucken, Vorschau
+// ansehen, Fotos zum Drucken finden – aber nicht die ganze Mediathek sehen.
+type kioskGuest struct{}
+
+func (kioskGuest) allowed(p permission.ID) bool {
+	return p == printing.PermPrintSimple || p == printing.PermPreview || p == photo.PermLocate
+}
+
+func (g kioskGuest) Audit(p permission.ID) error {
+	if !g.allowed(p) {
+		return errDenied
+	}
+
+	return nil
+}
+
+func (g kioskGuest) HasPermission(p permission.ID) bool { return g.allowed(p) }
+
+// TestKioskGuestSeesOnlyPhotosOfTheEvent: Ein Gast kennt vielleicht die
+// Kennung eines privaten Fotos, etwa aus einem alten Link. Drucken oder in
+// der Vorschau ansehen darf er es trotzdem nicht; das Foto der Feier schon.
+func TestKioskGuestSeesOnlyPhotosOfTheEvent(t *testing.T) {
+	printer := &fakePrinter{outcome: succeeded}
+	release := printer.holding()
+	defer release()
+
+	f := newFixture(t, printer)
+	guest := kioskGuest{}
+
+	event, private := f.photos.ids[0], f.photos.ids[1]
+
+	if _, err := f.uc.PrintSimple(guest, printing.SimpleCmd{Photo: private, Template: printing.TemplateFull, Copies: 1}); err == nil {
+		t.Fatal("ein Gast hat ein privates Foto gedruckt")
+	}
+
+	if _, err := f.uc.PrintSimple(guest, printing.SimpleCmd{Photo: "gibt-es-nicht", Template: printing.TemplateFull, Copies: 1}); err == nil {
+		t.Fatal("ein Gast hat ein unbekanntes Foto gedruckt")
+	}
+
+	if _, err := f.uc.Preview(guest, printing.PreviewCmd{Photos: []photo.ID{private}, Layout: printing.TemplateFull.Layout(), MaxEdge: 200}); err == nil {
+		t.Fatal("ein Gast hat die Vorschau eines privaten Fotos gesehen")
+	}
+
+	jobs, err := f.uc.FindAllJobs(su)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for job, err := range jobs {
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Fatalf("für ein verborgenes Foto wurde ein Auftrag angelegt: %+v", job)
+	}
+
+	buf, err := f.uc.Preview(guest, printing.PreviewCmd{Photos: []photo.ID{event}, Layout: printing.TemplateFull.Layout(), MaxEdge: 200})
+	if err != nil || !bytes.HasPrefix(buf, []byte{0xFF, 0xD8}) {
+		t.Fatalf("Vorschau des Fotos der Feier: %d Bytes, %v", len(buf), err)
+	}
+
+	batch, err := f.uc.PrintSimple(guest, printing.SimpleCmd{Photo: event, Template: printing.TemplatePolaroid, Copies: 1})
+	if err != nil || len(batch.Jobs) != 1 {
+		t.Fatalf("Druck des Fotos der Feier: %+v, %v", batch, err)
+	}
+
+	if got := f.job(t, batch.Jobs[0]).Photos; !slices.Equal(got, []photo.ID{event}) {
+		t.Fatalf("Photos = %v, erwartet %v", got, []photo.ID{event})
+	}
+
+	spec.Verified(t, druck.RDruckKiosk, modus.RModusPrivat)
 }
 
 // TestCancelQueuedJobIsNeverPrinted: Wer sich vertippt hat, bricht ab,
@@ -987,7 +1087,7 @@ func TestCancelQueuedJobIsNeverPrinted(t *testing.T) {
 		t.Fatalf("Wiederholung nach Abbruch: Zustand %s (%s)", got.State, got.Message)
 	}
 
-	spec.Verified(t, druck.RDruckKeinNachdruck)
+	spec.Verified(t, druck.RDruckKeinNachdruck, druck.RDruckAbbruch)
 }
 
 // TestCancelWhilePrintingWithdrawsPrinterJob: Liegt das Blatt schon beim
@@ -1021,7 +1121,7 @@ func TestCancelWhilePrintingWithdrawsPrinterJob(t *testing.T) {
 		t.Fatalf("der Worker hat den Abbruch überschrieben: Zustand %s, Grund %q", got.State, got.Reason)
 	}
 
-	spec.Verified(t, druck.RDruckKeinNachdruck)
+	spec.Verified(t, druck.RDruckKeinNachdruck, druck.RDruckAbbruch)
 }
 
 // TestCancelIgnoresFinishedAndUnknownJobs: Ein Abbruch in einer veralteten

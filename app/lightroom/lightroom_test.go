@@ -12,9 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/worldiety/speclink/spec"
 	"go.wdy.de/nago/application/permission"
 
 	"github.com/torbenschinke/eventprint/app/lightroom"
+	"github.com/torbenschinke/eventprint/requirements/fun/quellen"
 )
 
 func setup(t *testing.T) (*fakeAdobe, *memStore, lightroom.UseCases) {
@@ -120,6 +122,8 @@ func TestConnectViaRelay(t *testing.T) {
 	if err != nil || !acc.Connected || acc.Name != "Torben Schinke" {
 		t.Fatalf("Account = %+v, err = %v", acc, err)
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroomAnmeldung)
 }
 
 func TestAwaitConnect(t *testing.T) {
@@ -353,6 +357,8 @@ func TestAlbumsFollowAllPagesAndSkipFolders(t *testing.T) {
 	if fake.lastAPIKey != testClientID {
 		t.Fatalf("X-API-Key = %q", fake.lastAPIKey)
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroom)
 }
 
 func TestAssets(t *testing.T) {
@@ -450,6 +456,8 @@ func TestAssets(t *testing.T) {
 			t.Fatal("Verweis auf einen fremden Rechner wurde übernommen")
 		}
 	})
+
+	spec.Verified(t, quellen.RQuellenLightroom)
 }
 
 func assetsEqual(a, b []lightroom.Asset) bool {
@@ -605,6 +613,8 @@ func TestOpenThumbnail(t *testing.T) {
 	if !errors.As(err, &httpErr) || httpErr.Status != http.StatusNotFound {
 		t.Fatalf("err = %v, erwartet HTTP 404", err)
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroom)
 }
 
 func TestDownload(t *testing.T) {
@@ -675,6 +685,8 @@ func TestDownload(t *testing.T) {
 			}
 		})
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroom)
 }
 
 func TestDisconnect(t *testing.T) {
@@ -709,6 +721,8 @@ func TestDisconnect(t *testing.T) {
 	if err := uc.Disconnect(&allow{}); err != nil {
 		t.Fatalf("zweites Trennen: %v", err)
 	}
+
+	spec.Verified(t, quellen.RQuellenLightroomAnmeldung)
 }
 
 // TestAccountStaysConnectedWhileOffline: Fehlt nur das Netz, darf die Box

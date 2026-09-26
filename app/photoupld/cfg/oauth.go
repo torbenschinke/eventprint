@@ -73,7 +73,7 @@ func ConfigureOAuth(api *hapi.API, mux Handlers, authenticate token.Authenticate
 			}),
 		).
 		Response(hapi.ToJSON[oauthRegistration, OAuthRegisterResponse](func(in oauthRegistration) (OAuthRegisterResponse, error) {
-			if err := uc.RegisterOAuth(in.Subject, in.State, in.AuthorizeURL); err != nil {
+			if err := uc.RegisterLogin(in.Subject, in.State, in.AuthorizeURL); err != nil {
 				return OAuthRegisterResponse{}, err
 			}
 
@@ -84,7 +84,7 @@ func ConfigureOAuth(api *hapi.API, mux Handlers, authenticate token.Authenticate
 	// Anwendungsfalls mit 400; die Box muss aber "gibt es nicht (mehr)" von
 	// einer vorübergehenden Störung unterscheiden, um die Anmeldung
 	// abzubrechen statt endlos weiterzufragen. Das verlangt ein 404.
-	mux.HandleMethod(http.MethodGet, OAuthAPIPath, collectOAuthHandler(authenticate, uc.CollectOAuth))
+	mux.HandleMethod(http.MethodGet, OAuthAPIPath, collectOAuthHandler(authenticate, uc.CollectLogin))
 	hapi.Doc(api, func(doc *oas.OpenAPI) {
 		if item, ok := doc.Paths[OAuthAPIPath]; ok && item != nil {
 			item.Get = &oas.Operation{
@@ -94,11 +94,11 @@ func ConfigureOAuth(api *hapi.API, mux Handlers, authenticate token.Authenticate
 		}
 	})
 
-	mux.HandleMethod(http.MethodGet, OAuthStartPath, startOAuthHandler(uc.StartOAuth))
-	mux.HandleMethod(http.MethodGet, OAuthCallbackPath, completeOAuthHandler(uc.CompleteOAuth))
+	mux.HandleMethod(http.MethodGet, OAuthStartPath, startOAuthHandler(uc.StartLogin))
+	mux.HandleMethod(http.MethodGet, OAuthCallbackPath, completeOAuthHandler(uc.CompleteLogin))
 }
 
-func collectOAuthHandler(authenticate token.AuthenticateSubject, collect upld.CollectOAuth) http.HandlerFunc {
+func collectOAuthHandler(authenticate token.AuthenticateSubject, collect upld.CollectLogin) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 
@@ -160,7 +160,7 @@ func bearerSubject(w http.ResponseWriter, r *http.Request, authenticate token.Au
 	return subject, true
 }
 
-func startOAuthHandler(start upld.StartOAuth) http.HandlerFunc {
+func startOAuthHandler(start upld.StartLogin) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		noLeaks(w)
 
@@ -174,7 +174,7 @@ func startOAuthHandler(start upld.StartOAuth) http.HandlerFunc {
 	}
 }
 
-func completeOAuthHandler(complete upld.CompleteOAuth) http.HandlerFunc {
+func completeOAuthHandler(complete upld.CompleteLogin) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		noLeaks(w)
 

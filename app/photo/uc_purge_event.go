@@ -26,13 +26,15 @@ func NewPurgeEvent(mutex *sync.Mutex, repo Repository, originals Originals) Purg
 			return 0, errors.New("ohne Feier gibt es nichts abzuschließen")
 		}
 
+		// Erst sperren, dann suchen: Ein Foto, das in diesem Augenblick noch
+		// zur Feier hereinkommt, soll nicht übrig bleiben.
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		victims, err := query(repo, Query{Scope: ScopeEvent, Event: event})
 		if err != nil {
 			return 0, err
 		}
-
-		mutex.Lock()
-		defer mutex.Unlock()
 
 		for _, p := range victims {
 			if err := originals.Remove(p.File); err != nil {

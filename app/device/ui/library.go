@@ -3,6 +3,7 @@ package uidevice
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/worldiety/gift"
 	"github.com/worldiety/gift/asset"
@@ -175,9 +176,12 @@ func (a *App) gallery(key string) *ui.Gallery {
 }
 
 // refill meldet, ob eine Galerie einen neuen Inhalt braucht, und merkt sich
-// die Fassung, die sie bekommt. Die Fassung enthält die Ressource selbst: Wer
-// den Bildschirm verlässt und wiederkommt, bekommt eine neue Ressource, deren
-// Zähler wieder bei null beginnt.
+// den Inhalt, den sie bekommt.
+//
+// Verglichen wird der Inhalt selbst und nicht, ob neu geladen wurde. Der
+// Kiosk und der Eingang laden im Takt nach; eine Galerie, die dabei jedes Mal
+// neu befüllt würde, bände alle Kacheln neu und ließe die Bilder flackern,
+// obwohl sich nichts geändert hat.
 func (a *App) refill(key string, version any) bool {
 	if a.filled == nil {
 		a.filled = map[string]any{}
@@ -227,10 +231,23 @@ func fillGallery(g *ui.Gallery, items []photo.Location) {
 	})
 }
 
-// squareGrid ordnet die Kacheln als quadratisches Raster an, wie die
-// Fotos-App eines Tablets.
-func squareGrid(minWidth float32) ui.GalleryLayout {
-	return ui.Masonry().MinColumnWidth(minWidth).Gap(u(6)).AspectClamp(1, 1)
+// brickRows legt die Fotos zeilenweise wie Ziegel: gleich hohe Reihen, jedes
+// Bild in seinem eigenen Seitenverhältnis. Ein quadratischer Ausschnitt
+// zeigte nicht, was tatsächlich auf dem Foto ist – und genau das will man vor
+// dem Druck sehen.
+func brickRows(rowHeight float32) ui.GalleryLayout {
+	return ui.Justified().RowHeight(rowHeight).Gap(u(6))
+}
+
+// locationKey fasst den Inhalt einer Liste für den Vergleich in refill.
+func locationKey(items []photo.Location) string {
+	var b strings.Builder
+	for _, it := range items {
+		b.WriteString(string(it.Photo.ID))
+		b.WriteByte('|')
+	}
+
+	return b.String()
 }
 
 func scopeTitle(scope photo.Scope) (string, string) {
@@ -282,7 +299,7 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 
 	g := a.gallery("photos")
 	list := res.Value()
-	if a.refill("photos", [2]any{res, res.Version()}) {
+	if res.Loaded() && a.refill("photos", locationKey(list.items)) {
 		fillGallery(g, list.items)
 		xgift.ShowSelection(g, toAssetIDs(a.selected))
 	}
@@ -305,7 +322,7 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 		grid = ui.VStack(muted(emptyHint(scope), 17).MaxLines(3)).Align(geom.Center).Flex(1).Padding(u(40))
 	} else {
 		grid = ui.ImageGallery(g).
-			Layout(squareGrid(u(170))).
+			Layout(brickRows(u(190))).
 			Tile(tileStyle()).
 			Overscan(u(400)).
 			PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Bottom: u(120)}).
