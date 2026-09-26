@@ -70,7 +70,7 @@ func (a *App) kioskScreen(ctx *gift.Context, st *states, k device.Kiosk) gift.Vi
 	} else {
 		grid = ui.ImageGallery(g).
 			Layout(brickRows(u(rowHeight())).Gap(u(pick(14, 8)))).
-			Tile(ui.TileStyle{Palette: []ui.Color{kioskCard, kioskRaised}}).
+			Tile(ui.TileStyle{CornerRadius: u(pick(16, 10)), Palette: []ui.Color{kioskCard, kioskRaised}}).
 			// Vorladen über den sichtbaren Rand hinaus, damit beim Wischen
 			// keine leeren Kacheln hereinkommen.
 			Overscan(u(400)).

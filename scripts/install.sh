@@ -82,6 +82,7 @@ PACKAGES=(
   polkitd                         # Freigabe dafuer, siehe deploy/polkit/
   udisks2                         # USB-Stick einhaengen (udisksctl), siehe deploy/polkit/
   libheif1                        # HEIC von iPhones, zur Laufzeit geladen (pkg/heif)
+  libturbojpeg0                   # schnelles JPEG, zur Laufzeit geladen (gift/asset/turbojpeg)
 
   # Kioskbetrieb auf dem Touchscreen
   xserver-xorg xinit              # X11; Wayland kann den Fernseher nicht spiegeln

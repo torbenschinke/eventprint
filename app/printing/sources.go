@@ -46,10 +46,18 @@ const previewCacheSize = 8
 func decodeOriginal(raw []byte, maxEdge int, scaled ScaledJPEGDecoder) (image.Image, error) {
 	o := orient.FromJPEG(raw)
 
+	// Mit libjpeg-turbo auch dann, wenn voll dekodiert wird: Der Druck
+	// braucht die ganze Auflösung, aber nicht die Geduld von image/jpeg.
+	// Scheitert der schnelle Weg – keine Bibliothek, CMYK-JPEG –, bleibt der
+	// langsame.
 	var img image.Image
-	if maxEdge > 0 && scaled != nil && isJPEG(raw) {
+	if scaled != nil && isJPEG(raw) {
 		if cfg, err := jpeg.DecodeConfig(bytes.NewReader(raw)); err == nil {
-			w, h := fitEdge(cfg.Width, cfg.Height, maxEdge)
+			w, h := cfg.Width, cfg.Height
+			if maxEdge > 0 {
+				w, h = fitEdge(w, h, maxEdge)
+			}
+
 			if i, err := scaled(raw, w, h); err == nil {
 				img = i
 			}

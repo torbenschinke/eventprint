@@ -111,6 +111,7 @@ fi
 missing=()
 command -v udisksctl >/dev/null 2>&1 || missing+=(udisks2)
 ldconfig -p 2>/dev/null | grep -q 'libheif\.so\.1' || missing+=(libheif1)
+ldconfig -p 2>/dev/null | grep -q 'libturbojpeg\.so\.0' || missing+=(libturbojpeg0)
 command -v xinput >/dev/null 2>&1 || missing+=(xinput)
 if [[ ${#missing[@]} -gt 0 ]]; then
   log "nachinstallieren: ${missing[*]}"

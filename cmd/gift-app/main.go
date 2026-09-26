@@ -25,6 +25,7 @@ import (
 	eb "github.com/hajimehoshi/ebiten/v2"
 	"github.com/worldiety/gift"
 	"github.com/worldiety/gift/asset"
+	"github.com/worldiety/gift/asset/turbojpeg"
 	backend "github.com/worldiety/gift/backend/ebiten"
 	"github.com/worldiety/gift/font/inter"
 	"github.com/worldiety/gift/ui"
@@ -66,6 +67,15 @@ func run() error {
 	// HEIC von iPhones: für Import und Druck über image.Decode, für die
 	// Vorschaubilder über die Decoderliste von gift. Ohne libheif auf dem
 	// Gerät bleibt es bei JPEG und PNG.
+	// Kamerafotos über libjpeg-turbo: für Vorschaubilder verkleinert schon
+	// beim Dekodieren, auf dem Pi mehrfach schneller als image/jpeg. Ohne
+	// die Bibliothek bleibt es bei image/jpeg.
+	if turbojpeg.Register() {
+		asset.RegisterDecoder(asset.MIMEJPEG, turbojpeg.Decoder{})
+	} else {
+		slog.Warn("libturbojpeg nicht gefunden, Vorschaubilder werden langsamer dekodiert")
+	}
+
 	if heif.Register() {
 		asset.RegisterDecoder("image/heic", heif.Decoder{})
 		asset.RegisterDecoder("image/heif", heif.Decoder{})
@@ -122,6 +132,11 @@ func run() error {
 		// Eine Box, die den Abend über wartet, soll nicht heiß werden.
 		IdleTPS:    10,
 		IdleFrames: 120,
+
+		// Nur zeichnen, wenn sich etwas ändert. Ohne das zeichnet die Box
+		// auch im Leerlauf sechzigmal in der Sekunde das ganze Bild, und im
+		// geschlossenen Gehäuse wird der Pi heiß.
+		DrawOnDemand: os.Getenv("EVENTPRINT_DRAW_ALWAYS") == "",
 		OnUpdate: func() error {
 			if ctx.Err() != nil {
 				return backend.Terminate

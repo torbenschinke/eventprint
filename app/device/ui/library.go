@@ -208,9 +208,8 @@ func (a *App) refill(key string, version any) bool {
 // tileStyle ist das Aussehen einer Kachel.
 func tileStyle() ui.TileStyle {
 	return ui.TileStyle{
-		// Eckig: gift schneidet Bilder nur rechteckig zu. Runde Platzhalter
-		// und Auswahlrahmen um eckige Fotos sähen falsch aus.
-		CornerRadius: 0,
+		// Foto, Platzhalter und Auswahlrahmen teilen sich die Rundung.
+		CornerRadius: u(6),
 		Palette:      []ui.Color{tileA, tileB},
 		Error:        tileError,
 		Selected:     ui.Border{Width: u(5), Color: blue},

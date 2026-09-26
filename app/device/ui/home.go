@@ -432,6 +432,7 @@ func thumb(path string, edge float32) ui.ImageView {
 	return ui.Image(asset.File(path)).
 		Fit(ui.FitCover).
 		Frame(edge, edge).
+		CornerRadius(edge / 12).
 		Clip(true).
 		Placeholder(ui.Fade(ui.ColorLabel, 0.08))
 }

@@ -300,6 +300,20 @@ Zum Ausprobieren am Schreibtisch:
 go run -tags nofacecrop ./cmd/gift-app -window -size 800x480
 ```
 
+### Schnelles JPEG und Leerlauf
+
+* Kamerafotos werden über libjpeg-turbo dekodiert (`libturbojpeg0`, zur
+  Laufzeit geladen, kein cgo), für Vorschaubilder schon beim Dekodieren
+  verkleinert. Ohne die Bibliothek bleibt es bei Gos image/jpeg – richtig,
+  nur deutlich langsamer; das Protokoll meldet es beim Start.
+* Die Druckvorschau rechnet mit auf 1600 Pixel verkleinerten Originalen und
+  behält sie samt erkannten Gesichtern, solange man im Druck-Studio
+  gestaltet. Gedruckt wird aus der vollen Auflösung.
+* Die Oberfläche zeichnet nur, wenn sich etwas ändert, und hält sonst das
+  letzte Bild (gift `DrawOnDemand`). Im Leerlauf sind das wenige Bilder in
+  der Minute statt sechzig in der Sekunde; der Pi bleibt kühl.
+  `EVENTPRINT_DRAW_ALWAYS=1` schaltet zum Vergleich auf ständiges Zeichnen.
+
 ### HEIC
 
 iPhones speichern HEIC. `pkg/heif` lädt dafür die Systembibliothek libheif

@@ -3,6 +3,7 @@ package cfgdevice
 import (
 	"context"
 	"fmt"
+	"image"
 	"log/slog"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,8 @@ import (
 	"go.wdy.de/nago/application/permission"
 	"go.wdy.de/nago/pkg/blob/fs"
 	nagojson "go.wdy.de/nago/pkg/data/json"
+
+	"github.com/worldiety/gift/asset/turbojpeg"
 
 	"github.com/torbenschinke/eventprint/app/camera"
 	"github.com/torbenschinke/eventprint/app/device"
@@ -122,6 +125,9 @@ func Start(ctx context.Context, opts Options) (*Device, error) {
 		Repository: nagojson.NewSloppyJSONRepository[printing.Job, printing.JobID](jobStore),
 		Printer:    printer,
 		Locate:     photos.Locate,
+		DecodeJPEGScaled: func(raw []byte, minW, minH int) (image.Image, error) {
+			return turbojpeg.DecodeScaled(raw, minW, minH)
+		},
 		RenderOptions: func() printing.RenderOptions {
 			return printing.RenderOptions{AutoCrop: loadSettings().FaceCrop, DetectFaces: facecrop.Detect}
 		},
