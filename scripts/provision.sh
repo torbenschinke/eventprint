@@ -91,12 +91,17 @@ done
 # udisks2 haengt USB-Sticks ein, auf die die Fotos einer Feier kopiert werden.
 # Aeltere Installationen haben es nicht. Ohne Netz gelingt die Nachinstallation
 # nicht; dann eben beim naechsten Start – die Box startet trotzdem.
-if ! command -v udisksctl >/dev/null 2>&1; then
-  log "udisks2 nachinstallieren"
-  if timeout 300 env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends udisks2 >/dev/null 2>&1; then
+#
+# Dasselbe gilt fuer libheif, ohne die HEIC-Fotos von iPhones abgelehnt werden.
+missing=()
+command -v udisksctl >/dev/null 2>&1 || missing+=(udisks2)
+ldconfig -p 2>/dev/null | grep -q 'libheif\.so\.1' || missing+=(libheif1)
+if [[ ${#missing[@]} -gt 0 ]]; then
+  log "nachinstallieren: ${missing[*]}"
+  if timeout 300 env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}" >/dev/null 2>&1; then
     changed=1
   else
-    log "udisks2 liess sich nicht installieren; USB-Export bleibt bis dahin gesperrt"
+    log "${missing[*]} liess sich nicht installieren; USB-Export bzw. HEIC bleiben bis dahin gesperrt"
   fi
 fi
 

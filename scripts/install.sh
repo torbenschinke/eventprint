@@ -81,6 +81,7 @@ PACKAGES=(
   network-manager                 # Funknetz vor Ort wechseln (nmcli)
   polkitd                         # Freigabe dafuer, siehe deploy/polkit/
   udisks2                         # USB-Stick einhaengen (udisksctl), siehe deploy/polkit/
+  libheif1                        # HEIC von iPhones, zur Laufzeit geladen (pkg/heif)
 
   # Kioskbetrieb auf dem Touchscreen
   xserver-xorg xinit              # X11; Wayland kann den Fernseher nicht spiegeln
