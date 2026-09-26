@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 38 | 100% |
-| Normative requirements covered | 37 | 100% |
-| … claimed by a test | 37 | 100% |
-| … demonstrated by a run | 37 | 100% |
-| … read by a person | 37 | 0% |
+| Source segments accounted for | 39 | 100% |
+| Normative requirements covered | 38 | 100% |
+| … claimed by a test | 38 | 100% |
+| … demonstrated by a run | 38 | 100% |
+| … read by a person | 38 | 0% |
 
 ## Gaps
 
@@ -58,6 +58,7 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 - R-FOTO-HISTORIE
 - R-FOTO-IMPORT
 - R-FOTO-LOESCHEN
+- R-MODUS-ANZEIGE
 - R-MODUS-BETREUUNG
 - R-MODUS-EINSTELLUNGEN
 - R-MODUS-HEIM
@@ -81,9 +82,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 37 |  |
-| … a test claims | 37 | 100% |
-| … a run demonstrated | 37 | 100% |
+| Normative requirements | 38 |  |
+| … a test claims | 38 | 100% |
+| … a run demonstrated | 38 | 100% |
 
 ### How much of the code a run went through
 
@@ -97,7 +98,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | `requirements/_sources/druck.md` | markdown | 11 | 11 | 0 | 0 |
 | `requirements/_sources/entscheidungen.md` | markdown | 2 | 2 | 0 | 0 |
 | `requirements/_sources/foto.md` | markdown | 6 | 6 | 0 | 0 |
-| `requirements/_sources/modus.md` | markdown | 5 | 5 | 0 | 0 |
+| `requirements/_sources/modus.md` | markdown | 6 | 6 | 0 | 0 |
 | `requirements/_sources/netz.md` | markdown | 4 | 4 | 0 | 0 |
 | `requirements/_sources/quellen.md` | markdown | 2 | 2 | 0 | 0 |
 | `requirements/_sources/upload.md` | markdown | 5 | 5 | 0 | 0 |
@@ -124,7 +125,7 @@ Built from `cmd/gift-app`.
 
 **Appears to accept** — inferred from the code rather than declared, so treat it as a starting point and not as a contract.
 
-Flags: `-window`
+Flags: `-size`, `-window`
 
 ### photoupld
 
@@ -923,6 +924,7 @@ Every requirement that was read, and how far each one has got. A mark states wha
 | [R-FOTO-HISTORIE](#req-R-FOTO-HISTORIE) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-IMPORT](#req-R-FOTO-IMPORT) | functional | business | normative | yes | yes | yes | no |
 | [R-FOTO-LOESCHEN](#req-R-FOTO-LOESCHEN) | functional | business | normative | yes | yes | yes | no |
+| [R-MODUS-ANZEIGE](#req-R-MODUS-ANZEIGE) | functional | business | normative | yes | yes | yes | no |
 | [R-MODUS-BETREUUNG](#req-R-MODUS-BETREUUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-MODUS-EINSTELLUNGEN](#req-R-MODUS-EINSTELLUNGEN) | functional | business | normative | yes | yes | yes | no |
 | [R-MODUS-HEIM](#req-R-MODUS-HEIM) | functional | business | normative | yes | yes | yes | no |
@@ -1279,6 +1281,18 @@ _functional, business, normative._
   - `github.com/torbenschinke/eventprint/app/photo.Delete`
 - **Demonstrated by** TestDeleteRemovesMetadataAndOriginal
 
+<a id="req-R-MODUS-ANZEIGE"></a>
+### R-MODUS-ANZEIGE — Bedienbar auf jedem Touchscreen
+
+Die Oberfläche MUSS auf Touchscreens von 800 × 480 bis Full-HD vollständig bedienbar sein und sich nach Auflösung und Größe des Panels bemessen; das Erscheinungsbild MUSS sich hell, dunkel oder nach der Tageszeit wählen lassen.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/modus.md#bildschirme
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/device.Appearance`
+- **Demonstrated by** TestSmallPanelIsUsable
+
 <a id="req-R-MODUS-BETREUUNG"></a>
 ### R-MODUS-BETREUUNG — Betreuung im Kiosk nur mit PIN
 
@@ -1551,6 +1565,7 @@ What people wrote, and what became of each part of it.
 | Feier und Mediathek getrennt | R-MODUS-PRIVAT |
 | Betreuung im Kiosk | R-MODUS-BETREUUNG |
 | Einstellungen am Gerät | R-MODUS-EINSTELLUNGEN |
+| Bildschirme | R-MODUS-ANZEIGE |
 
 ### requirements/\_sources/netz.md
 

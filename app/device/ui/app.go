@@ -1,6 +1,7 @@
 package uidevice
 
 import (
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -73,6 +74,16 @@ type App struct {
 
 	tickOnce sync.Once
 	st       *states
+
+	// screen ist die Bemessung, nach der zuletzt aufgebaut wurde.
+	screen display
+
+	// dark ist das Erscheinungsbild, in dem zuletzt aufgebaut wurde.
+	dark bool
+
+	// nav merkt sich, woher der aktuelle Bildschirm kam, damit der Wechsel
+	// als Bewegung in die richtige Richtung erscheint.
+	nav struct{ current, previous Screen }
 }
 
 // states sind die Zustände, die mehrere Bildschirme lesen. Sie entstehen in
@@ -105,6 +116,9 @@ type states struct {
 	kioskCopies   *gift.State[int]
 
 	wifiSSID *gift.State[string]
+
+	// fit zählt die Wechsel der Bemessung; jeder baut alles neu auf.
+	fit *gift.State[int]
 }
 
 // New erzeugt die Oberfläche über dem verdrahteten Gerät.
@@ -122,19 +136,107 @@ func New(dev *cfgdevice.Device, gapp *gift.App) *App {
 // selbst anlegt.
 func (a *App) SetApp(gapp *gift.App) { a.gapp = gapp }
 
-// ApplyTheme setzt das Erscheinungsbild passend zur Betriebsart.
+// SetScale gibt die Vergrößerung fest vor, statt sie aus dem Bildschirm zu
+// bemessen. Für Bildschirme, die ihre Größe falsch melden.
+func (a *App) SetScale(s float32) {
+	if s > 0 {
+		a.screen.fixed = s
+		a.apply(a.screen)
+	}
+}
+
+// SetPhysicalSize nennt die Größe des Panels in Millimetern, wie sie xrandr
+// meldet. Ohne sie wird nach der Auflösung bemessen.
+func (a *App) SetPhysicalSize(mm geom.Size) {
+	d := a.screen
+	d.physical = mm
+	a.apply(d)
+}
+
+// Fit bemisst die Oberfläche für die Fläche des Fensters. Die Anwendung ruft
+// es in jedem Takt; nur eine tatsächliche Änderung baut neu auf, und die
+// passiert an der Box genau einmal, wenn das Vollbild steht.
+//
+// density ist die Dichte, mit der gift gerade zeichnet.
+func (a *App) Fit(viewport geom.Size, density float32) {
+	d := a.screen
+	d.viewport, d.density = viewport, density
+	a.apply(d)
+}
+
+func (a *App) apply(d display) {
+	s, c := d.scale(), d.compact()
+	g := design
+	if d.viewport.W > 0 && d.viewport.H > 0 {
+		g = geom.Sz(d.viewport.W/s, d.viewport.H/s)
+	}
+
+	changed := s != scale || c != compact || g != design
+	a.screen = d
+	scale, compact, design = s, c, g
+
+	if !changed {
+		return
+	}
+
+	slog.Info("display", "fit", d.String())
+	if a.st == nil {
+		return
+	}
+
+	// Galerien und ihre Füllung hängen an Kachelgrößen in Bildschirmpunkten.
+	a.galleries = map[string]*ui.Gallery{}
+	a.filled = map[string]any{}
+	a.st.fit.Set(a.st.fit.Get() + 1)
+}
+
+// ApplyTheme setzt das Erscheinungsbild passend zur Betriebsart und zur
+// Einstellung hell, dunkel oder automatisch.
 func (a *App) ApplyTheme() {
+	a.dark = a.wantDark()
+	setPalette(a.dark)
+
 	if a.gapp == nil {
 		return
 	}
 
 	k, _ := a.dev.Device.CurrentKiosk(a.dev.Subject())
 	if !k.Active() {
-		ui.SetTheme(a.gapp, homeTheme())
+		ui.SetTheme(a.gapp, homeTheme(a.dark))
 		return
 	}
 
 	ui.SetTheme(a.gapp, kioskTheme(parseHex(k.Accent, amber)))
+}
+
+// wantDark meldet, ob gerade dunkel gezeichnet werden soll. Der Kiosk ist
+// immer dunkel: Feiern sind abends, und ein heller Bildschirm blendet im
+// gedämpften Licht.
+func (a *App) wantDark() bool {
+	k, _ := a.dev.Device.CurrentKiosk(sys())
+	if k.Active() {
+		return true
+	}
+
+	s, err := a.dev.Device.LoadSettings(sys())
+	if err != nil {
+		return false
+	}
+
+	return s.Appearance.Dark(time.Now())
+}
+
+// refreshTheme wechselt das Erscheinungsbild, wenn die Einstellung oder –
+// bei "automatisch" – die Uhrzeit es verlangt. Der Takt ruft es regelmäßig.
+func (a *App) refreshTheme() {
+	if a.wantDark() == a.dark || a.st == nil {
+		return
+	}
+
+	a.ApplyTheme()
+	a.galleries = map[string]*ui.Gallery{}
+	a.filled = map[string]any{}
+	a.st.fit.Set(a.st.fit.Get() + 1)
 }
 
 // Root ist die Wurzel des Bildschirms.
@@ -161,12 +263,14 @@ func (a *App) Root(ctx *gift.Context) gift.View {
 		kioskTemplate: ctx.State("kioskTemplate", printing.TemplatePolaroid),
 		kioskCopies:   ctx.State("kioskCopies", 1),
 		wifiSSID:      ctx.State("wifiSSID", ""),
+		fit:           ctx.State("fit", 0),
 	}
 	a.st = st
 	a.startTicker(st)
 
 	ctx.Read(st.mode)
 	ctx.Read(st.sheet)
+	fit := ctx.Read(st.fit)
 
 	k, err := a.dev.Device.CurrentKiosk(a.dev.Subject())
 	if err != nil {
@@ -175,9 +279,9 @@ func (a *App) Root(ctx *gift.Context) gift.View {
 
 	var body gift.View
 	if k.Active() {
-		body = gift.Component("kiosk", func(ctx *gift.Context) gift.View { return a.kioskScreen(ctx, st, k) })
+		body = gift.Component(fmt.Sprint("kiosk@", fit), func(ctx *gift.Context) gift.View { return a.kioskScreen(ctx, st, k) })
 	} else {
-		body = gift.Component("home", func(ctx *gift.Context) gift.View { return a.homeShell(ctx, st) })
+		body = gift.Component(fmt.Sprint("home@", fit), func(ctx *gift.Context) gift.View { return a.homeShell(ctx, st) })
 	}
 
 	return ui.Window(
@@ -200,7 +304,10 @@ func (a *App) startTicker(st *states) {
 			t := time.NewTicker(2 * time.Second)
 			defer t.Stop()
 			for range t.C {
-				xgift.Post(func() { st.tick.Set(st.tick.Get() + 1) })
+				xgift.Post(func() {
+					st.tick.Set(st.tick.Get() + 1)
+					a.refreshTheme()
+				})
 			}
 		}()
 	})
@@ -213,6 +320,7 @@ func (a *App) modeChanged() {
 	a.filled = map[string]any{}
 	a.st.sheet.Set(SheetNone)
 	a.st.screen.Set(ScreenHome)
+	a.nav.current, a.nav.previous = ScreenHome, ScreenHome
 	a.st.pin.Set("")
 	a.ApplyTheme()
 	a.st.mode.Set(a.st.mode.Get() + 1)

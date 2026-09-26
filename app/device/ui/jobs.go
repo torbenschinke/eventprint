@@ -278,7 +278,7 @@ func (a *App) printingSheet(ctx *gift.Context, st *states) gift.View {
 
 	actions := []gift.View{}
 	if open > 0 {
-		actions = append(actions, filled("Abbrechen", ui.RGB(0xFD, 0xEC, 0xEC), red, func() {
+		actions = append(actions, filled("Abbrechen", dangerWash, red, func() {
 			var ids []printing.JobID
 			for _, j := range d.jobs {
 				if !j.State.Done() {
@@ -326,7 +326,7 @@ func (a *App) printingSheet(ctx *gift.Context, st *states) gift.View {
 		children = append(children, ui.HStack(
 			ui.Icon(outline.ExclamationCircle).Size(u(24)).Foreground(orange),
 			body(problem+" – neues Papier und Farbband einlegen, dann weiter drucken. Kein Blatt wird doppelt gedruckt.", 15).MaxLines(4).Flex(1),
-		).Gap(u(12)).Padding(u(14)).Background(ui.RGB(0xFF, 0xF1, 0xE0)).CornerRadius(u(14)))
+		).Gap(u(12)).Padding(u(14)).Background(notice).CornerRadius(u(14)))
 	}
 
 	children = append(children,

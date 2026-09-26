@@ -50,7 +50,7 @@ func (a *App) studioScreen(ctx *gift.Context, st *states) gift.View {
 			st.selection.Set(st.selection.Get() + 1)
 			st.screen.Set(ScreenHome)
 		}),
-	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(16), Right: u(16)}).MinHeight(u(56)).
+	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(pick(16, 8)), Right: u(pick(16, 8))}).MinHeight(u(studioHeader())).
 		Background(ui.ColorSurface)
 
 	return ui.VStack(
@@ -59,9 +59,39 @@ func (a *App) studioScreen(ctx *gift.Context, st *states) gift.View {
 		xgift.HStretch(
 			a.filmstrip(ctx, st, res.Value().items),
 			grow(gift.Component("preview", func(ctx *gift.Context) gift.View { return a.studioPreview(ctx, st) })),
-			xgift.Fill(gift.Component("inspector", func(ctx *gift.Context) gift.View { return a.inspector(ctx, st, sheets) })).Width(u(380)),
+			xgift.Fill(gift.Component("inspector", func(ctx *gift.Context) gift.View { return a.inspector(ctx, st, sheets) })).Width(u(inspectorWidth())),
 		).Flex(1),
 	).Flex(1)
+}
+
+// Die Maße des Druck-Studios. Die Vorschau bekommt, was Filmstreifen und
+// Gestaltung übrig lassen.
+func studioHeader() float32   { return pick(56, 44) }
+func filmstripWidth() float32 { return pick(124, 84) }
+func inspectorWidth() float32 { return pick(380, clamp(vw()*0.4, 280, 340)) }
+
+// statusBarHeight ist die Höhe der Statusleiste über allen Bildschirmen.
+func statusBarHeight() float32 { return pick(32, 28) }
+
+// paperSize ist die Größe des Vorschaublattes im Verhältnis 2 : 3, so groß
+// wie der Platz zwischen Filmstreifen und Gestaltung es erlaubt.
+func paperSize(landscape bool) (float32, float32) {
+	availW := vw() - filmstripWidth() - inspectorWidth() - 2*pick(32, 16)
+	availH := vh() - statusBarHeight() - studioHeader() - pick(80, 52)
+
+	long := min(float32(450), max(availH, 120))
+	if landscape {
+		long = min(float32(450), availW, availH*1.5)
+	} else {
+		long = min(long, availW*1.5)
+	}
+
+	short := long * 2 / 3
+	if landscape {
+		return long, short
+	}
+
+	return short, long
 }
 
 func plural(n int, one, many string) string {
@@ -79,7 +109,7 @@ func (a *App) filmstrip(ctx *gift.Context, st *states, items []photo.Location) g
 
 	cells := []gift.View{}
 	for i, it := range items {
-		img := thumb(it.Path, u(88))
+		img := thumb(it.Path, u(filmstripWidth()-36))
 		if i == active {
 			img = img.Border(ui.Border{Width: u(4), Color: blue})
 		}
@@ -92,10 +122,10 @@ func (a *App) filmstrip(ctx *gift.Context, st *states, items []photo.Location) g
 	cells = append(cells, iconButton(outline.Plus, "Fotos hinzufügen", ui.ColorAccent, func() {
 		a.selected = append([]photo.ID(nil), a.studio...)
 		a.openLibraryKeep(photo.ScopeAll)
-	}).Frame(u(88), u(88)))
+	}).Frame(u(filmstripWidth()-36), u(filmstripWidth()-36)))
 
-	return xgift.Fill(ui.VScroll(ui.VStack(cells...).Gap(u(12)).Align(geom.Top).Padding(u(16))).
-		Background(ui.ColorBackground)).Width(u(124))
+	return xgift.Fill(ui.VScroll(ui.VStack(cells...).Gap(u(pick(12, 8))).Align(geom.Top).Padding(u(pick(16, 10)))).
+		Background(ui.ColorBackground)).Width(u(filmstripWidth()))
 }
 
 // openLibraryKeep öffnet die Mediathek, ohne die Auswahl zu verwerfen.
@@ -125,12 +155,14 @@ func (a *App) studioPreview(ctx *gift.Context, st *states) gift.View {
 		return a.dev.Printing.Preview(a.dev.Subject(), printing.PreviewCmd{Photos: ids, Layout: layout, MaxEdge: int(u(900))})
 	})
 
-	w, h := u(300), u(450)
+	landscape := false
 	if len(res.Value()) > 0 && res.Loaded() {
-		if pw, ph := a.studioDims(ids); previewLandscape(layout, pw, ph) {
-			w, h = h, w
-		}
+		pw, ph := a.studioDims(ids)
+		landscape = previewLandscape(layout, pw, ph)
 	}
+
+	pw, ph := paperSize(landscape)
+	w, h := u(pw), u(ph)
 
 	var paper gift.View = ui.Box().Frame(w, h).Background(white)
 	if data := res.Value(); len(data) > 0 {
@@ -151,9 +183,11 @@ func (a *App) studioPreview(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return ui.VStack(
-		muted(label, 14),
-		ui.VStack(paper).Shadow(ui.Shadow{Blur: u(36), OffsetY: u(14), Color: ui.RGBA(0, 0, 0, 70)}),
-	).Gap(u(16)).Align(geom.Center).Flex(1).Background(ui.RGB(0xE9, 0xE9, 0xEE))
+		fill(),
+		muted(label, pick(14, 12)),
+		ui.VStack(paper).Shadow(ui.Shadow{Blur: u(pick(36, 20)), OffsetY: u(pick(14, 8)), Color: ui.RGBA(0, 0, 0, 70)}),
+		fill(),
+	).Gap(u(pick(16, 8))).Align(geom.Center).Flex(1).Background(canvas)
 }
 
 // studioDims liefert die Maße des ersten Fotos eines Blattes.
@@ -211,25 +245,40 @@ func (a *App) inspector(ctx *gift.Context, st *states, sheets int) gift.View {
 
 	printLabel := fmt.Sprintf("%d Blatt drucken", sheets)
 
-	return ui.VStack(
+	stepper := xgift.Stepper(copies, 1, printing.MaxCopies, u(16), st.copies.Set)
+	finishes := ui.SegmentedControl(finish, []string{"Glanz", "Matt"}, func(i int) {
+		set(func(l *printing.Layout) {
+			l.Finish = printing.FinishGlossy
+			if i == 1 {
+				l.Finish = printing.FinishMatte
+			}
+		})
+	}).FontSize(u(14)).Frame(u(pick(170, 130)), u(36))
+
+	rows := []gift.View{
 		ui.SegmentedControl(tab, []string{"Format", "Design", "Bild", "Text"}, st.studioTab.Set).
-			FontSize(u(15)).Frame(geom.Unbounded(), u(40)).Key("tabs"),
+			FontSize(u(pick(15, 14))).Frame(geom.Unbounded(), u(pick(40, 36))).Key("tabs"),
 		ui.VScroll(content).Flex(1),
 		xgift.Hairline(),
-		ui.HStack(body("Anzahl je Blatt", 15).Flex(1), xgift.Stepper(copies, 1, printing.MaxCopies, u(16), st.copies.Set)).Align(geom.Center),
-		ui.HStack(body("Oberfläche", 15).Flex(1),
-			ui.SegmentedControl(finish, []string{"Glanz", "Matt"}, func(i int) {
-				set(func(l *printing.Layout) {
-					l.Finish = printing.FinishGlossy
-					if i == 1 {
-						l.Finish = printing.FinishMatte
-					}
-				})
-			}).FontSize(u(14)).Frame(u(170), u(36)),
-		).Align(geom.Center),
-		xgift.Fill(primary(printLabel, func() { a.print(st) })).Height(u(54)),
-		muted(fmt.Sprintf("Danach noch etwa %d Blatt im Drucker", max(0, paper-sheets)), 13).Align(ui.AlignCenter),
-	).Gap(u(12)).Padding(u(16)).Background(ui.ColorSurface)
+	}
+
+	if compact {
+		// Anzahl und Oberfläche teilen sich eine Zeile; die Beschriftungen
+		// stecken in den Bedienelementen selbst.
+		rows = append(rows,
+			ui.HStack(stepper, fill(), finishes).Align(geom.Center),
+			xgift.Fill(primary(printLabel, func() { a.print(st) })).Height(u(46)),
+		)
+	} else {
+		rows = append(rows,
+			ui.HStack(body("Anzahl je Blatt", 15).Flex(1), stepper).Align(geom.Center),
+			ui.HStack(body("Oberfläche", 15).Flex(1), finishes).Align(geom.Center),
+			xgift.Fill(primary(printLabel, func() { a.print(st) })).Height(u(54)),
+			muted(fmt.Sprintf("Danach noch etwa %d Blatt im Drucker", max(0, paper-sheets)), 13).Align(ui.AlignCenter),
+		)
+	}
+
+	return ui.VStack(rows...).Gap(u(pick(12, 8))).Padding(u(pick(16, 10))).Background(ui.ColorSurface)
 }
 
 // print gibt den Druckvorgang auf und zeigt den Fortschritt.
@@ -253,19 +302,19 @@ func choiceCard(name, hint string, selected bool, fn func()) gift.View {
 	face := ui.ColorSurface
 	if selected {
 		border = ui.Border{Width: u(2), Color: blue}
-		face = ui.RGB(0xEE, 0xF4, 0xFD)
+		face = blueWash
 	}
 
 	style := ui.ButtonStyle{Background: face, Border: border, CornerRadius: u(14)}
 
 	return ui.Button(ui.VStack(
-		title(name, 15),
-		muted(hint, 12),
+		title(name, pick(15, 14)).MaxLines(1),
+		muted(hint, 12).MaxLines(1),
 	).Gap(u(2)).Align(geom.Leading), fn).
 		Style(style).HoverStyle(style).
 		PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.15), Border: border, CornerRadius: u(14)}).
-		PaddingInsets(geom.Insets{Left: u(14), Right: u(14), Top: u(12), Bottom: u(12)}).
-		MinHeight(u(72)).
+		PaddingInsets(geom.Insets{Left: u(pick(14, 10)), Right: u(pick(14, 10)), Top: u(pick(12, 8)), Bottom: u(pick(12, 8))}).
+		MinHeight(u(pick(72, 58))).
 		Align(geom.Leading)
 }
 

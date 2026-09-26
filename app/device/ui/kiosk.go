@@ -69,7 +69,7 @@ func (a *App) kioskScreen(ctx *gift.Context, st *states, k device.Kiosk) gift.Vi
 		).Gap(u(16)).Align(geom.Center).Flex(1)
 	} else {
 		grid = ui.ImageGallery(g).
-			Layout(brickRows(u(170)).Gap(u(14))).
+			Layout(brickRows(u(rowHeight())).Gap(u(pick(14, 8)))).
 			Tile(ui.TileStyle{CornerRadius: u(16), Palette: []ui.Color{kioskCard, kioskRaised}}).
 			OnSelect(func(id asset.ID) {
 				xgift.ShowSelection(g, nil)
@@ -86,15 +86,15 @@ func (a *App) kioskScreen(ctx *gift.Context, st *states, k device.Kiosk) gift.Vi
 		gift.Component("statusbar", func(ctx *gift.Context) gift.View { return a.statusBar(ctx, st, true, "Kiosk") }),
 		ui.HStack(
 			ui.VStack(
-				title(k.Title, 46).Foreground(white).MaxLines(1),
-				body("Tippe auf ein Foto, um es zu drucken", 20).Foreground(kioskMuted),
-			).Gap(u(6)).Flex(1),
+				title(k.Title, pick(46, 28)).Foreground(white).MaxLines(1),
+				body("Tippe auf ein Foto, um es zu drucken", pick(20, 15)).Foreground(kioskMuted),
+			).Gap(u(pick(6, 2))).Flex(1),
 			queue,
-		).Gap(u(16)).Align(geom.BottomLeading).PaddingInsets(geom.Insets{Top: u(18), Left: u(40), Right: u(40), Bottom: u(20)}),
+		).Gap(u(16)).Align(geom.BottomLeading).PaddingInsets(geom.Insets{Top: u(pick(18, 6)), Left: u(gutter()), Right: u(gutter()), Bottom: u(pick(20, 10))}),
 		ui.VStack(xgift.HStretch(
-			xgift.Fill(a.kioskInvite(d)).Width(u(360)),
+			xgift.Fill(a.kioskInvite(d)).Width(u(inviteWidth())),
 			grow(grid),
-		).Gap(u(32)).Flex(1)).PaddingInsets(geom.Insets{Left: u(40), Right: u(40), Bottom: u(32)}).Flex(1),
+		).Gap(u(pick(32, 14))).Flex(1)).PaddingInsets(geom.Insets{Left: u(gutter()), Right: u(gutter()), Bottom: u(pick(32, 12))}).Flex(1),
 	).Background(kioskBg).Flex(1)
 }
 
@@ -158,14 +158,18 @@ func (a *App) loadKiosk(k device.Kiosk) (kioskData, error) {
 // zugleich die verborgene Tür zur Betreuung: Gäste scannen ihn, sie tippen
 // ihn nicht an. Fünfmal zügig getippt öffnet sich die PIN-Eingabe.
 func (a *App) kioskInvite(d kioskData) gift.View {
+	// Der Code so groß, wie Breite und Höhe der Karte es zulassen: Je
+	// größer, desto weiter weg lässt er sich scannen.
+	edge := pick(236, clamp(min(inviteWidth()-28, vh()-260), 120, 236))
+
 	var code gift.View
 	if d.address.URL != "" {
-		code = xgift.QRCode(d.address.URL, u(236))
+		code = xgift.QRCode(d.address.URL, u(edge))
 	} else {
 		code = ui.VStack(
-			title("Gerade nicht möglich", 17).Foreground(white),
-			body(orDash(d.address.Problem), 14).Foreground(kioskMuted).MaxLines(3),
-		).Gap(u(8)).Align(geom.Center).Frame(u(236), u(236)).Background(kioskRaised).CornerRadius(u(16)).Padding(u(16))
+			title("Gerade nicht möglich", pick(17, 15)).Foreground(white),
+			body(orDash(d.address.Problem), pick(14, 13)).Foreground(kioskMuted).MaxLines(3),
+		).Gap(u(8)).Align(geom.Center).Frame(u(edge), u(edge)).Background(kioskRaised).CornerRadius(u(16)).Padding(u(pick(16, 10)))
 	}
 
 	clear := ui.ButtonStyle{Background: ui.ColorClear, Border: noBorder}
@@ -192,14 +196,17 @@ func (a *App) kioskInvite(d kioskData) gift.View {
 	}
 
 	return ui.VStack(
-		title("Eigene Fotos drucken", 24).Foreground(white),
-		body("Scannen · Foto wählen · abholen", 16).Foreground(kioskMuted),
+		title("Eigene Fotos drucken", pick(24, 18)).Foreground(white),
+		body("Scannen · Foto wählen · abholen", pick(16, 13)).Foreground(kioskMuted),
 		door,
 		fill(),
 		ui.HStack(chip(camColor, cam)).Gap(u(8)),
-	).Gap(u(14)).Align(geom.Center).Padding(u(26)).
-		Background(kioskCard).CornerRadius(u(28))
+	).Gap(u(pick(14, 8))).Align(geom.Center).Padding(u(pick(26, 14))).
+		Background(kioskCard).CornerRadius(u(pick(28, 20)))
 }
+
+// inviteWidth ist die Breite der Einladungskarte neben den Fotos.
+func inviteWidth() float32 { return pick(360, clamp(vw()*0.34, 240, 300)) }
 
 // kioskPrintSheet fragt den Gast nach dem Layout und druckt.
 func (a *App) kioskPrintSheet(ctx *gift.Context, st *states) gift.View {
@@ -222,9 +229,13 @@ func (a *App) kioskPrintSheet(ctx *gift.Context, st *states) gift.View {
 		return a.dev.Printing.Preview(a.dev.Subject(), printing.PreviewCmd{Photos: []photo.ID{id}, Layout: tpl.Layout(), MaxEdge: int(u(700))})
 	})
 
-	var paper gift.View = ui.Box().Frame(u(300), u(450)).Background(kioskRaised)
+	// Das Blatt so hoch, wie der Dialog es erlaubt, im Verhältnis 2 : 3.
+	ph := pick(450, clamp(vh()-24-2*16-2*12, 200, 450))
+	pw := ph * 2 / 3
+
+	var paper gift.View = ui.Box().Frame(u(pw), u(ph)).Background(kioskRaised)
 	if data := preview.Value(); len(data) > 0 {
-		paper = ui.Image(xgift.Memory(data)).Fit(ui.FitContain).Frame(u(300), u(450))
+		paper = ui.Image(xgift.Memory(data)).Fit(ui.FitContain).Frame(u(pw), u(ph))
 	}
 
 	touch := func(fn func()) func() {
@@ -248,29 +259,31 @@ func (a *App) kioskPrintSheet(ctx *gift.Context, st *states) gift.View {
 
 		style := ui.ButtonStyle{Background: kioskRaised, Border: border, CornerRadius: u(22)}
 		cards = append(cards, ui.Button(
-			ui.Text(printing.TemplateByID(t).Name).FontSize(u(20)).Font(boldFont).Foreground(white),
+			ui.Text(printing.TemplateByID(t).Name).FontSize(u(pick(20, 15))).Font(boldFont).Foreground(white).MaxLines(1),
 			touch(func() { st.kioskTemplate.Set(t) }),
-		).Style(style).HoverStyle(style).PressedStyle(style).MinHeight(u(96)).Flex(1))
+		).Style(style).HoverStyle(style).PressedStyle(style).MinHeight(u(pick(96, 60))).Flex(1))
 	}
 
 	maxCopies := max(k.MaxCopies, 1)
 
+	btn := pick(72, 52)
+
 	return ui.HStack(
-		ui.VStack(paper).Align(geom.Center).Padding(u(30)).Background(kioskRaised).CornerRadius(u(22)),
+		ui.VStack(paper).Align(geom.Center).Padding(u(pick(30, 12))).Background(kioskRaised).CornerRadius(u(pick(22, 16))),
 		ui.VStack(
 			ui.HStack(
-				title("Wie soll dein Foto aussehen?", 32).Foreground(white).Flex(1),
-				body(fmt.Sprintf("schließt in %d s", int(left.Seconds())), 14).Foreground(kioskMuted),
+				title("Wie soll dein Foto aussehen?", pick(32, 20)).Foreground(white).MaxLines(2).Flex(1),
+				body(fmt.Sprintf("schließt in %d s", int(left.Seconds())), pick(14, 12)).Foreground(kioskMuted),
 			).Align(geom.Center),
-			ui.HStack(cards...).Gap(u(16)),
+			ui.HStack(cards...).Gap(u(pick(16, 8))),
 			ui.HStack(
-				title("Anzahl", 20).Foreground(white).Flex(1),
-				xgift.Stepper(copies, 1, maxCopies, u(24), func(v int) { touch(func() { st.kioskCopies.Set(v) })() }),
-				body(fmt.Sprintf("höchstens %d", maxCopies), 14).Foreground(kioskMuted),
-			).Gap(u(16)).Align(geom.Center).Padding(u(16)).Background(kioskRaised).CornerRadius(u(18)),
+				title("Anzahl", pick(20, 16)).Foreground(white).Flex(1),
+				xgift.Stepper(copies, 1, maxCopies, u(pick(24, 18)), func(v int) { touch(func() { st.kioskCopies.Set(v) })() }),
+				body(fmt.Sprintf("höchstens %d", maxCopies), pick(14, 12)).Foreground(kioskMuted),
+			).Gap(u(pick(16, 8))).Align(geom.Center).Padding(u(pick(16, 8))).Background(kioskRaised).CornerRadius(u(18)),
 			fill(),
 			ui.HStack(
-				filled("Abbrechen", kioskRaised, white, func() { a.dismissSheet() }).MinHeight(u(72)),
+				filled("Abbrechen", kioskRaised, white, func() { a.dismissSheet() }).MinHeight(u(btn)),
 				filled("Drucken", ui.ColorAccent, ink, func() {
 					_, err := a.dev.Printing.PrintSimple(a.dev.Subject(), printing.SimpleCmd{Photo: id, Template: tpl, Copies: copies})
 					if a.fail(err) {
@@ -279,10 +292,11 @@ func (a *App) kioskPrintSheet(ctx *gift.Context, st *states) gift.View {
 
 					a.dismissSheet()
 					a.show("Dein Foto wird gedruckt. Abholen am Drucker.")
-				}).MinHeight(u(72)).Flex(1),
-			).Gap(u(16)),
-		).Gap(u(22)).Flex(1),
-	).Gap(u(40)).Padding(u(36)).Frame(u(1140), u(620)).Background(kioskCard).CornerRadius(u(32))
+				}).MinHeight(u(btn)).Flex(1),
+			).Gap(u(pick(16, 10))),
+		).Gap(u(pick(22, 10))).Flex(1),
+	).Gap(u(pick(40, 16))).Padding(u(pick(36, 16))).
+		Frame(u(min(1140, vw()-24)), u(min(620, vh()-24))).Background(kioskCard).CornerRadius(u(pick(32, 20)))
 }
 
 // pinSheet fragt die Betreuer-PIN ab.

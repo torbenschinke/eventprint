@@ -37,3 +37,13 @@ beenden. Wiederholte Fehleingaben MÜSSEN das Raten ausbremsen.
 
 Alle Einstellungen MÜSSEN sich am Gerät selbst vornehmen lassen, ohne Terminal
 und ohne zweiten Rechner.
+
+## Bildschirme
+
+An die Box kommen verschiedene Touchscreens: kleine Panels mit 800 × 480 oder
+1024 × 600, das Raspberry Pi Touch Display 2 mit 5 oder 7 Zoll, größere
+Panels bis Full-HD. Die Oberfläche MUSS auf jedem davon vollständig bedienbar
+sein, ohne abgeschnittene Knöpfe und mit Bedienflächen, die sich mit dem
+Finger treffen lassen. Wechsel zwischen Bildschirmen SOLLEN als Bewegung
+erkennbar sein, damit man sieht, wohin es vor und zurück geht. Das
+Erscheinungsbild MUSS sich hell, dunkel oder nach der Tageszeit wählen lassen.

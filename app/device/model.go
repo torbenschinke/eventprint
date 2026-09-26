@@ -70,6 +70,10 @@ type Settings struct {
 	RelayURL   string `json:"relayUrl,omitempty"`
 	RelayToken string `json:"relayToken,omitempty"`
 
+	// Appearance ist das Erscheinungsbild im Heimbetrieb: hell, dunkel oder
+	// nach der Tageszeit. Der Kiosk ist immer dunkel.
+	Appearance Appearance `json:"appearance,omitempty"`
+
 	// NAS ist die Netzwerkfreigabe mit den Fotos des Haushalts.
 	NAS nas.Config `json:"nas,omitzero"`
 
@@ -155,4 +159,29 @@ type KioskStore interface {
 	Load() (Kiosk, error)
 	Save(Kiosk) error
 	Clear() error
+}
+
+// Appearance ist das Erscheinungsbild der Oberfläche.
+type Appearance string
+
+const (
+	// AppearanceAuto ist abends und nachts dunkel, tagsüber hell. Die Box
+	// hat keinen Lichtsensor; die Uhrzeit ist die beste Näherung dafür, ob
+	// das Zimmer dunkel ist.
+	AppearanceAuto  Appearance = ""
+	AppearanceLight Appearance = "light"
+	AppearanceDark  Appearance = "dark"
+)
+
+// Dark meldet, ob zur Uhrzeit t dunkel gezeichnet wird.
+func (a Appearance) Dark(t time.Time) bool {
+	switch a {
+	case AppearanceLight:
+		return false
+	case AppearanceDark:
+		return true
+	default:
+		h := t.Hour()
+		return h >= 20 || h < 7
+	}
 }

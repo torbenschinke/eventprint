@@ -54,6 +54,13 @@ func withNAS(c nas.Client) func(*cfgdevice.Options) {
 func newBoxWith(t *testing.T, opt func(*cfgdevice.Options), seed ...photo.EventID) *box {
 	t.Helper()
 
+	return newBoxSized(t, geom.Sz(1280, 720), opt, seed...)
+}
+
+// newBoxSized startet ein Gerät an einem Bildschirm der Größe size.
+func newBoxSized(t *testing.T, size geom.Size, opt func(*cfgdevice.Options), seed ...photo.EventID) *box {
+	t.Helper()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
@@ -80,10 +87,11 @@ func newBoxWith(t *testing.T, opt func(*cfgdevice.Options), seed ...photo.EventI
 	face := uidevice.New(dev, nil)
 	h := gifttest.New(t, gifttest.Options{
 		Root: face.Root,
-		Size: geom.Sz(1280, 720),
+		Size: size,
 		Font: ui.MustFont(ui.FontQuery{Family: inter.Family}),
 	})
 	face.SetApp(h.App())
+	face.Fit(size, 1)
 	xgift.Install(h.App())
 	b.h = h
 
@@ -137,6 +145,17 @@ func (b *box) tap(text string) {
 	b.t.Helper()
 	b.waitFor(gifttest.ByText(text).And(gifttest.Interactive()).Or(gifttest.Under(gifttest.Interactive()).And(gifttest.ByText(text)))).Click()
 	b.h.Frame()
+}
+
+// settle wartet, bis ein Seitenwechsel ausgeglitten ist. Solange die Seite
+// noch einfährt, träfe ein Tipp eine andere Stelle als die, an der die
+// Beschriftung am Ende steht.
+func (b *box) settle() {
+	deadline := time.Now().Add(xgift.PageAnimation + 200*time.Millisecond)
+	for time.Now().Before(deadline) {
+		b.h.Frame()
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 func (b *box) role() device.Role { return b.dev.Subject().Role() }
@@ -320,4 +339,52 @@ func TestNASIsSetUpAndBrowsedOnTheDevice(t *testing.T) {
 	}
 
 	spec.Verified(t, quellen.RQuellenNas)
+}
+
+// TestSmallPanelIsUsable: Auf dem kleinsten Panel mit 800 x 480 liegen alle
+// Bedienflächen im Bild, und die Einstellungen sind Liste und Detail wie am
+// iPhone.
+func TestSmallPanelIsUsable(t *testing.T) {
+	b := newBoxSized(t, geom.Sz(800, 480), nil, "", "")
+	screen := geom.Rc(0, 0, 800, 480)
+
+	inside := func(text string) {
+		t.Helper()
+		n := b.waitFor(gifttest.ByText(text))
+		if r := n.Bounds(); !screen.Contains(r.Min) || !screen.Contains(geom.Pt(r.Max.X-1, r.Max.Y-1)) {
+			t.Fatalf("%q liegt außerhalb des Bildschirms: %v\n%s", text, r, b.h.Dump())
+		}
+	}
+
+	for _, text := range []string{"Auswählen und drucken", "Kiosk starten", "Einstellungen", "Aufträge"} {
+		inside(text)
+	}
+
+	// Der Dialog zum Kiosk-Start hat mehr Inhalt als Höhe; die Knöpfe
+	// bleiben trotzdem erreichbar.
+	b.tap("Kiosk starten")
+	inside("Abbrechen")
+	b.tap("Abbrechen")
+
+	b.tap("Einstellungen")
+	b.tap("Anzeige")
+	b.settle()
+	inside("‹ Einstellungen")
+
+	// Das Segment-Steuerelement ist ein Knoten; "Dunkel" ist sein rechtes
+	// Drittel.
+	seg := b.waitFor(gifttest.ByType("ui.SegmentedControl")).Bounds()
+	b.h.ClickAt(geom.Pt(seg.Max.X-seg.Width()/6, (seg.Min.Y+seg.Max.Y)/2))
+	b.h.Frame()
+
+	s, err := b.dev.Device.LoadSettings(b.dev.Subject())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Appearance != device.AppearanceDark {
+		t.Fatalf("Erscheinungsbild = %q, erwartet dunkel", s.Appearance)
+	}
+
+	spec.Verified(t, modus.RModusAnzeige)
 }

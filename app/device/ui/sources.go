@@ -38,16 +38,21 @@ func importBar(n int, hint string, busy bool, fn func()) gift.View {
 		label = fmt.Sprintf("%d Fotos ausgewählt", n)
 	}
 
-	action := "Übernehmen und drucken"
+	action := pick2("Übernehmen und drucken", "Übernehmen")
 	if busy {
 		action = "Wird übernommen …"
 	}
 
+	info := gift.View(ui.VStack(title(label, 17), muted(hint, 13).MaxLines(1)).Gap(u(2)).Flex(1))
+	if compact {
+		info = title(fmt.Sprintf("%d ausgewählt", n), 15).MaxLines(1).Flex(1)
+	}
+
 	return floating(ui.HStack(
-		ui.VStack(title(label, 17), muted(hint, 13)).Gap(u(2)).Flex(1),
+		info,
 		primary(action, fn).Disabled(busy),
 	).Gap(u(12)).Align(geom.Center).
-		PaddingInsets(geom.Insets{Left: u(22), Right: u(12), Top: u(10), Bottom: u(10)}).
+		PaddingInsets(geom.Insets{Left: u(pick(22, 14)), Right: u(pick(12, 8)), Top: u(pick(10, 6)), Bottom: u(pick(10, 6))}).
 		Background(ui.ColorSurface).CornerRadius(u(22)).
 		Shadow(ui.Shadow{Blur: u(30), OffsetY: u(10), Color: ui.RGBA(0, 0, 0, 60)}).
 		Border(ui.Border{Width: 1, Color: ui.ColorSeparator}).
@@ -114,9 +119,9 @@ func (a *App) usbBrowser(ctx *gift.Context, st *states) gift.View {
 
 	d := res.Value()
 	header := func(sub string, extra ...gift.View) gift.View {
-		row := []gift.View{ui.VStack(title("USB-Stick", 30), muted(sub, 15)).Gap(u(2)).Flex(1)}
+		row := []gift.View{ui.VStack(title("USB-Stick", pick(30, 22)), muted(sub, pick(15, 13))).Gap(u(2)).Flex(1)}
 		return ui.HStack(append(row, extra...)...).Gap(u(12)).Align(geom.Center).
-			PaddingInsets(geom.Insets{Top: u(14), Left: u(32), Right: u(32), Bottom: u(8)})
+			PaddingInsets(geom.Insets{Top: u(pick(14, 8)), Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(8)})
 	}
 
 	if len(d.drives) == 0 {
@@ -178,9 +183,9 @@ func (a *App) usbBrowser(ctx *gift.Context, st *states) gift.View {
 		xgift.Fill(ui.VStack(
 			header(sub, secondary("Auswerfen", func() { a.eject(drive.Path, func() { res.Load(load) }) })),
 			ui.ImageGallery(g).
-				Layout(brickRows(u(170))).
+				Layout(brickRows(u(rowHeight()))).
 				Tile(tileStyle()).
-				PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Bottom: u(120)}).
+				PaddingInsets(geom.Insets{Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(pick(120, 84))}).
 				OnSelect(func(id asset.ID) {
 					a.usbSelected = xgift.TouchSelect(g, a.usbSelected, id)
 					selRev.Set(selRev.Get() + 1)
@@ -234,9 +239,9 @@ func (a *App) nasBrowser(ctx *gift.Context, st *states) gift.View {
 	})
 
 	head := func(sub string, extra ...gift.View) gift.View {
-		row := []gift.View{ui.VStack(title("NAS", 30), muted(sub, 15).MaxLines(2)).Gap(u(2)).Flex(1)}
+		row := []gift.View{ui.VStack(title("NAS", pick(30, 22)), muted(sub, pick(15, 13)).MaxLines(2)).Gap(u(2)).Flex(1)}
 		return ui.HStack(append(row, extra...)...).Gap(u(12)).Align(geom.Center).
-			PaddingInsets(geom.Insets{Top: u(14), Left: u(32), Right: u(32), Bottom: u(8)})
+			PaddingInsets(geom.Insets{Top: u(pick(14, 8)), Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(8)})
 	}
 
 	switch {
@@ -249,7 +254,7 @@ func (a *App) nasBrowser(ctx *gift.Context, st *states) gift.View {
 					st.settings.Set(sectionSources)
 					st.screen.Set(ScreenSettings)
 				}),
-			).Gap(u(16)).Padding(u(32)).Align(geom.TopLeading),
+			).Gap(u(16)).Padding(u(pick(32, 16))).Align(geom.TopLeading),
 			fill(),
 		).Flex(1)
 	case !res.Loaded():
@@ -322,11 +327,11 @@ func (a *App) nasBrowser(ctx *gift.Context, st *states) gift.View {
 
 	rows := []gift.View{
 		head(sub),
-		ui.HScroll(crumbs...).Gap(u(6)).PaddingInsets(geom.Insets{Left: u(32), Right: u(32)}).MinHeight(u(44)),
+		ui.HScroll(crumbs...).Gap(u(6)).PaddingInsets(geom.Insets{Left: u(pick(32, 16)), Right: u(pick(32, 16))}).MinHeight(u(44)),
 	}
 
 	if len(folders) > 0 {
-		rows = append(rows, ui.HScroll(folders...).Gap(u(8)).PaddingInsets(geom.Insets{Left: u(32), Right: u(32)}).MinHeight(u(48)))
+		rows = append(rows, ui.HScroll(folders...).Gap(u(8)).PaddingInsets(geom.Insets{Left: u(pick(32, 16)), Right: u(pick(32, 16))}).MinHeight(u(48)))
 	}
 
 	if len(l.Images) == 0 {
@@ -335,12 +340,12 @@ func (a *App) nasBrowser(ctx *gift.Context, st *states) gift.View {
 			hint = "Hier liegen nur Ordner. Tippe oben auf einen, um hineinzusehen."
 		}
 
-		rows = append(rows, muted(hint, 17).MaxLines(2).PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Top: u(24)}), fill())
+		rows = append(rows, muted(hint, 17).MaxLines(2).PaddingInsets(geom.Insets{Left: u(pick(32, 16)), Right: u(pick(32, 16)), Top: u(24)}), fill())
 	} else {
 		rows = append(rows, ui.ImageGallery(g).
-			Layout(brickRows(u(170))).
+			Layout(brickRows(u(rowHeight()))).
 			Tile(tileStyle()).
-			PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Top: u(12), Bottom: u(120)}).
+			PaddingInsets(geom.Insets{Left: u(pick(32, 16)), Right: u(pick(32, 16)), Top: u(12), Bottom: u(pick(120, 84))}).
 			OnSelect(func(id asset.ID) {
 				a.nasSelected = xgift.TouchSelect(g, a.nasSelected, id)
 				selRev.Set(selRev.Get() + 1)

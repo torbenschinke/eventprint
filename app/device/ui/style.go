@@ -15,15 +15,34 @@ import (
 	"github.com/torbenschinke/eventprint/pkg/xgift"
 )
 
-// scale vergrößert alle Maße. Der Entwurf rechnet mit 1280 x 720 logischen
-// Punkten; ein 1080p-Bildschirm mit Skalierungsfaktor 1 braucht 1,5.
-var scale float32 = 1
+// scale vergrößert alle Maße, compact wählt die kompakten Anordnungen. Beides
+// folgt aus dem Bildschirm, siehe display.go und [App.Fit], und ändert sich
+// nur zwischen zwei Aufbauten der Oberfläche.
+var (
+	scale   float32 = 1
+	compact bool
 
-// SetScale legt den Vergrößerungsfaktor fest. Aufzurufen vor dem ersten Bild.
-func SetScale(s float32) {
-	if s > 0 {
-		scale = s
+	// design ist die Fläche in Entwurfspunkten; leer heißt 1280 x 720, der
+	// Entwurf, mit dem die Tests laufen.
+	design geom.Size
+)
+
+// vw und vh sind Breite und Höhe der Fläche in Entwurfspunkten. Bildschirme,
+// die ihre Anordnung nach dem Platz richten, rechnen damit.
+func vw() float32 {
+	if design.W <= 0 {
+		return 1280
 	}
+
+	return design.W
+}
+
+func vh() float32 {
+	if design.H <= 0 {
+		return 720
+	}
+
+	return design.H
 }
 
 // u rechnet ein Entwurfsmaß in logische Punkte um.
@@ -31,19 +50,13 @@ func u(v float32) float32 { return v * scale }
 
 var (
 	blue        = ui.RGB(0x0A, 0x66, 0xD9)
-	blueText    = ui.RGB(0x0A, 0x5B, 0xC4)
-	blueWash    = ui.RGB(0xE8, 0xF0, 0xFC)
 	green       = ui.RGB(0x1E, 0x8E, 0x3E)
-	greenText   = ui.RGB(0x1E, 0x7A, 0x36)
-	orange      = ui.RGB(0xB8, 0x53, 0x00)
-	red         = ui.RGB(0xC4, 0x16, 0x1C)
 	pink        = ui.RGB(0xC2, 0x18, 0x5B)
 	purple      = ui.RGB(0x6E, 0x4B, 0xD8)
 	grey        = ui.RGB(0x63, 0x63, 0x66)
 	navy        = ui.RGB(0x24, 0x32, 0x4F)
 	amber       = ui.RGB(0xE9, 0xB9, 0x49)
 	ink         = ui.RGB(0x11, 0x11, 0x14)
-	wallpaper   = ui.RGB(0xE7, 0xE4, 0xDF)
 	kioskBg     = ui.RGB(0x10, 0x10, 0x13)
 	kioskCard   = ui.RGB(0x1C, 0x1C, 0x21)
 	kioskRaised = ui.RGB(0x26, 0x26, 0x2C)
@@ -51,8 +64,71 @@ var (
 	white       = ui.OpaqueWhite
 )
 
-// homeTheme ist das helle Erscheinungsbild des Heimbetriebs.
-func homeTheme() ui.Theme {
+// Die Farben, die das Thema von gift nicht kennt. Sie hängen am
+// Erscheinungsbild und werden mit ihm gesetzt, siehe [setPalette]; ein Wechsel
+// baut die Oberfläche danach vollständig neu auf.
+var (
+	blueText   ui.Color // Text in Akzentblau auf Flächen
+	blueWash   ui.Color // gewählte Karte
+	greenText  ui.Color
+	orange     ui.Color // Warnung als Text und Symbol
+	red        ui.Color // Fehler, Löschen
+	wallpaper  ui.Color // Hintergrund des Home-Bildschirms
+	canvas     ui.Color // Tisch unter der Druckvorschau
+	notice     ui.Color // Hinweisfläche, warm
+	dangerWash ui.Color // Fläche hinter einer zerstörenden Aktion
+	tileA      ui.Color // Platzhalter der Kacheln
+	tileB      ui.Color
+	tileError  ui.Color
+	kioskPanel ui.Color // die Kiosk-Karte auf dem Home-Bildschirm
+)
+
+func init() { setPalette(false) }
+
+// setPalette setzt die Sonderfarben für hell oder dunkel.
+func setPalette(dark bool) {
+	if dark {
+		blueText = ui.RGB(0x4C, 0x9D, 0xFF)
+		blueWash = ui.RGB(0x14, 0x2A, 0x48)
+		greenText = ui.RGB(0x4C, 0xD9, 0x64)
+		orange = ui.RGB(0xFF, 0x9F, 0x2E)
+		red = ui.RGB(0xFF, 0x5A, 0x52)
+		wallpaper = ui.RGB(0x16, 0x15, 0x14)
+		canvas = ui.RGB(0x10, 0x10, 0x12)
+		notice = ui.RGB(0x3A, 0x2E, 0x14)
+		dangerWash = ui.RGB(0x42, 0x1C, 0x1C)
+		tileA, tileB = ui.RGB(0x2C, 0x2C, 0x30), ui.RGB(0x34, 0x34, 0x39)
+		tileError = ui.RGB(0x5A, 0x24, 0x24)
+		kioskPanel = ui.RGB(0x2A, 0x2A, 0x30)
+
+		return
+	}
+
+	blueText = ui.RGB(0x0A, 0x5B, 0xC4)
+	blueWash = ui.RGB(0xEE, 0xF4, 0xFD)
+	greenText = ui.RGB(0x1E, 0x7A, 0x36)
+	orange = ui.RGB(0xB8, 0x53, 0x00)
+	red = ui.RGB(0xC4, 0x16, 0x1C)
+	wallpaper = ui.RGB(0xE7, 0xE4, 0xDF)
+	canvas = ui.RGB(0xE9, 0xE9, 0xEE)
+	notice = ui.RGB(0xFF, 0xF6, 0xE0)
+	dangerWash = ui.RGB(0xFD, 0xEC, 0xEC)
+	tileA, tileB = ui.RGB(0xE3, 0xE3, 0xE8), ui.RGB(0xDA, 0xDA, 0xE0)
+	tileError = ui.RGB(0xF3, 0xC6, 0xC6)
+	kioskPanel = ui.RGB(0x16, 0x16, 0x1A)
+}
+
+// homeTheme ist das Erscheinungsbild des Heimbetriebs, hell oder dunkel wie
+// die Einstellungen am iPad.
+func homeTheme(dark bool) ui.Theme {
+	if dark {
+		return ui.DarkTheme().
+			With(ui.ColorAccent, ui.RGB(0x0A, 0x84, 0xFF)).
+			With(ui.ColorOnAccent, white).
+			With(ui.ColorBackground, ui.RGB(0x0B, 0x0B, 0x0D)).
+			With(ui.ColorSurface, ui.RGB(0x1C, 0x1C, 0x1E))
+	}
+
 	return ui.LightTheme().
 		With(ui.ColorAccent, blue).
 		With(ui.ColorOnAccent, white).
@@ -86,13 +162,41 @@ func muted(s string, size float32) ui.TextView {
 	return ui.Text(s).FontSize(u(size)).Foreground(ui.ColorSecondaryLabel)
 }
 
-// card ist eine weiße, abgerundete Fläche auf dem Hintergrund.
+// pick wählt ein Entwurfsmaß nach der Größenklasse.
+func pick(regular, small float32) float32 {
+	if compact {
+		return small
+	}
+
+	return regular
+}
+
+// pick2 wählt einen Text nach der Größenklasse: Auf kleinen Panels reicht
+// oft das erste Wort.
+func pick2(regular, small string) string {
+	if compact {
+		return small
+	}
+
+	return regular
+}
+
+// clamp begrenzt v auf [lo, hi].
+func clamp(v, lo, hi float32) float32 { return max(lo, min(v, hi)) }
+
+// gutter ist der Abstand der Bildschirminhalte vom Rand.
+func gutter() float32 { return pick(40, 16) }
+
+// spacing ist der Abstand zwischen Karten.
+func spacing() float32 { return pick(20, 12) }
+
+// card ist eine abgerundete Fläche auf dem Hintergrund.
 func card(children ...gift.View) ui.Stack {
 	return ui.VStack(children...).
 		Background(ui.ColorSurface).
-		CornerRadius(u(22)).
-		Padding(u(22)).
-		Gap(u(14))
+		CornerRadius(u(pick(22, 16))).
+		Padding(u(pick(22, 14))).
+		Gap(u(pick(14, 10)))
 }
 
 // section ist eine gruppierte Liste mit Überschrift, wie in den Einstellungen.
@@ -115,13 +219,13 @@ func primary(label string, action func()) ui.ButtonView {
 
 // filled ist ein flächiger Knopf in beliebiger Farbe.
 func filled(label string, face, fg ui.Color, action func()) ui.ButtonView {
-	return ui.Button(ui.Text(label).FontSize(u(17)).Font(boldFont).Foreground(fg), action).
+	return ui.Button(ui.Text(label).FontSize(u(pick(17, 16))).Font(boldFont).Foreground(fg), action).
 		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
 		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
 		PressedStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.75), CornerRadius: u(14)}).
 		DisabledStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.35), CornerRadius: u(14)}).
-		MinHeight(u(52)).
-		PaddingInsets(geom.Insets{Left: u(22), Right: u(22)})
+		MinHeight(u(pick(52, 44))).
+		PaddingInsets(geom.Insets{Left: u(pick(22, 16)), Right: u(pick(22, 16))})
 }
 
 // secondary ist eine Nebenaktion auf heller Fläche.
@@ -131,8 +235,8 @@ func secondary(label string, action func()) ui.ButtonView {
 		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
 		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
 		PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorAccent, 0.25), CornerRadius: u(14)}).
-		MinHeight(u(48)).
-		PaddingInsets(geom.Insets{Left: u(18), Right: u(18)})
+		MinHeight(u(pick(48, 44))).
+		PaddingInsets(geom.Insets{Left: u(pick(18, 14)), Right: u(pick(18, 14))})
 }
 
 // link ist ein Knopf, der nur aus Text besteht.
@@ -171,5 +275,5 @@ func grow(v gift.View) xgift.FillView { return xgift.Fill(v).Flex(1) }
 
 // floating hebt eine schwebende Leiste vom unteren Rand ab.
 func floating(v gift.View) gift.View {
-	return ui.VStack(v).PaddingInsets(geom.Insets{Bottom: u(24)})
+	return ui.VStack(v).PaddingInsets(geom.Insets{Bottom: u(pick(24, 12)), Left: u(12), Right: u(12)})
 }

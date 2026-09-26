@@ -765,6 +765,12 @@
         "text": "29e9470424a1435e7f5267e8ffb6b1880bbb580dd9d3b76937be5caca86d310f"
       }
     ],
+    "R-MODUS-ANZEIGE": [
+      {
+        "test": "TestSmallPanelIsUsable",
+        "text": "f3c679961f24874ae13971c3b1654c2aad749d9c1b3d60afa36167e7042c3070"
+      }
+    ],
     "R-MODUS-BETREUUNG": [
       {
         "test": "TestKioskOperatorNeedsThePin",

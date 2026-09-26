@@ -209,7 +209,10 @@ Einstellungen nichts steht.
 | `EVENTPRINT_NAS_USER`, `EVENTPRINT_NAS_PASSWORD` | NAS: Anmeldung |
 | `EVENTPRINT_NAS_SHARE` | NAS: Freigabe, z. B. `photo` |
 | `EVENTPRINT_CAMERA_DIR` | Tethering-Ordner; `off` schaltet die Kamera ab |
-| `EVENTPRINT_UI_SCALE` | Vergrößerung der Oberfläche; Vorgabe 1,5 für 1080p |
+| `EVENTPRINT_UI_SCALE` | feste Vergrößerung der Oberfläche statt der automatischen, siehe *Bildschirme* |
+| `EVENTPRINT_UI_DENSITY` | Pixeldichte 1 oder 2 erzwingen (sonst nach Panelgröße) |
+| `EVENTPRINT_ROTATE` | Drehung des Touchscreens: `auto` (Vorgabe), `normal`, `left`, `right`, `inverted` |
+| `EVENTPRINT_PRIMARY_OUTPUT` | Ausgang des Touchscreens, falls die Wahl daneben liegt, z. B. `HDMI-1` |
 | `EVENTPRINT_DATA_DIR`, `EVENTPRINT_RUNTIME_DIR` | nur zum Entwickeln; unter systemd gelten `/var/lib/eventprint` und `/run/eventprint` |
 
 ### Drucker
@@ -265,6 +268,37 @@ dem App-Symbol **NAS**.
   Dienstnutzer lesbar. Am besten legt man auf dem NAS einen eigenen Benutzer an,
   der die Fotoordner nur lesen darf.
 * SMB1 wird nicht unterstützt; DSM hat es seit Version 7 ohnehin abgeschaltet.
+
+### Bildschirme
+
+Die Oberfläche bemisst sich selbst nach dem angeschlossenen Panel. Getestet
+ist sie mit 800 × 480, 1024 × 600, 1280 × 720 und Full-HD.
+
+* **Größe:** Aus Auflösung und der Größe in Millimetern, die das Panel über
+  xrandr meldet, rechnet sie die Pixeldichte aus und vergrößert so, dass ein
+  Knopf etwa 8 mm hoch ist. Meldet ein Panel keine oder eine unglaubwürdige
+  Größe, wie viele billige HDMI-Panels, gilt die Auflösung allein.
+  **Einstellungen → Anzeige** zeigt, was erkannt wurde.
+* **Anordnung:** Unter etwa 1100 × 640 Punkten wird kompakt angeordnet:
+  schmalere Spalten, knappere Texte, und die Einstellungen sind Liste und
+  Detail wie am iPhone. Dialoge scrollen, wenn sie nicht passen; ihre Knöpfe
+  bleiben stehen.
+* **Dichte:** Auf dichten Panels ab etwa 180 ppi, etwa dem Touch Display 2,
+  setzt die Anzeigesitzung `Xft.dpi` auf 192. Damit wachsen auch die
+  Bausteine von gift mit festen Maßen mit, allen voran die
+  Bildschirmtastatur.
+* **Drehung:** Das Raspberry Pi Touch Display 2 (5 und 7 Zoll) ist hochkant
+  gebaut. Die Sitzung dreht es ins Querformat und legt die Berührung mit
+  `xinput map-to-output` passend darauf. Steht das Bild auf dem Kopf, hilft
+  `EVENTPRINT_ROTATE=right`.
+* **Erscheinungsbild:** Hell, dunkel oder automatisch (dunkel von 20 bis
+  7 Uhr), unter **Einstellungen → Anzeige**. Der Kiosk ist immer dunkel.
+
+Zum Ausprobieren am Schreibtisch:
+
+```bash
+go run -tags nofacecrop ./cmd/gift-app -window -size 800x480
+```
 
 ### HEIC
 

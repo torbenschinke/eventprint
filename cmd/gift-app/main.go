@@ -8,7 +8,7 @@
 // wird über die Umgebung, siehe [cfgdevice.OptionsFromEnv]. Zum Ausprobieren
 // am Schreibtisch:
 //
-//	go run -tags nofacecrop ./cmd/gift-app -window
+//	go run -tags nofacecrop ./cmd/gift-app -window -size 1024x600
 package main
 
 import (
@@ -35,7 +35,10 @@ import (
 	"github.com/torbenschinke/eventprint/pkg/xgift"
 )
 
-var window = flag.Bool("window", false, "im Fenster statt im Vollbild starten, zum Entwickeln")
+var (
+	window = flag.Bool("window", false, "im Fenster statt im Vollbild starten, zum Entwickeln")
+	size   = flag.String("size", "", "Fenstergröße zum Entwickeln, etwa 800x480 oder 1024x600")
+)
 
 func main() {
 	flag.Parse()
@@ -70,26 +73,20 @@ func run() error {
 		slog.Warn("libheif nicht gefunden, HEIC-Fotos werden abgelehnt")
 	}
 
-	// Der Entwurf rechnet in 1280 x 720 Punkten. Auf dem 1080p-Bildschirm
-	// der Box ist alles um die Hälfte größer; gift kennt nur ganzzahlige
-	// Dichten, deshalb vergrößert die Oberfläche selbst.
-	width, height := 1280, 720
-	scale := float32(1)
-	if !*window {
-		scale = 1.5
-		width, height = 1920, 1080
-	}
-
-	if v, err := strconv.ParseFloat(os.Getenv("EVENTPRINT_UI_SCALE"), 32); err == nil && v > 0 {
-		scale = float32(v)
-	}
-
-	uidevice.SetScale(scale)
-
 	var face *uidevice.App
 	app := gift.New(gift.Options{Root: func(c *gift.Context) gift.View { return face.Root(c) }})
 	face = uidevice.New(dev, app)
 	xgift.Install(app)
+
+	// Die Oberfläche bemisst sich selbst nach dem Bildschirm, siehe
+	// app/device/ui/display.go. Die Panelgröße in Millimetern kennt nur X11.
+	if mm, ok := physicalSize(); ok {
+		face.SetPhysicalSize(mm)
+	}
+
+	if v, err := strconv.ParseFloat(os.Getenv("EVENTPRINT_UI_SCALE"), 32); err == nil && v > 0 {
+		face.SetScale(float32(v))
+	}
 
 	pipe := asset.NewPipeline(asset.Config{
 		Deliver: app.Post,
@@ -105,6 +102,11 @@ func run() error {
 	// gibt.
 	ui.SetOnScreenKeyboard(app, true)
 	face.ApplyTheme()
+
+	width, height := 1280, 720
+	if w, h, ok := parseSize(*size); ok {
+		width, height = w, h
+	}
 
 	if !*window {
 		eb.SetFullscreen(true)
@@ -124,6 +126,8 @@ func run() error {
 			if ctx.Err() != nil {
 				return backend.Terminate
 			}
+
+			face.Fit(app.Viewport(), app.Density())
 
 			return nil
 		},

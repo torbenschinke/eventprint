@@ -105,14 +105,14 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 		style := ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(10)}
 
 		return ui.Button(ui.HStack(
-			ui.Icon(sym).Size(u(22)).Foreground(ic),
-			ui.Text(label).FontSize(u(16)).Foreground(fg).Flex(1),
-			ui.Text(count).FontSize(u(14)).Foreground(fg),
-		).Gap(u(12)).Align(geom.Center), fn).
+			ui.Icon(sym).Size(u(pick(22, 18))).Foreground(ic),
+			ui.Text(label).FontSize(u(pick(16, 14))).Foreground(fg).MaxLines(1).Flex(1),
+			ui.Text(count).FontSize(u(pick(14, 12))).Foreground(fg),
+		).Gap(u(pick(12, 8))).Align(geom.Center), fn).
 			Style(style).HoverStyle(style).
 			PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.2), CornerRadius: u(10)}).
-			PaddingInsets(geom.Insets{Left: u(12), Right: u(12)}).
-			MinHeight(u(44))
+			PaddingInsets(geom.Insets{Left: u(pick(12, 8)), Right: u(pick(12, 8))}).
+			MinHeight(u(pick(44, 40)))
 	}
 
 	count := func(sc photo.Scope) string {
@@ -130,16 +130,30 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 			fill(),
 			iconButton(outline.List, "Aufträge", ui.ColorAccent, func() { st.screen.Set(ScreenJobs) }),
 		).Align(geom.Center),
-		title("Fotos", 30).PaddingInsets(geom.Insets{Left: u(8), Bottom: u(6)}),
+	}
+
+	if compact {
+		// Auf kleinen Panels steht der Titel zwischen den Knöpfen, statt eine
+		// eigene Zeile zu kosten.
+		items[0] = ui.HStack(
+			iconButton(outline.Home, "Home", ui.ColorAccent, func() { st.screen.Set(ScreenHome) }),
+			title("Fotos", 20).Flex(1).PaddingInsets(geom.Insets{Left: u(6)}),
+			iconButton(outline.List, "Aufträge", ui.ColorAccent, func() { st.screen.Set(ScreenJobs) }),
+		).Align(geom.Center)
+	} else {
+		items = append(items, title("Fotos", 30).PaddingInsets(geom.Insets{Left: u(8), Bottom: u(6)}))
+	}
+
+	items = append(items,
 		muted("MEDIATHEK", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(4)}),
 		row("Eingang", outline.Inbox, count(photo.ScopeInbox), local && scope == photo.ScopeInbox, func() { a.openLibrary(photo.ScopeInbox, "") }),
 		row("Alle Fotos", outline.Grid, count(photo.ScopeAll), local && scope == photo.ScopeAll, func() { a.openLibrary(photo.ScopeAll, "") }),
 		row("Favoriten", outline.Heart, count(photo.ScopeFavorites), local && scope == photo.ScopeFavorites, func() { a.openLibrary(photo.ScopeFavorites, "") }),
 		row("Gedruckt", outline.Printer, count(photo.ScopePrinted), local && scope == photo.ScopePrinted, func() { a.openLibrary(photo.ScopePrinted, "") }),
-	}
+	)
 
 	if len(d.events) > 0 {
-		items = append(items, muted("FEIERN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(14)}))
+		items = append(items, muted("FEIERN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(pick(14, 8))}))
 		for _, e := range d.events {
 			items = append(items, row(e.Title, outline.WandMagicSparkles, e.StartedAt.Local().Format("02.01."),
 				local && scope == photo.ScopeEvent && event == e.ID, func() {
@@ -150,13 +164,13 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 	}
 
 	items = append(items,
-		muted("QUELLEN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(14)}),
+		muted("QUELLEN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(pick(14, 8))}),
 		row("NAS", outline.Server, "", source == sourceNAS, func() { a.openLibrary(scope, sourceNAS) }),
 		row("USB-Stick", outline.ArchiveArrowDown, "", source == sourceUSB, func() { a.openLibrary(scope, sourceUSB) }),
 	)
 
-	return xgift.Fill(ui.VScroll(ui.VStack(items...).Gap(u(4)).Padding(u(16))).
-		Background(ui.ColorBackground)).Width(u(300))
+	return xgift.Fill(ui.VScroll(ui.VStack(items...).Gap(u(pick(4, 2))).Padding(u(pick(16, 10)))).
+		Background(ui.ColorBackground)).Width(u(pick(300, clamp(vw()*0.27, 190, 250))))
 }
 
 // gallery liefert die dauerhafte Galerie eines Bildschirms.
@@ -195,8 +209,8 @@ func (a *App) refill(key string, version any) bool {
 func tileStyle() ui.TileStyle {
 	return ui.TileStyle{
 		CornerRadius: u(6),
-		Palette:      []ui.Color{ui.RGB(0xE3, 0xE3, 0xE8), ui.RGB(0xDA, 0xDA, 0xE0)},
-		Error:        ui.RGB(0xF3, 0xC6, 0xC6),
+		Palette:      []ui.Color{tileA, tileB},
+		Error:        tileError,
 		Selected:     ui.Border{Width: u(5), Color: blue},
 	}
 }
@@ -224,6 +238,12 @@ func fillGallery(g *ui.Gallery, items []photo.Location) {
 
 		return nil
 	})
+}
+
+// rowHeight ist die Höhe einer Ziegelreihe: auf großen Bildschirmen 190
+// Punkte, auf kleinen so, dass gut zwei Reihen zu sehen sind.
+func rowHeight() float32 {
+	return pick(190, clamp(vh()*0.3, 110, 170))
 }
 
 // brickRows legt die Fotos zeilenweise wie Ziegel: gleich hohe Reihen, jedes
@@ -306,21 +326,21 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 
 	header := ui.HStack(
 		ui.VStack(
-			title(name, 30),
+			title(name, pick(30, 22)),
 			muted(fmt.Sprintf("%s · %d Fotos", hint, len(list.items)), 15),
 		).Gap(u(2)).Flex(1),
 		a.selectAllButton(list.items),
-	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Top: u(14), Left: u(32), Right: u(32), Bottom: u(8)})
+	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Top: u(pick(14, 8)), Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(8)})
 
 	var grid gift.View
 	if res.Loaded() && len(list.items) == 0 {
 		grid = ui.VStack(muted(emptyHint(scope), 17).MaxLines(3)).Align(geom.Center).Flex(1).Padding(u(40))
 	} else {
 		grid = ui.ImageGallery(g).
-			Layout(brickRows(u(190))).
+			Layout(brickRows(u(rowHeight()))).
 			Tile(tileStyle()).
 			Overscan(u(400)).
-			PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Bottom: u(120)}).
+			PaddingInsets(geom.Insets{Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(pick(120, 84))}).
 			OnSelect(func(id asset.ID) {
 				a.selected = toPhotoIDs(xgift.TouchSelect(g, toAssetIDs(a.selected), id))
 				st.selection.Set(st.selection.Get() + 1)
@@ -382,8 +402,12 @@ func (a *App) selectionBar(st *states) gift.View {
 		label = fmt.Sprintf("%d Fotos ausgewählt", n)
 	}
 
+	if compact {
+		label = fmt.Sprintf("%d ausgewählt", n)
+	}
+
 	return floating(ui.HStack(
-		title(label, 17).Flex(1),
+		title(label, pick(17, 15)).MaxLines(1).Flex(1),
 		iconButton(outline.Heart, "Favorit", ui.ColorAccent, func() {
 			if !a.fail(a.dev.Photos.SetFavorite(a.dev.Subject(), true, a.selected...)) {
 				a.show("Als Favorit markiert.")
@@ -392,9 +416,9 @@ func (a *App) selectionBar(st *states) gift.View {
 		}),
 		iconButton(outline.ArchiveArrowDown, "Auf USB-Stick kopieren", ui.ColorAccent, func() { a.openSheet(SheetExport) }),
 		iconButton(outline.TrashBin, "Löschen", red, func() { a.openSheet(SheetConfirmDelete) }),
-		primary("Weiter zum Drucken", func() { a.startStudio(slices.Clone(a.selected)) }),
-	).Gap(u(12)).Align(geom.Center).
-		PaddingInsets(geom.Insets{Left: u(22), Right: u(12), Top: u(10), Bottom: u(10)}).
+		primary(pick2("Weiter zum Drucken", "Drucken"), func() { a.startStudio(slices.Clone(a.selected)) }),
+	).Gap(u(pick(12, 8))).Align(geom.Center).
+		PaddingInsets(geom.Insets{Left: u(pick(22, 14)), Right: u(pick(12, 8)), Top: u(pick(10, 6)), Bottom: u(pick(10, 6))}).
 		Background(ui.ColorSurface).CornerRadius(u(22)).
 		Shadow(ui.Shadow{Blur: u(30), OffsetY: u(10), Color: ui.RGBA(0, 0, 0, 60)}).
 		Border(ui.Border{Width: 1, Color: ui.ColorSeparator}).

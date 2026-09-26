@@ -26,6 +26,7 @@ import (
 // Abschnitte der Einstellungen.
 const (
 	sectionWifi = iota
+	sectionDisplay
 	sectionPrinter
 	sectionUpload
 	sectionSources
@@ -43,6 +44,7 @@ type sectionSpec struct {
 
 var sections = []sectionSpec{
 	{sectionWifi, "WLAN", outline.Globe, blue},
+	{sectionDisplay, "Anzeige", outline.Sun, ui.RGB(0x2F, 0x6F, 0xE0)},
 	{sectionPrinter, "Drucker & Papier", outline.Printer, grey},
 	{sectionUpload, "Handy-Upload", outline.MobilePhone, green},
 	{sectionSources, "Konten & Quellen", outline.CloudArrowUp, purple},
@@ -55,6 +57,11 @@ var sections = []sectionSpec{
 func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 	current := ctx.Read(st.settings)
 	rev := ctx.State("rev", 0)
+
+	// Auf kleinen Panels sind Liste und Detail zwei Seiten wie am iPhone;
+	// open sagt, ob gerade das Detail vorne liegt.
+	open := ctx.State("open", false)
+	ctx.Read(open)
 
 	res := xgift.UseResource[device.Settings](ctx, "settings")
 	res.LoadKeyed(ctx.Read(rev), func() (device.Settings, error) { return a.dev.Device.LoadSettings(a.dev.Subject()) })
@@ -69,7 +76,7 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 	rows := []gift.View{}
 	for _, sec := range sections {
 		fg, face := ui.ColorLabel, ui.ColorSurface
-		if sec.id == current {
+		if sec.id == current && !compact {
 			fg, face = white, blue
 		}
 
@@ -78,28 +85,43 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 			xgift.IconTile(sec.sym, sec.face, u(30)),
 			ui.Text(sec.label).FontSize(u(16)).Foreground(fg).Flex(1),
 			ui.Icon(outline.AngleRight).Size(u(16)).Foreground(fg),
-		).Gap(u(12)).Align(geom.Center), func() { st.settings.Set(sec.id) }).
+		).Gap(u(12)).Align(geom.Center), func() {
+			st.settings.Set(sec.id)
+			open.Set(true)
+		}).
 			Style(style).HoverStyle(style).
 			PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.2), CornerRadius: u(10)}).
 			PaddingInsets(geom.Insets{Left: u(12), Right: u(12)}).
 			MinHeight(u(46)))
 	}
 
-	sidebar := ui.VStack(
+	head := []gift.View{
 		link("‹ Home", func() { st.screen.Set(ScreenHome) }),
 		title("Einstellungen", 30),
 		ui.HStack(
 			xgift.IconTile(outline.Printer, ink, u(48)),
 			ui.VStack(title("eventprint", 17), muted("Heimdrucker · Citizen CZ-01", 13)).Gap(u(2)),
 		).Gap(u(14)).Align(geom.Center).Padding(u(12)).Background(ui.ColorSurface).CornerRadius(u(12)),
-		ui.VStack(rows...).Gap(u(4)),
-	).Gap(u(12)).Padding(u(20)).Background(ui.ColorBackground)
+	}
+
+	if compact {
+		head = []gift.View{ui.HStack(
+			link("‹ Home", func() { st.screen.Set(ScreenHome) }),
+			title("Einstellungen", 20).Flex(1).Align(ui.AlignCenter),
+			ui.Box().Frame(u(90), 1),
+		).Align(geom.Center)}
+	}
+
+	sidebar := ui.VStack(append(head, ui.VStack(rows...).Gap(u(4)))...).
+		Gap(u(pick(12, 6))).Padding(u(pick(20, 10))).Background(ui.ColorBackground)
 
 	var detail gift.View
 	key := fmt.Sprint("detail", current)
 	switch current {
 	case sectionWifi:
 		detail = gift.Component(key, func(ctx *gift.Context) gift.View { return a.wifiSettings(ctx, st) })
+	case sectionDisplay:
+		detail = gift.Component(key, func(ctx *gift.Context) gift.View { return a.displaySettings(s, save) })
 	case sectionPrinter:
 		detail = gift.Component(key, func(ctx *gift.Context) gift.View { return a.printerSettings(ctx, st, s, save) })
 	case sectionUpload:
@@ -121,12 +143,33 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 		}
 	}
 
+	scroller := ui.VScroll(ui.VStack(detail, ui.Box().Frame(1, ui.OnScreenKeyboardHeight())).MaxWidth(u(700)).
+		PaddingInsets(geom.Insets{Left: u(pick(24, 16)), Right: u(pick(24, 16)), Bottom: u(24)})).Flex(1)
+
+	if compact {
+		list := xgift.Page{Key: "list", Depth: 0, View: xgift.Fill(ui.VScroll(sidebar)).Key("list")}
+		page := xgift.Page{Key: "detail", Depth: 1, View: ui.VStack(
+			ui.HStack(
+				link("‹ Einstellungen", func() { open.Set(false) }),
+				title(name, 17).Flex(1).Align(ui.AlignCenter),
+				ui.Box().Frame(u(120), 1),
+			).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(8), Right: u(8)}).MinHeight(u(44)),
+			scroller,
+		).Background(ui.ColorBackground)}
+
+		if open.Get() {
+			return xgift.Pages(page, list)
+		}
+
+		return xgift.Pages(list, page)
+	}
+
 	return xgift.HStretch(
 		xgift.Fill(ui.VScroll(sidebar)).Width(u(400)),
 		xgift.VHairline(),
 		grow(ui.VStack(
 			title(name, 17).Align(ui.AlignCenter).PaddingInsets(geom.Insets{Top: u(16), Bottom: u(8)}),
-			ui.VScroll(ui.VStack(detail, ui.Box().Frame(1, ui.OnScreenKeyboardHeight())).MaxWidth(u(700)).PaddingInsets(geom.Insets{Left: u(24), Right: u(24), Bottom: u(24)})).Flex(1),
+			scroller,
 		).Background(ui.ColorBackground)),
 	).Flex(1)
 }
@@ -241,6 +284,46 @@ func (a *App) wifiPasswordSheet(ctx *gift.Context, st *states) gift.View {
 		ui.TextField(ed).Placeholder("WLAN-Kennwort").FontSize(u(18)).MinHeight(u(52)).OnSubmit(func(string) { connect() }),
 		ui.HStack(secondary("Abbrechen", func() { a.dismissSheet() }), primary("Verbinden", connect).Flex(1)).Gap(u(12)),
 	)
+}
+
+// --- Anzeige ----------------------------------------------------------------
+
+// displaySettings wählt hell, dunkel oder automatisch und zeigt, wie die
+// Oberfläche den Bildschirm bemessen hat – nützlich, wenn ein Panel seine
+// Größe falsch meldet.
+func (a *App) displaySettings(s device.Settings, save func(func(*device.Settings))) gift.View {
+	modes := []device.Appearance{device.AppearanceAuto, device.AppearanceLight, device.AppearanceDark}
+	current := slices.Index(modes, s.Appearance)
+	if current < 0 {
+		current = 0
+	}
+
+	d := a.screen
+	size := fmt.Sprintf("%.0f × %.0f Punkte", d.viewport.W, d.viewport.H)
+	if d.physical.W > 0 {
+		size += fmt.Sprintf(" · %.0f × %.0f mm", d.physical.W, d.physical.H)
+	}
+
+	layout := "groß"
+	if compact {
+		layout = "kompakt"
+	}
+
+	return ui.VStack(
+		section("ERSCHEINUNGSBILD",
+			ui.Row("").Accessory(ui.SegmentedControl(current, []string{"Automatisch", "Hell", "Dunkel"}, func(i int) {
+				save(func(s *device.Settings) { s.Appearance = modes[i] })
+				a.refreshTheme()
+			}).FontSize(u(15)).Frame(geom.Unbounded(), u(40))),
+		),
+		muted("Automatisch ist die Box von 20 bis 7 Uhr dunkel. Der Kiosk ist immer dunkel.", 13).MaxLines(2).PaddingInsets(geom.Insets{Left: u(16)}),
+		section("BILDSCHIRM",
+			ui.Row("Fläche").Value(size),
+			ui.Row("Vergrößerung").Value(fmt.Sprintf("%.2f × Dichte %v", scale, d.dens())),
+			ui.Row("Anordnung").Value(layout),
+		),
+		muted("Die Oberfläche bemisst sich nach Auflösung und Größe des Panels. Wer anderes möchte, setzt EVENTPRINT_UI_SCALE in /etc/default/eventprint.", 13).MaxLines(3).PaddingInsets(geom.Insets{Left: u(16)}),
+	).Gap(u(pick(18, 12)))
 }
 
 // --- Drucker ----------------------------------------------------------------

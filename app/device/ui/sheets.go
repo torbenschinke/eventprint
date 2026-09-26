@@ -18,9 +18,28 @@ import (
 )
 
 // sheetCard ist die Fläche eines Dialogs.
+//
+// Sie ist nie breiter als der Bildschirm, und ihr Inhalt scrollt, wenn er
+// nicht in die Höhe passt. Das letzte Kind – die Knopfzeile – bleibt dabei
+// stehen: Ein Dialog, dessen Knöpfe unter dem Rand liegen, lässt sich auf
+// einem kleinen Panel sonst nicht mehr schließen.
 func sheetCard(width float32, children ...gift.View) gift.View {
-	return ui.VStack(children...).Gap(u(16)).Padding(u(28)).Frame(width, geom.Unbounded()).
-		Background(ui.ColorSurface).CornerRadius(u(28))
+	pad, gap := u(pick(28, 16)), u(pick(16, 10))
+	width = min(width, u(vw()-24))
+
+	if len(children) < 2 {
+		return ui.VStack(children...).Gap(gap).Padding(pad).Frame(width, geom.Unbounded()).
+			Background(ui.ColorSurface).CornerRadius(u(pick(28, 20)))
+	}
+
+	head, foot := children[:len(children)-1], children[len(children)-1]
+	room := u(vh()-24) - 2*pad - gap - u(pick(64, 52))
+
+	return ui.VStack(
+		ui.VScroll(ui.VStack(head...).Gap(gap)).MaxHeight(room),
+		foot,
+	).Gap(gap).Padding(pad).Frame(width, geom.Unbounded()).
+		Background(ui.ColorSurface).CornerRadius(u(pick(28, 20)))
 }
 
 // sheetView zeigt den aktuellen Dialog.
@@ -74,9 +93,9 @@ func (a *App) kioskStartSheet(ctx *gift.Context, st *states) gift.View {
 		}
 
 		rows = append(rows, ui.HStack(
-			ui.Icon(sym).Size(u(26)).Foreground(color),
-			ui.VStack(title(c.Title, 16), muted(c.Detail, 13).MaxLines(2)).Gap(u(2)).Flex(1),
-		).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(14), Right: u(14), Top: u(8), Bottom: u(8)}))
+			ui.Icon(sym).Size(u(pick(26, 22))).Foreground(color),
+			ui.VStack(title(c.Title, pick(16, 15)), muted(c.Detail, 13).MaxLines(2)).Gap(u(2)).Flex(1),
+		).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(14), Right: u(14), Top: u(pick(8, 5)), Bottom: u(pick(8, 5))}))
 	}
 
 	if !res.Loaded() {
@@ -90,14 +109,14 @@ func (a *App) kioskStartSheet(ctx *gift.Context, st *states) gift.View {
 
 	return sheetCard(u(600),
 		ui.HStack(
-			xgift.IconTile(outline.WandMagicSparkles, pink, u(52)),
-			ui.VStack(title("Kiosk starten?", 24), body(name, 15)).Gap(u(2)),
+			xgift.IconTile(outline.WandMagicSparkles, pink, u(pick(52, 40))),
+			ui.VStack(title("Kiosk starten?", pick(24, 20)), body(name, 15)).Gap(u(2)),
 		).Gap(u(14)).Align(geom.Center),
 		ui.VStack(rows...).Background(ui.ColorBackground).CornerRadius(u(14)),
 		ui.HStack(
 			ui.Icon(outline.InfoCircle).Size(u(22)).Foreground(orange),
 			body("Der Kiosk bleibt aktiv, bis die Box neu startet. Stecker ziehen und wieder einstecken bringt dich zurück in den Heimbetrieb. Mediathek und Einstellungen sind bis dahin verborgen.", 15).MaxLines(4).Flex(1),
-		).Gap(u(12)).Padding(u(14)).Background(ui.RGB(0xFF, 0xF6, 0xE0)).CornerRadius(u(14)),
+		).Gap(u(12)).Padding(u(14)).Background(notice).CornerRadius(u(14)),
 		ui.HStack(
 			secondary("Abbrechen", func() { a.dismissSheet() }),
 			primary(label, func() {

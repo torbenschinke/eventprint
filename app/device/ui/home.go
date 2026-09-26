@@ -22,9 +22,36 @@ import (
 // homeShell ist der Rahmen des Heimbetriebs: Statusleiste und Bildschirm.
 func (a *App) homeShell(ctx *gift.Context, st *states) gift.View {
 	screen := ctx.Read(st.screen)
+	if screen != a.nav.current {
+		a.nav.previous, a.nav.current = a.nav.current, screen
+	}
 
+	return ui.VStack(
+		gift.Component("statusbar", func(ctx *gift.Context) gift.View { return a.statusBar(ctx, st, false, "") }),
+		grow(xgift.Pages(a.page(st, a.nav.current), a.page(st, a.nav.previous))),
+	).Background(wallpaper).Flex(1)
+}
+
+// depth ordnet die Bildschirme für die Bewegung beim Wechsel: Tiefer
+// liegende schieben sich von rechts über den Home-Bildschirm, zurück geht es
+// nach rechts hinaus.
+func (s Screen) depth() int {
+	switch s {
+	case ScreenHome:
+		return 0
+	case ScreenStudio:
+		return 2
+	default:
+		return 1
+	}
+}
+
+// page baut einen Bildschirm als Seite mit eigenem, deckendem Hintergrund:
+// Während eines Wechsels liegen zwei Seiten übereinander.
+func (a *App) page(st *states, s Screen) xgift.Page {
 	var content gift.View
-	switch screen {
+	bg := ui.ColorBackground
+	switch s {
 	case ScreenLibrary:
 		content = gift.Component("library", func(ctx *gift.Context) gift.View { return a.library(ctx, st) })
 	case ScreenStudio:
@@ -35,17 +62,14 @@ func (a *App) homeShell(ctx *gift.Context, st *states) gift.View {
 		content = gift.Component("settings", func(ctx *gift.Context) gift.View { return a.settingsScreen(ctx, st) })
 	default:
 		content = gift.Component("homescreen", func(ctx *gift.Context) gift.View { return a.homeScreen(ctx, st) })
-	}
-
-	bg := ui.ColorBackground
-	if screen == ScreenHome {
 		bg = wallpaper
 	}
 
-	return ui.VStack(
-		gift.Component("statusbar", func(ctx *gift.Context) gift.View { return a.statusBar(ctx, st, false, "") }),
-		grow(content),
-	).Background(bg).Flex(1)
+	return xgift.Page{
+		Key:   fmt.Sprint("screen", int(s)),
+		Depth: s.depth(),
+		View:  ui.VStack(grow(content)).Background(bg),
+	}
 }
 
 // status sind die Angaben der Statusleiste.
@@ -107,8 +131,8 @@ func (a *App) statusBar(ctx *gift.Context, st *states, dark bool, pill string) g
 	}
 
 	return ui.HStack(items...).Gap(u(18)).Align(geom.Center).
-		PaddingInsets(geom.Insets{Left: u(28), Right: u(28)}).
-		MinHeight(u(32))
+		PaddingInsets(geom.Insets{Left: u(pick(28, 16)), Right: u(pick(28, 16))}).
+		MinHeight(u(statusBarHeight()))
 }
 
 // loadStatus sammelt die Angaben der Statusleiste. Sie laufen als System:
@@ -145,6 +169,10 @@ type homeData struct {
 }
 
 // homeScreen ist der Home-Bildschirm mit Widgets und App-Symbolen.
+//
+// Links die Widgets, rechts die App-Symbole und der Start in den Kiosk. Die
+// Spalten teilen sich die Breite anteilig; auf kleinen Panels werden die
+// Widgets knapper, statt aus dem Bild zu laufen.
 func (a *App) homeScreen(ctx *gift.Context, st *states) gift.View {
 	tick := ctx.Read(st.tick)
 
@@ -152,18 +180,28 @@ func (a *App) homeScreen(ctx *gift.Context, st *states) gift.View {
 	res.LoadKeyed([2]int{tick / 3, ctx.Read(st.photos)}, func() (homeData, error) { return a.loadHome() })
 	d := res.Value()
 
-	left := xgift.Fill(ui.VStack(
-		a.inboxWidget(st, d),
-		xgift.HStretch(xgift.Fill(a.printerWidget(st, d)).Flex(1), xgift.Fill(a.phoneWidget(d)).Flex(1)).Gap(u(20)).Flex(1),
-	).Gap(u(20))).Width(u(800))
+	pad, gap := gutter(), spacing()
+	inner := vw() - 2*pad - gap
+	right := clamp(inner*0.36, 260, 420)
+	if !compact {
+		right = inner * 0.36
+	}
 
-	right := xgift.Fill(ui.VStack(
-		a.appIcons(st),
-		xgift.Fill(a.kioskWidget(st, d)).Flex(1),
-	).Gap(u(20))).Flex(1)
+	left := inner - right
 
-	return ui.VStack(xgift.HStretch(left, right).Gap(u(24)).Flex(1)).
-		PaddingInsets(geom.Insets{Top: u(16), Left: u(40), Right: u(40), Bottom: u(32)})
+	lower := xgift.HStretch(
+		xgift.Fill(a.printerWidget(st, d)).Flex(1),
+		xgift.Fill(a.phoneWidget(d)).Flex(1),
+	).Gap(u(gap)).Flex(1)
+
+	return ui.VStack(xgift.HStretch(
+		xgift.Fill(ui.VStack(a.inboxWidget(st, d, left), lower).Gap(u(gap))).Width(u(left)),
+		xgift.Fill(ui.VStack(
+			a.appIcons(st, right),
+			xgift.Fill(a.kioskWidget(st, d)).Flex(1),
+		).Gap(u(gap))).Flex(1),
+	).Gap(u(gap)).Flex(1)).
+		PaddingInsets(geom.Insets{Top: u(pick(16, 8)), Left: u(pad), Right: u(pad), Bottom: u(pick(32, 12))})
 }
 
 func (a *App) loadHome() (homeData, error) {
@@ -200,14 +238,25 @@ func (a *App) loadHome() (homeData, error) {
 	return d, nil
 }
 
-func (a *App) inboxWidget(st *states, d homeData) gift.View {
+func (a *App) inboxWidget(st *states, d homeData, width float32) gift.View {
+	// So viele Vorschaubilder, wie mit mindestens 90 Punkten nebeneinander
+	// passen, höchstens fünf; ihre Kante füllt dann die Zeile.
+	inner := width - 2*pick(22, 14)
+	gap := pick(12, 8)
+	n := clamp(float32(int((inner+gap)/(90+gap))), 1, 5)
+	edge := min((inner-gap*(n-1))/n, pick(150, 120), vh()*0.22)
+
 	thumbs := []gift.View{}
-	for _, loc := range d.inbox {
-		thumbs = append(thumbs, thumb(loc.Path, u(138)))
+	for i, loc := range d.inbox {
+		if float32(i) >= n {
+			break
+		}
+
+		thumbs = append(thumbs, thumb(loc.Path, u(edge)))
 	}
 
 	if len(thumbs) == 0 {
-		thumbs = append(thumbs, muted("Noch nichts angekommen. Scanne den QR-Code mit dem Handy, um Fotos zu senden.", 16).Flex(1).MinHeight(u(138)))
+		thumbs = append(thumbs, muted("Noch nichts angekommen. Scanne den QR-Code mit dem Handy, um Fotos zu senden.", pick(16, 14)).MaxLines(3).Flex(1).MinHeight(u(edge)))
 	}
 
 	badge := gift.View(ui.Box().Frame(1, 1))
@@ -215,19 +264,24 @@ func (a *App) inboxWidget(st *states, d homeData) gift.View {
 		badge = ui.Badge(fmt.Sprintf("%d neu", d.unseen)).Color(blue)
 	}
 
+	footer := gift.View(ui.HStack(
+		muted("Fotos von Handy und Kamera warten hier, bis du Format und Design wählst.", 15).MaxLines(2).Flex(1),
+		primary("Auswählen und drucken", func() { a.openLibrary(photo.ScopeInbox, "") }),
+	).Gap(u(16)).Align(geom.Center))
+	if compact {
+		footer = primary("Auswählen und drucken", func() { a.openLibrary(photo.ScopeInbox, "") })
+	}
+
 	return card(
 		ui.HStack(
-			xgift.IconTile(outline.Inbox, ui.RGB(0xE8, 0x59, 0x0C), u(34)),
-			title("Eingang", 21),
+			xgift.IconTile(outline.Inbox, ui.RGB(0xE8, 0x59, 0x0C), u(pick(34, 28))),
+			title("Eingang", pick(21, 18)),
 			badge,
 			fill(),
-			link("Alle ansehen", func() { a.openLibrary(photo.ScopeInbox, "") }),
-		).Gap(u(12)).Align(geom.Center),
-		ui.HStack(thumbs...).Gap(u(12)),
-		ui.HStack(
-			muted("Fotos von Handy und Kamera warten hier, bis du Format und Design wählst.", 15).Flex(1),
-			primary("Auswählen und drucken", func() { a.openLibrary(photo.ScopeInbox, "") }),
-		).Gap(u(16)).Align(geom.Center),
+			link(pick2("Alle ansehen", "Alle"), func() { a.openLibrary(photo.ScopeInbox, "") }),
+		).Gap(u(pick(12, 10))).Align(geom.Center),
+		ui.HStack(thumbs...).Gap(u(gap)),
+		footer,
 	)
 }
 
@@ -248,46 +302,59 @@ func (a *App) printerWidget(st *states, d homeData) gift.View {
 		detail = p
 	}
 
-	return card(
+	rows := []gift.View{
 		ui.HStack(
-			xgift.IconTile(outline.Printer, grey, u(34)),
-			title("Drucker", 21),
-			fill(),
-			ui.Text(state).FontSize(u(15)).Font(boldFont).Foreground(color),
-		).Gap(u(12)).Align(geom.Center),
+			xgift.IconTile(outline.Printer, grey, u(pick(34, 26))),
+			title("Drucker", pick(21, 17)).MaxLines(1).Flex(1),
+			ui.Text(state).FontSize(u(pick(15, 13))).Font(boldFont).Foreground(color),
+		).Gap(u(pick(12, 8))).Align(geom.Center),
 		ui.HStack(
-			ui.Text(fmt.Sprint(d.settings.PaperLeft)).FontSize(u(56)).Font(boldFont),
-			body(fmt.Sprintf("von %d Blatt übrig", capacity), 17),
+			ui.Text(fmt.Sprint(d.settings.PaperLeft)).FontSize(u(pick(56, 32))).Font(boldFont),
+			body(fmt.Sprintf("von %d Blatt", capacity), pick(17, 14)),
 		).Gap(u(8)).AlignBaseline(),
-		ui.ProgressBar(frac).Tint(green).Frame(geom.Unbounded(), u(10)),
-		muted(detail, 15).MaxLines(2),
-		fill(),
-		link("Aufträge ansehen", func() { a.st.screen.Set(ScreenJobs) }),
-	).Flex(1)
+		ui.ProgressBar(frac).Tint(green).Frame(geom.Unbounded(), u(pick(10, 8))),
+	}
+
+	if !compact {
+		rows = append(rows, muted(detail, 15).MaxLines(2))
+	}
+
+	rows = append(rows, fill(), link(pick2("Aufträge ansehen", "Aufträge"), func() { a.st.screen.Set(ScreenJobs) }))
+
+	return card(rows...).Flex(1)
 }
 
 func (a *App) phoneWidget(d homeData) gift.View {
+	edge := pick(150, clamp(vh()*0.16, 64, 110))
+
 	var code gift.View
 	if d.address.URL != "" {
-		code = xgift.QRCode(d.address.URL, u(150))
+		code = xgift.QRCode(d.address.URL, u(edge))
 	} else {
-		code = ui.VStack(muted(orDash(d.address.Problem), 14).MaxLines(4)).Frame(u(150), u(150)).
-			Align(geom.Center).Background(ui.ColorBackground).CornerRadius(u(12)).Padding(u(10))
+		code = ui.VStack(muted(orDash(d.address.Problem), 13).MaxLines(4)).Frame(u(edge), u(edge)).
+			Align(geom.Center).Background(ui.ColorBackground).CornerRadius(u(12)).Padding(u(8))
+	}
+
+	hint := "Kamera öffnen, Code scannen, Fotos wählen. Sie landen im Eingang – gedruckt wird erst, wenn du hier auswählst."
+	if compact {
+		hint = "Code scannen, Fotos wählen – sie landen im Eingang."
 	}
 
 	return card(
 		ui.HStack(
-			xgift.IconTile(outline.MobilePhone, green, u(34)),
-			title("Vom Handy senden", 21),
-		).Gap(u(12)).Align(geom.Center),
+			xgift.IconTile(outline.MobilePhone, green, u(pick(34, 26))),
+			title(pick2("Vom Handy senden", "Vom Handy"), pick(21, 17)).MaxLines(1).Flex(1),
+		).Gap(u(pick(12, 8))).Align(geom.Center),
 		ui.HStack(
 			code,
-			muted("Kamera öffnen, Code scannen, Fotos wählen. Sie landen im Eingang – gedruckt wird erst, wenn du hier auswählst.", 15).MaxLines(6).Flex(1),
-		).Gap(u(18)).Align(geom.Center).Flex(1),
+			muted(hint, pick(15, 13)).MaxLines(6).Flex(1),
+		).Gap(u(pick(18, 10))).Align(geom.Center).Flex(1),
 	).Flex(1)
 }
 
-func (a *App) appIcons(st *states) gift.View {
+// appIcons ist das Raster der App-Symbole, drei nebeneinander. Die Kante der
+// Symbole folgt der Spaltenbreite.
+func (a *App) appIcons(st *states, width float32) gift.View {
 	type app struct {
 		label string
 		sym   ui.Symbol
@@ -311,19 +378,26 @@ func (a *App) appIcons(st *states) gift.View {
 		{"Einstellungen", outline.Cog, ui.RGB(0x5E, 0x5E, 0x63), func() { st.screen.Set(ScreenSettings) }},
 	}
 
+	gap := pick(18, 10)
+	cell := (width - 2*gap) / 3
+	edge := clamp(cell-pick(28, 24), 52, 84)
+	if compact {
+		edge = min(edge, vh()*0.13)
+	}
+
 	cells := make([]gift.View, 0, len(apps))
 	for _, ap := range apps {
 		face := ui.ButtonStyle{Background: ui.ColorClear, Border: noBorder}
 		cells = append(cells, ui.Button(ui.VStack(
-			xgift.IconTile(ap.sym, ap.face, u(84)),
-			ui.Text(ap.label).FontSize(u(14)),
-		).Gap(u(8)).Align(geom.Center), ap.fn).
+			xgift.IconTile(ap.sym, ap.face, u(edge)),
+			ui.Text(ap.label).FontSize(u(pick(14, 12))).MaxLines(1),
+		).Gap(u(pick(8, 4))).Align(geom.Center), ap.fn).
 			Style(face).HoverStyle(face).
 			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.06), CornerRadius: u(16)}).
 			Label(ap.label))
 	}
 
-	return xgift.Grid(3, u(18), cells...)
+	return xgift.Grid(3, u(gap), cells...)
 }
 
 func (a *App) kioskWidget(st *states, d homeData) gift.View {
@@ -332,17 +406,21 @@ func (a *App) kioskWidget(st *states, d homeData) gift.View {
 		name = "Nächste Feier"
 	}
 
+	hint := "Gäste drucken selbst, deine Mediathek bleibt verborgen. Aktiv bis zum nächsten Neustart."
+	if compact {
+		hint = "Gäste drucken selbst. Aktiv bis zum Neustart."
+	}
+
 	return ui.VStack(
 		ui.HStack(
-			ui.Icon(outline.WandMagicSparkles).Size(u(20)).Foreground(amber),
-			ui.Text("KIOSK-MODUS").FontSize(u(13)).Font(boldFont).Foreground(amber),
-		).Gap(u(10)).Align(geom.Center),
-		title(name, 24).Foreground(white).MaxLines(2),
-		ui.Text("Gäste drucken selbst, deine Mediathek bleibt verborgen. Aktiv bis zum nächsten Neustart.").
-			FontSize(u(15)).Foreground(ui.RGB(0xC7, 0xC7, 0xCC)).MaxLines(4),
+			ui.Icon(outline.WandMagicSparkles).Size(u(pick(20, 16))).Foreground(amber),
+			ui.Text("KIOSK-MODUS").FontSize(u(pick(13, 12))).Font(boldFont).Foreground(amber),
+		).Gap(u(pick(10, 8))).Align(geom.Center),
+		title(name, pick(24, 18)).Foreground(white).MaxLines(2),
+		ui.Text(hint).FontSize(u(pick(15, 13))).Foreground(ui.RGB(0xC7, 0xC7, 0xCC)).MaxLines(3),
 		fill(),
 		filled("Kiosk starten", amber, ink, func() { a.openSheet(SheetKioskStart) }),
-	).Gap(u(12)).Padding(u(24)).Background(ui.RGB(0x16, 0x16, 0x1A)).CornerRadius(u(26)).Flex(1)
+	).Gap(u(pick(12, 8))).Padding(u(pick(24, 14))).Background(kioskPanel).CornerRadius(u(pick(26, 18))).Flex(1)
 }
 
 // thumb ist ein quadratisches Vorschaubild eines Originals.
