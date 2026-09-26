@@ -1,0 +1,434 @@
+package uidevice
+
+import (
+	"fmt"
+	"slices"
+
+	"github.com/worldiety/gift"
+	"github.com/worldiety/gift/asset"
+	"github.com/worldiety/gift/geom"
+	"github.com/worldiety/gift/icon/outline"
+	"github.com/worldiety/gift/ui"
+
+	"github.com/torbenschinke/eventprint/app/device"
+	"github.com/torbenschinke/eventprint/app/photo"
+	"github.com/torbenschinke/eventprint/pkg/xgift"
+)
+
+// Quellen außerhalb der Mediathek.
+const (
+	sourceLightroom = "lightroom"
+	sourceUSB       = "usb"
+)
+
+// openLibrary öffnet die Mediathek mit einer Auswahl.
+func (a *App) openLibrary(scope photo.Scope, source string) {
+	a.clearSelection()
+	a.st.libScope.Set(scope)
+	a.st.libSource.Set(source)
+	a.st.screen.Set(ScreenLibrary)
+}
+
+func (a *App) clearSelection() {
+	a.selected = nil
+	a.st.selection.Set(a.st.selection.Get() + 1)
+}
+
+// library ist die Mediathek: links die Seitenleiste, rechts die Fotos.
+func (a *App) library(ctx *gift.Context, st *states) gift.View {
+	source := ctx.Read(st.libSource)
+
+	var content gift.View
+	switch source {
+	case sourceLightroom:
+		content = gift.Component("lightroom", func(ctx *gift.Context) gift.View { return a.lightroomBrowser(ctx, st) })
+	case sourceUSB:
+		content = gift.Component("usb", func(ctx *gift.Context) gift.View { return a.usbBrowser(ctx, st) })
+	default:
+		content = gift.Component("photos", func(ctx *gift.Context) gift.View { return a.photoBrowser(ctx, st) })
+	}
+
+	return xgift.HStretch(
+		gift.Component("sidebar", func(ctx *gift.Context) gift.View { return a.librarySidebar(ctx, st) }),
+		grow(content),
+	).Flex(1)
+}
+
+// sidebarData sind die Zahlen der Seitenleiste.
+type sidebarData struct {
+	counts map[photo.Scope]int
+	events []device.Event
+}
+
+func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
+	scope := ctx.Read(st.libScope)
+	event := ctx.Read(st.libEvent)
+	source := ctx.Read(st.libSource)
+	rev := ctx.Read(st.photos)
+
+	res := xgift.UseResource[sidebarData](ctx, "sidebar")
+	res.LoadKeyed(rev, func() (sidebarData, error) {
+		d := sidebarData{counts: map[photo.Scope]int{}}
+		subject := a.dev.Subject()
+		for _, sc := range []photo.Scope{photo.ScopeInbox, photo.ScopeAll, photo.ScopeFavorites, photo.ScopePrinted} {
+			list, err := a.dev.Photos.FindAll(subject, photo.Query{Scope: sc})
+			if err != nil {
+				return d, err
+			}
+
+			d.counts[sc] = len(list)
+		}
+
+		s, err := a.dev.Device.LoadSettings(subject)
+		if err != nil {
+			return d, err
+		}
+
+		d.events = slices.Clone(s.Events)
+		slices.Reverse(d.events)
+		if len(d.events) > 5 {
+			d.events = d.events[:5]
+		}
+
+		return d, nil
+	})
+
+	d := res.Value()
+
+	row := func(label string, sym ui.Symbol, count string, active bool, fn func()) gift.View {
+		fg, ic, face := ui.ColorLabel, ui.ColorAccent, ui.ColorClear
+		if active {
+			fg, ic, face = white, white, blue
+		}
+
+		style := ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(10)}
+
+		return ui.Button(ui.HStack(
+			ui.Icon(sym).Size(u(22)).Foreground(ic),
+			ui.Text(label).FontSize(u(16)).Foreground(fg).Flex(1),
+			ui.Text(count).FontSize(u(14)).Foreground(fg),
+		).Gap(u(12)).Align(geom.Center), fn).
+			Style(style).HoverStyle(style).
+			PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.2), CornerRadius: u(10)}).
+			PaddingInsets(geom.Insets{Left: u(12), Right: u(12)}).
+			MinHeight(u(44))
+	}
+
+	count := func(sc photo.Scope) string {
+		if n, ok := d.counts[sc]; ok && n > 0 {
+			return fmt.Sprint(n)
+		}
+
+		return ""
+	}
+
+	local := source == ""
+	items := []gift.View{
+		ui.HStack(
+			iconButton(outline.Home, "Home", ui.ColorAccent, func() { st.screen.Set(ScreenHome) }),
+			fill(),
+			iconButton(outline.List, "Aufträge", ui.ColorAccent, func() { st.screen.Set(ScreenJobs) }),
+		).Align(geom.Center),
+		title("Fotos", 30).PaddingInsets(geom.Insets{Left: u(8), Bottom: u(6)}),
+		muted("MEDIATHEK", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(4)}),
+		row("Eingang", outline.Inbox, count(photo.ScopeInbox), local && scope == photo.ScopeInbox, func() { a.openLibrary(photo.ScopeInbox, "") }),
+		row("Alle Fotos", outline.Grid, count(photo.ScopeAll), local && scope == photo.ScopeAll, func() { a.openLibrary(photo.ScopeAll, "") }),
+		row("Favoriten", outline.Heart, count(photo.ScopeFavorites), local && scope == photo.ScopeFavorites, func() { a.openLibrary(photo.ScopeFavorites, "") }),
+		row("Gedruckt", outline.Printer, count(photo.ScopePrinted), local && scope == photo.ScopePrinted, func() { a.openLibrary(photo.ScopePrinted, "") }),
+	}
+
+	if len(d.events) > 0 {
+		items = append(items, muted("FEIERN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(14)}))
+		for _, e := range d.events {
+			items = append(items, row(e.Title, outline.WandMagicSparkles, e.StartedAt.Local().Format("02.01."),
+				local && scope == photo.ScopeEvent && event == e.ID, func() {
+					a.st.libEvent.Set(e.ID)
+					a.openLibrary(photo.ScopeEvent, "")
+				}))
+		}
+	}
+
+	items = append(items,
+		muted("QUELLEN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(14)}),
+		row("Adobe Lightroom", outline.CloudArrowUp, "", source == sourceLightroom, func() { a.openLibrary(scope, sourceLightroom) }),
+		row("USB-Stick", outline.ArchiveArrowDown, "", source == sourceUSB, func() { a.openLibrary(scope, sourceUSB) }),
+		ui.HStack(
+			ui.Icon(outline.Server).Size(u(22)).Foreground(ui.ColorSecondaryLabel),
+			muted("NAS / Freigabe", 16).Flex(1),
+			muted("bald", 14),
+		).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(12), Right: u(12)}).MinHeight(u(44)),
+	)
+
+	return xgift.Fill(ui.VScroll(ui.VStack(items...).Gap(u(4)).Padding(u(16))).
+		Background(ui.ColorBackground)).Width(u(300))
+}
+
+// gallery liefert die dauerhafte Galerie eines Bildschirms.
+func (a *App) gallery(key string) *ui.Gallery {
+	g, ok := a.galleries[key]
+	if !ok {
+		g = ui.NewGallery(asset.NewCollection(nil))
+		a.galleries[key] = g
+	}
+
+	return g
+}
+
+// refill meldet, ob eine Galerie einen neuen Inhalt braucht, und merkt sich
+// die Fassung, die sie bekommt. Die Fassung enthält die Ressource selbst: Wer
+// den Bildschirm verlässt und wiederkommt, bekommt eine neue Ressource, deren
+// Zähler wieder bei null beginnt.
+func (a *App) refill(key string, version any) bool {
+	if a.filled == nil {
+		a.filled = map[string]any{}
+	}
+
+	if v, ok := a.filled[key]; ok && v == version {
+		return false
+	}
+
+	a.filled[key] = version
+
+	return true
+}
+
+// tileStyle ist das Aussehen einer Kachel.
+func tileStyle() ui.TileStyle {
+	return ui.TileStyle{
+		CornerRadius: u(6),
+		Palette:      []ui.Color{ui.RGB(0xE3, 0xE3, 0xE8), ui.RGB(0xDA, 0xDA, 0xE0)},
+		Error:        ui.RGB(0xF3, 0xC6, 0xC6),
+		Selected:     ui.Border{Width: u(5), Color: blue},
+	}
+}
+
+// photoList ist eine geladene Liste von Fotos.
+type photoList struct {
+	items []photo.Location
+}
+
+// fillGallery setzt den Inhalt einer Galerie aus Originaldateien.
+func fillGallery(g *ui.Gallery, items []photo.Location) {
+	meta := make([]asset.Metadata, 0, len(items))
+	paths := make(map[asset.ID]string, len(items))
+	for _, it := range items {
+		id := asset.ID(it.Photo.ID)
+		meta = append(meta, asset.Metadata{ID: id, Width: uint32(it.Photo.Width), Height: uint32(it.Photo.Height)})
+		paths[id] = it.Path
+	}
+
+	g.SetCollection(asset.NewCollection(meta))
+	g.SetSources(func(id asset.ID) asset.Source {
+		if p, ok := paths[id]; ok {
+			return asset.File(p)
+		}
+
+		return nil
+	})
+}
+
+// squareGrid ordnet die Kacheln als quadratisches Raster an, wie die
+// Fotos-App eines Tablets.
+func squareGrid(minWidth float32) ui.GalleryLayout {
+	return ui.Masonry().MinColumnWidth(minWidth).Gap(u(6)).AspectClamp(1, 1)
+}
+
+func scopeTitle(scope photo.Scope) (string, string) {
+	switch scope {
+	case photo.ScopeInbox:
+		return "Eingang", "Vom Handy und von der Kamera"
+	case photo.ScopeFavorites:
+		return "Favoriten", "Von dir markiert"
+	case photo.ScopePrinted:
+		return "Gedruckt", "Schon einmal auf Papier"
+	case photo.ScopeEvent:
+		return "Feier", "Fotos einer Feier im Kiosk"
+	default:
+		return "Alle Fotos", "Alles auf der Box"
+	}
+}
+
+// photoBrowser zeigt die Fotos der Mediathek.
+func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
+	scope := ctx.Read(st.libScope)
+	event := ctx.Read(st.libEvent)
+	rev := ctx.Read(st.photos)
+	tick := ctx.Read(st.tick)
+	ctx.Read(st.selection)
+
+	// Der Eingang füllt sich von selbst, während man davorsteht. Die anderen
+	// Listen ändern sich nur durch eigene Aktionen.
+	refresh := 0
+	if scope == photo.ScopeInbox {
+		refresh = tick / 3
+	}
+
+	res := xgift.UseResource[photoList](ctx, "list")
+	res.LoadKeyed([4]any{scope, event, rev, refresh}, func() (photoList, error) {
+		subject := a.dev.Subject()
+		list, err := a.dev.Photos.FindAll(subject, photo.Query{Scope: scope, Event: event})
+		if err != nil {
+			return photoList{}, err
+		}
+
+		ids := make([]photo.ID, 0, len(list))
+		for _, p := range list {
+			ids = append(ids, p.ID)
+		}
+
+		locs, err := a.dev.Photos.Locate(subject, ids...)
+		return photoList{items: locs}, err
+	})
+
+	g := a.gallery("photos")
+	list := res.Value()
+	if a.refill("photos", [2]any{res, res.Version()}) {
+		fillGallery(g, list.items)
+		xgift.ShowSelection(g, toAssetIDs(a.selected))
+	}
+
+	name, hint := scopeTitle(scope)
+	if res.Err() != nil {
+		hint = res.Err().Error()
+	}
+
+	header := ui.HStack(
+		ui.VStack(
+			title(name, 30),
+			muted(fmt.Sprintf("%s · %d Fotos", hint, len(list.items)), 15),
+		).Gap(u(2)).Flex(1),
+		a.selectAllButton(list.items),
+	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Top: u(14), Left: u(32), Right: u(32), Bottom: u(8)})
+
+	var grid gift.View
+	if res.Loaded() && len(list.items) == 0 {
+		grid = ui.VStack(muted(emptyHint(scope), 17).MaxLines(3)).Align(geom.Center).Flex(1).Padding(u(40))
+	} else {
+		grid = ui.ImageGallery(g).
+			Layout(squareGrid(u(170))).
+			Tile(tileStyle()).
+			Overscan(u(400)).
+			PaddingInsets(geom.Insets{Left: u(32), Right: u(32), Bottom: u(120)}).
+			OnSelect(func(id asset.ID) {
+				a.selected = toPhotoIDs(xgift.TouchSelect(g, toAssetIDs(a.selected), id))
+				st.selection.Set(st.selection.Get() + 1)
+			}).
+			Flex(1)
+	}
+
+	return ui.ZStack(
+		xgift.Fill(ui.VStack(header, grid).Background(ui.ColorSurface)),
+		a.selectionBar(st),
+	).Align(geom.Bottom)
+}
+
+func emptyHint(scope photo.Scope) string {
+	switch scope {
+	case photo.ScopeInbox:
+		return "Der Eingang ist leer. Scanne den QR-Code auf dem Home-Bildschirm mit dem Handy und sende Fotos."
+	case photo.ScopeFavorites:
+		return "Noch keine Favoriten. Wähle Fotos aus und tippe auf das Herz."
+	case photo.ScopePrinted:
+		return "Noch nichts gedruckt."
+	default:
+		return "Noch keine Fotos auf der Box."
+	}
+}
+
+func (a *App) selectAllButton(items []photo.Location) gift.View {
+	if len(a.selected) > 0 {
+		return secondary("Auswahl aufheben", func() {
+			a.clearSelection()
+			xgift.ShowSelection(a.gallery("photos"), nil)
+		})
+	}
+
+	if len(items) == 0 {
+		return ui.Box().Frame(1, 1)
+	}
+
+	return secondary("Alle auswählen", func() {
+		a.selected = nil
+		for _, it := range items {
+			a.selected = append(a.selected, it.Photo.ID)
+		}
+
+		xgift.ShowSelection(a.gallery("photos"), toAssetIDs(a.selected))
+		a.st.selection.Set(a.st.selection.Get() + 1)
+	})
+}
+
+// selectionBar schwebt über der Galerie, sobald etwas ausgewählt ist.
+func (a *App) selectionBar(st *states) gift.View {
+	n := len(a.selected)
+	if n == 0 {
+		return ui.Box().Frame(1, 1)
+	}
+
+	label := "1 Foto ausgewählt"
+	if n > 1 {
+		label = fmt.Sprintf("%d Fotos ausgewählt", n)
+	}
+
+	return floating(ui.HStack(
+		title(label, 17).Flex(1),
+		iconButton(outline.Heart, "Favorit", ui.ColorAccent, func() {
+			if !a.fail(a.dev.Photos.SetFavorite(a.dev.Subject(), true, a.selected...)) {
+				a.show("Als Favorit markiert.")
+				a.photosChanged()
+			}
+		}),
+		iconButton(outline.ArchiveArrowDown, "Auf USB-Stick kopieren", ui.ColorAccent, func() { a.openSheet(SheetExport) }),
+		iconButton(outline.TrashBin, "Löschen", red, func() { a.openSheet(SheetConfirmDelete) }),
+		primary("Weiter zum Drucken", func() { a.startStudio(slices.Clone(a.selected)) }),
+	).Gap(u(12)).Align(geom.Center).
+		PaddingInsets(geom.Insets{Left: u(22), Right: u(12), Top: u(10), Bottom: u(10)}).
+		Background(ui.ColorSurface).CornerRadius(u(22)).
+		Shadow(ui.Shadow{Blur: u(30), OffsetY: u(10), Color: ui.RGBA(0, 0, 0, 60)}).
+		Border(ui.Border{Width: 1, Color: ui.ColorSeparator}).
+		MaxWidth(u(760)))
+}
+
+// startStudio öffnet das Druck-Studio mit den Fotos.
+func (a *App) startStudio(ids []photo.ID) {
+	if len(ids) == 0 {
+		return
+	}
+
+	a.studio = ids
+	a.st.active.Set(0)
+	a.st.copies.Set(1)
+	a.st.selection.Set(a.st.selection.Get() + 1)
+	a.st.screen.Set(ScreenStudio)
+
+	// Wer Fotos zum Drucken auswählt, hat sie gesehen. Der Eingang ist
+	// danach wieder das, was neu ist.
+	if err := a.dev.Photos.MarkSeen(a.dev.Subject(), ids...); err != nil {
+		a.fail(err)
+	}
+
+	a.photosChanged()
+}
+
+// photosChanged meldet allen Listen, dass sich Fotos geändert haben.
+func (a *App) photosChanged() {
+	a.st.photos.Set(a.st.photos.Get() + 1)
+}
+
+func toAssetIDs(ids []photo.ID) []asset.ID {
+	out := make([]asset.ID, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, asset.ID(id))
+	}
+
+	return out
+}
+
+func toPhotoIDs(ids []asset.ID) []photo.ID {
+	out := make([]photo.ID, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, photo.ID(id))
+	}
+
+	return out
+}
