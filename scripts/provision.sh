@@ -77,6 +77,7 @@ if [[ -d /etc/polkit-1/rules.d ]]; then
   done
 fi
 
+session_changed=0
 for script in kiosk-session.sh:eventprint-kiosk-session mirror-displays.sh:eventprint-mirror-displays; do
   src="${ROOT_DIR}/deploy/kiosk/${script%%:*}"
   dst="/usr/local/bin/${script##*:}"
@@ -84,9 +85,22 @@ for script in kiosk-session.sh:eventprint-kiosk-session mirror-displays.sh:event
   if ! cmp -s "${src}" "${dst}"; then
     log "Kiosk-Skript ${script##*:} angleichen"
     install -m 0755 "${src}" "${dst}"
+    session_changed=1
     changed=1
   fi
 done
+
+# Die Sitzung laeuft zu diesem Zeitpunkt womoeglich schon - mit dem ALTEN
+# Skript. lightdm wartet nicht auf dieses Provisioning, und die automatische
+# Anmeldung ist meist schneller als Update und Build. So ist es beim Umstieg
+# auf gift passiert: Die Box startete noch einmal Chromium, das keine Seite
+# mehr fand, und erst ein zweiter Neustart haette es behoben. Deshalb die
+# Sitzung neu starten, sobald ihr Skript getauscht wurde. Der Dienst selbst
+# laeuft noch nicht (Before=eventprint.service), es geht also nichts verloren.
+if [[ ${session_changed} -eq 1 ]] && systemctl is-active --quiet display-manager.service; then
+  log "Kiosk-Sitzung mit dem neuen Skript neu starten"
+  systemctl --no-block restart display-manager.service
+fi
 
 # udisks2 haengt USB-Sticks ein, auf die die Fotos einer Feier kopiert werden.
 # Aeltere Installationen haben es nicht. Ohne Netz gelingt die Nachinstallation
