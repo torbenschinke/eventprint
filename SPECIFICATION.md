@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 23 | 100% |
-| Normative requirements covered | 23 | 100% |
-| … claimed by a test | 23 | 100% |
-| … demonstrated by a run | 23 | 100% |
-| … read by a person | 23 | 0% |
+| Source segments accounted for | 24 | 100% |
+| Normative requirements covered | 24 | 100% |
+| … claimed by a test | 24 | 100% |
+| … demonstrated by a run | 24 | 100% |
+| … read by a person | 24 | 0% |
 
 ## Gaps
 
@@ -43,6 +43,7 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 - R-DEC-ZUSTANDSABLAGE
 - R-DRUCK-AUFTRAG
 - R-DRUCK-DIAGNOSE
+- R-DRUCK-FREIGABE
 - R-DRUCK-KEIN-NACHDRUCK
 - R-DRUCK-STATUS
 - R-DRUCK-VORSCHAU
@@ -67,9 +68,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 23 |  |
-| … a test claims | 23 | 100% |
-| … a run demonstrated | 23 | 100% |
+| Normative requirements | 24 |  |
+| … a test claims | 24 | 100% |
+| … a run demonstrated | 24 | 100% |
 
 ### How much of the code a run went through
 
@@ -80,7 +81,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | Document | Kind | Segments | Cited | Read | Drifted |
 |---|---|---:|---:|---:|---:|
 | `requirements/_sources/archiv.md` | markdown | 3 | 3 | 0 | 0 |
-| `requirements/_sources/druck.md` | markdown | 6 | 6 | 0 | 0 |
+| `requirements/_sources/druck.md` | markdown | 7 | 7 | 0 | 0 |
 | `requirements/_sources/entscheidungen.md` | markdown | 1 | 1 | 0 | 0 |
 | `requirements/_sources/foto.md` | markdown | 5 | 5 | 0 | 0 |
 | `requirements/_sources/netz.md` | markdown | 4 | 4 | 0 | 0 |
@@ -164,7 +165,7 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-24 packages in 6 bounded contexts, and 43 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+24 packages in 6 bounded contexts, and 44 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
 6 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
@@ -196,7 +197,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-47 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+49 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/photo
 
@@ -359,6 +360,13 @@ _query_ — `app/printing/uc_print.go:19`
 
 **Answers to** [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG), [R-DRUCK-KEIN-NACHDRUCK](#req-R-DRUCK-KEIN-NACHDRUCK)
 
+<a id="req-code-github-com-torbenschinke-eventprint-app-printing-resume"></a>
+#### Resume
+
+_use case_ — `app/printing/uc_resume.go:17`
+
+**Answers to** [R-DRUCK-FREIGABE](#req-R-DRUCK-FREIGABE)
+
 <a id="req-code-github-com-torbenschinke-eventprint-app-printing-retry"></a>
 #### Retry
 
@@ -369,32 +377,37 @@ _use case_ — `app/printing/uc_retry.go:15`
 <a id="req-code-de-torbenschinke-eventprint-printing-diagnose"></a>
 #### de.torbenschinke.eventprint.printing.diagnose
 
-_permission_ — `app/printing/perm.go:54`
+_permission_ — `app/printing/perm.go:55`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-find-all-jobs"></a>
 #### de.torbenschinke.eventprint.printing.find\_all\_jobs
 
-_permission_ — `app/printing/perm.go:26`
+_permission_ — `app/printing/perm.go:27`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-find-job-by-id"></a>
 #### de.torbenschinke.eventprint.printing.find\_job\_by\_id
 
-_permission_ — `app/printing/perm.go:33`
+_permission_ — `app/printing/perm.go:34`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-preview"></a>
 #### de.torbenschinke.eventprint.printing.preview
 
-_permission_ — `app/printing/perm.go:47`
+_permission_ — `app/printing/perm.go:48`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-print"></a>
 #### de.torbenschinke.eventprint.printing.print
 
-_permission_ — `app/printing/perm.go:19`
+_permission_ — `app/printing/perm.go:20`
+
+<a id="req-code-de-torbenschinke-eventprint-printing-resume"></a>
+#### de.torbenschinke.eventprint.printing.resume
+
+_permission_ — `app/printing/perm.go:62`
 
 <a id="req-code-de-torbenschinke-eventprint-printing-retry"></a>
 #### de.torbenschinke.eventprint.printing.retry
 
-_permission_ — `app/printing/perm.go:40`
+_permission_ — `app/printing/perm.go:41`
 
 <a id="req-code-github-com-torbenschinke-eventprint-app-printing-job"></a>
 #### Job
@@ -557,6 +570,7 @@ Every requirement that was read, and how far each one has got. A mark states wha
 | [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE) | decision | technical | normative | yes | no | n/a | no |
 | [R-DRUCK-AUFTRAG](#req-R-DRUCK-AUFTRAG) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-DIAGNOSE](#req-R-DRUCK-DIAGNOSE) | functional | mixed | normative | yes | yes | yes | no |
+| [R-DRUCK-FREIGABE](#req-R-DRUCK-FREIGABE) | functional | mixed | normative | yes | yes | yes | no |
 | [R-DRUCK-KEIN-NACHDRUCK](#req-R-DRUCK-KEIN-NACHDRUCK) | functional | mixed | normative | yes | yes | yes | no |
 | [R-DRUCK-STATUS](#req-R-DRUCK-STATUS) | functional | business | normative | yes | yes | yes | no |
 | [R-DRUCK-VORSCHAU](#req-R-DRUCK-VORSCHAU) | functional | business | normative | yes | yes | yes | no |
@@ -678,6 +692,18 @@ _functional, mixed, normative._
   - `github.com/torbenschinke/eventprint/app/printing.Diagnose`
   - `github.com/torbenschinke/eventprint/app/printing.Diagnose`
 - **Demonstrated by** TestDiagnoseReportsPrinterState
+
+<a id="req-R-DRUCK-FREIGABE"></a>
+### R-DRUCK-FREIGABE — Angehaltenen Drucker ohne Terminal freigeben
+
+Hält der Druckdienst den Drucker an, MUSS die Fotobox ihn selbsttätig wieder freigeben, und die Betreuung MUSS ihn in der Oberfläche sofort freigeben können. Solange er angehalten ist, DARF ein wartender Auftrag nicht wegen Zeitüberschreitung verworfen werden.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/druck.md#drucker-freigeben
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/printing.Resume`
+- **Demonstrated by** TestAwaitJobPausesDeadlineWhileStopped, TestResumeGuardReleasesStoppedQueue, TestResumeUseCase
 
 <a id="req-R-DRUCK-KEIN-NACHDRUCK"></a>
 ### R-DRUCK-KEIN-NACHDRUCK — Kein Ausdruck ohne Auslösung
@@ -942,6 +968,7 @@ What people wrote, and what became of each part of it.
 | Auftrag wiederholen | R-DRUCK-WIEDERHOLUNG |
 | Vorschau des Ergebnisses | R-DRUCK-VORSCHAU |
 | Zustand des Druckers | R-DRUCK-DIAGNOSE |
+| Drucker freigeben | R-DRUCK-FREIGABE |
 
 ### requirements/\_sources/entscheidungen.md
 

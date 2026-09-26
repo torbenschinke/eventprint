@@ -144,6 +144,7 @@ func printerProblemHint(wnd core.Window, opts Options) core.View {
 		ui.If(problem != "", ui.Text(problem).Font(ui.BodyMedium).TextAlignment(ui.TextAlignCenter)),
 		ui.If(status.Message != "", ui.Text(status.Message).Font(ui.MonoSmall).TextAlignment(ui.TextAlignCenter)),
 		ui.If(backlog != "", ui.Text(backlog).Font(ui.BodySmall).TextAlignment(ui.TextAlignCenter)),
+		resumeButton(wnd, opts, status),
 	).
 		Gap(ui.L8).
 		Alignment(ui.Center).
@@ -151,6 +152,33 @@ func printerProblemHint(wnd core.Window, opts Options) core.View {
 		WithPadding(ui.Padding{}.All(ui.L24)).
 		Border(ui.Border{}.Radius(ui.L12)).
 		Frame(ui.Frame{}.FullWidth())
+}
+
+// resumeButton gibt einen angehaltenen Drucker sofort frei.
+//
+// Die Fotobox tut das auch selbst, aber erst nach einer Wartezeit. Wer
+// gerade das Papier gewechselt hat, will nicht warten – und vorher half nur
+// "sudo cupsenable" im Terminal.
+func resumeButton(wnd core.Window, opts Options, status printing.PrinterStatus) core.View {
+	if !status.Exists || status.Enabled || opts.Printing.Resume == nil {
+		return nil
+	}
+
+	if !wnd.Subject().HasPermission(printing.PermResume) {
+		return ui.Text("Zum Freigeben als Betreuer anmelden.").Font(ui.BodySmall)
+	}
+
+	return ui.PrimaryButton(func() {
+		if err := opts.Printing.Resume(wnd.Subject()); err != nil {
+			alert.ShowBannerError(wnd, err)
+			return
+		}
+
+		alert.ShowBannerMessage(wnd, alert.Message{
+			Title:  "Drucker freigegeben",
+			Intent: alert.IntentOk,
+		})
+	}).Title("Weiter drucken")
 }
 
 // pendingBadge zeigt die Anzahl der noch offenen Aufträge.

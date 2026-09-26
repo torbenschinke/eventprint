@@ -214,6 +214,13 @@ func jobBlock(out, jobID string) ([]string, bool) {
 // Fotobox blockiert: Der Worker arbeitet bewusst seriell, weil es nur einen
 // Drucker gibt.
 //
+// Solange CUPS den Drucker angehalten hat, ruht die Frist. Ein angehaltener
+// Drucker wartet auf einen Papierwechsel oder auf den USB-Bus, und der
+// zurückbehaltene Auftrag wird danach gedruckt. Liefe die Frist weiter,
+// stornierte die Fotobox ihn mitten im Wechsel, und jeder folgende Auftrag
+// liefe nacheinander in dieselbe Frist – nach einer Viertelstunde ohne
+// Farbband wären drei Gäste ohne Bild und wüssten nicht, warum.
+//
 // Wird die Grenze erreicht oder die Fotobox beendet, wird der Auftrag in CUPS
 // storniert. Das ist zwingend: Ein aufgegebener, aber nicht stornierter
 // Auftrag ist für die Fotobox unsichtbar, für CUPS aber weiterhin gültig und
@@ -230,6 +237,11 @@ func AwaitJob(ctx context.Context, queue, jobID string, timeout, interval time.D
 	// denn zwischen den beiden lpstat-Aufrufen kann ein Zustandswechsel
 	// liegen.
 	var missing int
+
+	// last ist der Zeitpunkt der vorigen Runde. Die Zeit seitdem wird der
+	// Frist gutgeschrieben, wenn der Drucker in dieser Runde angehalten ist.
+	last := time.Now()
+	paused := false
 
 	for {
 		outcome, err := JobStatus(ctx, queue, jobID)
@@ -258,7 +270,29 @@ func AwaitJob(ctx context.Context, queue, jobID string, timeout, interval time.D
 			}
 		}
 
-		if time.Now().After(deadline) {
+		now := time.Now()
+		stopped := queueStopped(ctx, queue)
+
+		// Ein abgebrochener Kontext lässt auch lpstat scheitern, und der
+		// Drucker gälte dann als laufend. Das Herunterfahren muss deshalb nach
+		// der Abfrage und vor der Frist erkannt werden, sonst meldete es sich
+		// als Zeitüberschreitung.
+		if ctx.Err() != nil {
+			return abandonJob(ctx, jobID, "canceled",
+				"Die Fotobox wurde beendet. Der Auftrag wurde aus der CUPS-Warteschlange entfernt.")
+		}
+		if stopped {
+			deadline = deadline.Add(now.Sub(last))
+
+			if !paused {
+				slog.Info("print deadline paused while printer is stopped", "queue", queue, "printerJob", jobID)
+			}
+		}
+
+		paused = stopped
+		last = now
+
+		if now.After(deadline) {
 			return abandonJob(ctx, jobID, "timeout",
 				"CUPS hat den Auftrag auch nach "+timeout.String()+" nicht als abgeschlossen gemeldet. "+
 					"Er wurde aus der Warteschlange entfernt, damit der Drucker ihn nicht später von sich aus nachdruckt. "+
@@ -272,6 +306,18 @@ func AwaitJob(ctx context.Context, queue, jobID string, timeout, interval time.D
 		case <-time.After(interval):
 		}
 	}
+}
+
+// queueStopped meldet, ob CUPS die Warteschlange angehalten hat. Ohne
+// Auskunft gilt sie als laufend: Eine kaputte lpstat-Abfrage darf die Frist
+// nicht dauerhaft aussetzen.
+func queueStopped(ctx context.Context, queue string) bool {
+	out, err := exec.CommandContext(ctx, lpstatExecutable, "-p", queue).Output()
+	if err != nil {
+		return false
+	}
+
+	return isDisabled(string(out))
 }
 
 // vanishedThreshold ist die Anzahl aufeinanderfolgender Abfragen, nach denen

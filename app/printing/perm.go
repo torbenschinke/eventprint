@@ -13,6 +13,7 @@ const (
 	idRetry       permission.ID = "de.torbenschinke.eventprint.printing.retry"
 	idPreview     permission.ID = "de.torbenschinke.eventprint.printing.preview"
 	idDiagnose    permission.ID = "de.torbenschinke.eventprint.printing.diagnose"
+	idResume      permission.ID = "de.torbenschinke.eventprint.printing.resume"
 )
 
 var (
@@ -56,5 +57,12 @@ var (
 		permtext.Description(idDiagnose,
 			"Träger dieser Berechtigung können den Zustand des Druckers einsehen, etwa ein leeres Papierfach.",
 			"Holders of this authorisation can inspect the state of the printer, for instance an empty paper tray."),
+	)
+
+	PermResume = permission.Declare[Resume](idResume,
+		permtext.Name(idResume, "Drucker freigeben", "Resume the printer"),
+		permtext.Description(idResume,
+			"Träger dieser Berechtigung können einen angehaltenen Drucker wieder freigeben, etwa nach einem Papierwechsel.",
+			"Holders of this authorisation can resume a stopped printer, for instance after changing the paper."),
 	)
 )

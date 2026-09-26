@@ -183,6 +183,20 @@
         "text": "7f14c77f1a019734d23e247aa3feadfd5828d981481f93bf88e15eb74ea84223"
       }
     ],
+    "R-DRUCK-FREIGABE": [
+      {
+        "test": "TestAwaitJobPausesDeadlineWhileStopped",
+        "text": "e9f241d7bdd41d48fd486c2e3c1857faa5798e9d2236e4fa1baa9f794483bed3"
+      },
+      {
+        "test": "TestResumeGuardReleasesStoppedQueue",
+        "text": "e9f241d7bdd41d48fd486c2e3c1857faa5798e9d2236e4fa1baa9f794483bed3"
+      },
+      {
+        "test": "TestResumeUseCase",
+        "text": "e9f241d7bdd41d48fd486c2e3c1857faa5798e9d2236e4fa1baa9f794483bed3"
+      }
+    ],
     "R-DRUCK-KEIN-NACHDRUCK": [
       {
         "test": "TestAwaitJobCancelsAbandonedJob",

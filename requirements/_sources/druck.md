@@ -38,3 +38,12 @@ Wahl des Layouts keine Überraschung ist.
 
 Der Zustand des Druckers MUSS ohne Terminal erkennbar sein: fehlende
 Warteschlange, angehaltenes Gerät, gestoppte Annahme, leeres Papierfach.
+
+## Drucker freigeben
+
+Bei leerem Papier und bei einer abgerissenen USB-Verbindung hält der
+Druckdienst den Drucker an. Er MUSS danach ohne Terminal wieder anlaufen:
+selbsttätig, und auf Wunsch der Betreuung sofort, etwa direkt nach dem
+Papierwechsel. Solange er angehalten ist, DARF ein wartender Auftrag nicht
+wegen Zeitüberschreitung verworfen werden, denn er wird nach dem Wechsel
+gedruckt.

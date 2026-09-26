@@ -186,6 +186,24 @@ inklusive Rendering, das Ergebnis wird aber verworfen. So lässt sich die
 Fotobox ohne Hardware aufbauen und vorführen – die Druckstatus-Seite weist
 deutlich darauf hin.
 
+### Wenn der Drucker steht
+
+Bei leerem Papier oder Farbband und bei einer abgerissenen USB-Verbindung
+beendet sich das Gutenprint-Backend mit Status 4 („stop printer“), und CUPS
+**hält die Warteschlange an**. Die `abort-job`-Einstellung greift dabei nicht,
+sie gilt nur für Status 1. Die Warteschlange bleibt angehalten, auch über
+einen Neustart hinweg.
+
+Die Fotobox gibt sie deshalb selbst wieder frei: erst nach 15 Sekunden, dann
+mit wachsendem Abstand bis zu zwei Minuten. Wer gerade Papier gewechselt hat,
+tippt auf der Druckstatus-Seite auf **Weiter drucken**. Im Terminal
+entspricht das `sudo cupsenable CZ01`.
+
+Solange der Drucker angehalten ist, ruht die Frist von fünf Minuten, nach der
+die Fotobox einen Auftrag sonst aufgibt. Aufträge, die während eines
+Papierwechsels entstehen, werden danach also gedruckt statt als gescheitert
+geführt.
+
 ### Öffentliche Adresse für den QR-Code
 
 **Einstellungen → Fotobox → Öffentliche Adresse.** Ohne Angabe leitet Nago die
@@ -296,6 +314,15 @@ Der **USB-Autosuspend** legt Geräte nach zwei Sekunden Leerlauf schlafen. Eine
 Kamera im Tethering wartet die meiste Zeit auf den Auslöser und gilt damit als
 untätig; schläft sie ein, bricht die PTP-Sitzung. Eine udev-Regel hält
 Kameras wach.
+
+Eine dritte Ursache lässt sich nicht per Skript abstellen: Die Sony A7 III
+lädt ihren Akku über USB, solange **Menü → Einstellungen →
+USB-Stromversorgung** eingeschaltet ist. Am Raspberry Pi 400 teilen sich alle
+Ports ein gemeinsames Stromlimit; am 05.09.2026 meldete der Kernel
+509-mal `over-current`, jede Episode begann am Port der Kamera und riss
+Drucker, Touchscreen und Tastatur mit. Die Einstellung gehört deshalb auf
+**Aus**, und wenn das nicht reicht, zwischen Pi und Geräte ein aktiver
+USB-Hub mit eigenem Netzteil.
 
 Zur Prüfung meldet `gphoto2 --auto-detect` die Kamera, und
 `journalctl -u eventprint -f` zeigt `camera connected` beziehungsweise

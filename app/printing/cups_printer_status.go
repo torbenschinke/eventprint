@@ -56,9 +56,28 @@ func (s PrinterStatus) Problem() string {
 	case !s.Exists:
 		return "Die Warteschlange " + s.Queue + " ist in CUPS nicht eingerichtet."
 	case !s.Enabled:
-		return "Der Drucker ist angehalten. Aufträge bleiben liegen, bis er freigegeben wird."
+		return "Der Drucker ist angehalten. " + s.cause() +
+			"Die Fotobox gibt ihn in kurzen Abständen selbst wieder frei; nach einem Wechsel geht es mit \"Weiter drucken\" sofort weiter."
 	case !s.Accepting:
 		return "Die Warteschlange nimmt keine neuen Aufträge an."
+	default:
+		return ""
+	}
+}
+
+// cause übersetzt die Gerätemeldung in die Handlung, die sie verlangt.
+//
+// Die Meldungen stammen aus dem Gutenprint-Backend und sind nicht übersetzt,
+// etwa "Printer not ready: Ribbon End, please correct..." oder "Fatal
+// Printer Error: 9999 => Communication Failure, halting queue!".
+func (s PrinterStatus) cause() string {
+	lower := strings.ToLower(s.Message)
+
+	switch {
+	case strings.Contains(lower, "ribbon"), strings.Contains(lower, "paper"), strings.Contains(lower, "media"):
+		return "Papier oder Farbband ist leer. "
+	case strings.Contains(lower, "communication"), strings.Contains(lower, "libusb"):
+		return "Die USB-Verbindung zum Drucker ist abgerissen. "
 	default:
 		return ""
 	}

@@ -837,6 +837,10 @@ func operatorPermissions() []permission.ID {
 		photo.PermDelete,
 		printing.PermRetry,
 
+		// Nach einem Papierwechsel den angehaltenen Drucker freigeben. Die
+		// Fotobox tut das auch selbst, nur eben mit Verzögerung.
+		printing.PermResume,
+
 		// Erst diese Berechtigung öffnet die Einstellungen in dieser Anwendung.
 		PermConfigure,
 

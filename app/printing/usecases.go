@@ -19,6 +19,7 @@ type UseCases struct {
 	FindJobByID FindJobByID
 	Retry       Retry
 	Diagnose    Diagnose
+	Resume      Resume
 
 	// Printer ist der konfigurierte Ausgabekanal, damit die Oberfläche das
 	// Ziel anzeigen kann.
@@ -73,6 +74,7 @@ func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer P
 	worker := newWorker(&mutex, bus, repo, printer, openOriginal, renderOptions)
 	recoverStaleJobs(ctx, &mutex, repo, printer, queue)
 	go worker.run(ctx, queue)
+	go newResumeGuard(printer).run(ctx)
 
 	return UseCases{
 		Print:       NewPrint(ctx, &mutex, bus, repo, printer, queue),
@@ -81,6 +83,7 @@ func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer P
 		FindJobByID: findJobByID,
 		Retry:       NewRetry(ctx, &mutex, repo, printer, findJobByID, queue),
 		Diagnose:    NewDiagnose(ctx, printer),
+		Resume:      NewResume(ctx, printer),
 		Printer:     printer,
 	}
 }
