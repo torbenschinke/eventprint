@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 37 | 100% |
-| Normative requirements covered | 36 | 100% |
-| … claimed by a test | 36 | 100% |
-| … demonstrated by a run | 36 | 100% |
-| … read by a person | 36 | 0% |
+| Source segments accounted for | 38 | 100% |
+| Normative requirements covered | 37 | 100% |
+| … claimed by a test | 37 | 100% |
+| … demonstrated by a run | 37 | 100% |
+| … read by a person | 37 | 0% |
 
 ## Gaps
 
@@ -67,6 +67,7 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 - R-NETZ-SUCHE
 - R-NETZ-VERBINDEN
 - R-NETZ-ZUSTAND
+- R-QUELLEN-NAS
 - R-QUELLEN-USB
 - R-UPLOAD-ABHOLUNG
 - R-UPLOAD-BESTAETIGUNG
@@ -80,9 +81,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 36 |  |
-| … a test claims | 36 | 100% |
-| … a run demonstrated | 36 | 100% |
+| Normative requirements | 37 |  |
+| … a test claims | 37 | 100% |
+| … a run demonstrated | 37 | 100% |
 
 ### How much of the code a run went through
 
@@ -98,7 +99,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | `requirements/_sources/foto.md` | markdown | 6 | 6 | 0 | 0 |
 | `requirements/_sources/modus.md` | markdown | 5 | 5 | 0 | 0 |
 | `requirements/_sources/netz.md` | markdown | 4 | 4 | 0 | 0 |
-| `requirements/_sources/quellen.md` | markdown | 1 | 1 | 0 | 0 |
+| `requirements/_sources/quellen.md` | markdown | 2 | 2 | 0 | 0 |
 | `requirements/_sources/upload.md` | markdown | 5 | 5 | 0 | 0 |
 
 ## Themes
@@ -181,7 +182,7 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-29 packages in 9 bounded contexts, and 60 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+30 packages in 10 bounded contexts, and 65 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
 8 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
@@ -189,19 +190,22 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ### Where one context reaches into another
 
-21 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
+24 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
 
 | From | To |
 |---|---|
+| `app/device` | `app/nas` |
 | `app/device` | `app/photo` |
 | `app/device` | `app/printing` |
 | `app/device/cfg` | `app/camera` |
+| `app/device/cfg` | `app/nas` |
 | `app/device/cfg` | `app/photo` |
 | `app/device/cfg` | `app/printing` |
 | `app/device/cfg` | `app/relay` |
 | `app/device/cfg` | `app/usb` |
 | `app/device/cfg` | `app/wifi` |
 | `app/device/ui` | `app/camera` |
+| `app/device/ui` | `app/nas` |
 | `app/device/ui` | `app/photo` |
 | `app/device/ui` | `app/printing` |
 | `app/device/ui` | `app/relay` |
@@ -217,7 +221,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-92 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+100 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/device
 
@@ -352,6 +356,56 @@ _permission_ — `app/device/perm.go:52`
 #### de.torbenschinke.eventprint.device.unlock
 
 _permission_ — `app/device/perm.go:66`
+
+### app/nas
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-nas-browse"></a>
+#### Browse
+
+_query_ — `app/nas/uc_browse.go:17`
+
+**Answers to** [R-QUELLEN-NAS](#req-R-QUELLEN-NAS)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-nas-read"></a>
+#### Read
+
+_query_ — `app/nas/uc_read.go:12`
+
+**Answers to** [R-QUELLEN-NAS](#req-R-QUELLEN-NAS)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-nas-shares"></a>
+#### Shares
+
+_query_ — `app/nas/uc_shares.go:17`
+
+**Answers to** [R-QUELLEN-NAS](#req-R-QUELLEN-NAS)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-nas-thumbnail"></a>
+#### Thumbnail
+
+_query_ — `app/nas/uc_thumbnail.go:19`
+
+**Answers to** [R-QUELLEN-NAS](#req-R-QUELLEN-NAS)
+
+<a id="req-code-de-torbenschinke-eventprint-nas-browse"></a>
+#### de.torbenschinke.eventprint.nas.browse
+
+_permission_ — `app/nas/perm.go:27`
+
+<a id="req-code-de-torbenschinke-eventprint-nas-read"></a>
+#### de.torbenschinke.eventprint.nas.read
+
+_permission_ — `app/nas/perm.go:41`
+
+<a id="req-code-de-torbenschinke-eventprint-nas-shares"></a>
+#### de.torbenschinke.eventprint.nas.shares
+
+_permission_ — `app/nas/perm.go:20`
+
+<a id="req-code-de-torbenschinke-eventprint-nas-thumbnail"></a>
+#### de.torbenschinke.eventprint.nas.thumbnail
+
+_permission_ — `app/nas/perm.go:34`
 
 ### app/photo
 
@@ -878,6 +932,7 @@ Every requirement that was read, and how far each one has got. A mark states wha
 | [R-NETZ-SUCHE](#req-R-NETZ-SUCHE) | functional | mixed | normative | yes | yes | yes | no |
 | [R-NETZ-VERBINDEN](#req-R-NETZ-VERBINDEN) | functional | mixed | normative | yes | yes | yes | no |
 | [R-NETZ-ZUSTAND](#req-R-NETZ-ZUSTAND) | functional | mixed | normative | yes | yes | yes | no |
+| [R-QUELLEN-NAS](#req-R-QUELLEN-NAS) | functional | business | normative | yes | yes | yes | no |
 | [R-QUELLEN-USB](#req-R-QUELLEN-USB) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-ABHOLUNG](#req-R-UPLOAD-ABHOLUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG) | functional | business | normative | yes | yes | yes | no |
@@ -1342,6 +1397,21 @@ _functional, mixed, normative._
   - `github.com/torbenschinke/eventprint/app/wifi.Current`
 - **Demonstrated by** TestStatusJoinsDeviceAndSignal
 
+<a id="req-R-QUELLEN-NAS"></a>
+### R-QUELLEN-NAS — Fotos vom NAS übernehmen
+
+Eine Netzwerkfreigabe im Heimnetz MUSS sich am Gerät einrichten lassen; ihre Ordner und Bilder MÜSSEN sich durchsuchen und übernehmen lassen, und gelesen werden darf nur die eingerichtete Freigabe.
+
+_functional, business, normative._
+
+- **Asked for in** requirements/\_sources/quellen.md#nas-als-quelle
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/nas.Browse`
+  - `github.com/torbenschinke/eventprint/app/nas.Read`
+  - `github.com/torbenschinke/eventprint/app/nas.Shares`
+  - `github.com/torbenschinke/eventprint/app/nas.Thumbnail`
+- **Demonstrated by** TestBrowseShare, TestNASIsSetUpAndBrowsedOnTheDevice, TestSetUpShare, TestThumbnailsAndRead
+
 <a id="req-R-QUELLEN-USB"></a>
 ### R-QUELLEN-USB — Bilder vom USB-Stick übernehmen
 
@@ -1498,6 +1568,7 @@ What people wrote, and what became of each part of it.
 |---|---|
 | Quellen | _nothing, and says so_ |
 | USB-Stick als Quelle | R-QUELLEN-USB |
+| NAS als Quelle | R-QUELLEN-NAS |
 
 ### requirements/\_sources/upload.md
 

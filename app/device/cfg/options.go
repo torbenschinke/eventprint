@@ -7,6 +7,8 @@ package cfgdevice
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/torbenschinke/eventprint/app/nas"
 )
 
 // Options sind die Betriebsparameter, die nicht in die Einstellungen gehören,
@@ -35,6 +37,11 @@ type Options struct {
 	PrinterQueue string
 	RelayURL     string
 	RelayToken   string
+	NAS          nas.Config
+
+	// NASClient ersetzt den SMB-Client, etwa durch eine Freigabe im
+	// Speicher für Tests. Leer heißt SMB.
+	NASClient nas.Client
 }
 
 // OptionsFromEnv liest die Parameter aus der Umgebung.
@@ -45,6 +52,10 @@ type Options struct {
 //	EVENTPRINT_PRINTER          CUPS-Warteschlange für ein frisches Gerät
 //	EVENTPRINT_RELAY_URL        Upload-Dienst für ein frisches Gerät
 //	EVENTPRINT_RELAY_TOKEN      Token des Geräts beim Upload-Dienst
+//	EVENTPRINT_NAS_HOST         NAS: Name oder Adresse, auch smb://host/freigabe
+//	EVENTPRINT_NAS_USER         NAS: Benutzer
+//	EVENTPRINT_NAS_PASSWORD     NAS: Kennwort
+//	EVENTPRINT_NAS_SHARE        NAS: Freigabe, etwa "photo"
 func OptionsFromEnv() Options {
 	data := firstNonEmpty(os.Getenv("EVENTPRINT_DATA_DIR"), os.Getenv("STATE_DIRECTORY"))
 	if data == "" {
@@ -73,6 +84,12 @@ func OptionsFromEnv() Options {
 		PrinterQueue: os.Getenv("EVENTPRINT_PRINTER"),
 		RelayURL:     os.Getenv("EVENTPRINT_RELAY_URL"),
 		RelayToken:   os.Getenv("EVENTPRINT_RELAY_TOKEN"),
+		NAS: nas.Config{
+			Host:     os.Getenv("EVENTPRINT_NAS_HOST"),
+			User:     os.Getenv("EVENTPRINT_NAS_USER"),
+			Password: os.Getenv("EVENTPRINT_NAS_PASSWORD"),
+			Share:    os.Getenv("EVENTPRINT_NAS_SHARE"),
+		},
 	}
 }
 

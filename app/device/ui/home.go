@@ -305,6 +305,7 @@ func (a *App) appIcons(st *states) gift.View {
 				a.show("Wähle zuerst Fotos aus.")
 			}
 		}},
+		{"NAS", outline.Server, navy, func() { a.openLibrary(photo.ScopeAll, sourceNAS) }},
 		{"Aufträge", outline.List, green, func() { st.screen.Set(ScreenJobs) }},
 		{"USB-Stick", outline.ArchiveArrowDown, grey, func() { a.openLibrary(photo.ScopeAll, sourceUSB) }},
 		{"Einstellungen", outline.Cog, ui.RGB(0x5E, 0x5E, 0x63), func() { st.screen.Set(ScreenSettings) }},

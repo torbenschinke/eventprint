@@ -18,6 +18,7 @@ import (
 
 // Quellen außerhalb der Mediathek.
 const (
+	sourceNAS = "nas"
 	sourceUSB = "usb"
 )
 
@@ -40,6 +41,8 @@ func (a *App) library(ctx *gift.Context, st *states) gift.View {
 
 	var content gift.View
 	switch source {
+	case sourceNAS:
+		content = gift.Component("nas", func(ctx *gift.Context) gift.View { return a.nasBrowser(ctx, st) })
 	case sourceUSB:
 		content = gift.Component("usb", func(ctx *gift.Context) gift.View { return a.usbBrowser(ctx, st) })
 	default:
@@ -148,12 +151,8 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 
 	items = append(items,
 		muted("QUELLEN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(14)}),
+		row("NAS", outline.Server, "", source == sourceNAS, func() { a.openLibrary(scope, sourceNAS) }),
 		row("USB-Stick", outline.ArchiveArrowDown, "", source == sourceUSB, func() { a.openLibrary(scope, sourceUSB) }),
-		ui.HStack(
-			ui.Icon(outline.Server).Size(u(22)).Foreground(ui.ColorSecondaryLabel),
-			muted("NAS / Freigabe", 16).Flex(1),
-			muted("bald", 14),
-		).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(12), Right: u(12)}).MinHeight(u(44)),
 	)
 
 	return xgift.Fill(ui.VScroll(ui.VStack(items...).Gap(u(4)).Padding(u(16))).

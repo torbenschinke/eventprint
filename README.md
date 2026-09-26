@@ -22,7 +22,9 @@ die GPU, ohne Browser. Die Einrichtung des Druckers ist getrennt dokumentiert:
 * **Fotos:** Mediathek mit Eingang, allen Fotos, Favoriten, Gedrucktem und den
   Fotos vergangener Feiern, als Ziegelreihen im Seitenverhältnis der Fotos,
   mit Mehrfachauswahl.
-* **Quellen:** USB-Stick. Eine Netzwerkfreigabe ist vorgesehen.
+* **Quellen:** NAS im Heimnetz per SMB, etwa eine Synology DiskStation
+  (Ordner durchsuchen, Vorschaubilder vom NAS, Übernahme der Originale), und
+  USB-Stick.
 * **Druck-Studio** mit echter Vorschau aus dem Renderer des Druckers:
 
   | | |
@@ -203,6 +205,9 @@ Einstellungen nichts steht.
 | `EVENTPRINT_PRINTER` | CUPS-Warteschlange, z. B. `CZ01`; leer = Testbetrieb |
 | `EVENTPRINT_RELAY_URL` | Basis-URL des Upload-Dienstes `photoupld` |
 | `EVENTPRINT_RELAY_TOKEN` | Zugangstoken der Box beim Upload-Dienst |
+| `EVENTPRINT_NAS_HOST` | NAS: Name oder Adresse, auch `smb://diskstation/photo` |
+| `EVENTPRINT_NAS_USER`, `EVENTPRINT_NAS_PASSWORD` | NAS: Anmeldung |
+| `EVENTPRINT_NAS_SHARE` | NAS: Freigabe, z. B. `photo` |
 | `EVENTPRINT_CAMERA_DIR` | Tethering-Ordner; `off` schaltet die Kamera ab |
 | `EVENTPRINT_UI_SCALE` | Vergrößerung der Oberfläche; Vorgabe 1,5 für 1080p |
 | `EVENTPRINT_DATA_DIR`, `EVENTPRINT_RUNTIME_DIR` | nur zum Entwickeln; unter systemd gelten `/var/lib/eventprint` und `/run/eventprint` |
@@ -243,6 +248,23 @@ Gestaltung ab und nimmt mehrere Bilder auf einmal, die im Eingang landen. Im
 Kiosk fehlt der Parameter, und die Seite fragt wie bisher nach dem Layout;
 das Bild wird sofort gedruckt. Für HEIC braucht auch der Server libheif
 (`apt install libheif1`); fehlt sie, meldet das Protokoll es beim Start.
+
+### NAS (Synology und andere SMB-Freigaben)
+
+**Einstellungen → Konten & Quellen.** Adresse (`diskstation.local` oder die
+IP-Adresse), Benutzer und Kennwort eintragen, **Anmelden und Freigaben
+suchen** tippen und die Freigabe mit den Fotos wählen – bei Synology meist
+`photo` oder `home`. Danach stehen die Fotos unter **Fotos → NAS** und hinter
+dem App-Symbol **NAS**.
+
+* Die Box spricht SMB 2/3 selbst (reines Go, `go-smb2`). Sie hängt nichts ein,
+  braucht dafür weder root noch eine polkit-Regel und liest nur.
+* Vorschaubilder kommen aus `@eaDir`, das Synology Photos und die File Station
+  anlegen. Ohne sie lädt die Galerie die Originale, was spürbar langsamer ist.
+* Das Kennwort liegt in den Einstellungen auf der Speicherkarte, nur für den
+  Dienstnutzer lesbar. Am besten legt man auf dem NAS einen eigenen Benutzer an,
+  der die Fotoordner nur lesen darf.
+* SMB1 wird nicht unterstützt; DSM hat es seit Version 7 ohnehin abgeschaltet.
 
 ### HEIC
 
@@ -395,6 +417,7 @@ app/photo/           Fotos: Import, Mediathek, Eingang, Feiern, Originale
 app/printing/        Gestaltung, Renderer, Druckaufträge, CUPS-Anbindung
 app/relay/           Box-Seite des Upload-Dienstes
 app/camera/          Tethering mit gphoto2
+app/nas/             NAS per SMB: Freigaben, Ordner, Vorschaubilder, Übernahme
 app/usb/             USB-Sticks: erkennen, kopieren, auswerfen, lesen
 app/wifi/            Funknetz über NetworkManager
 app/upld/            Upload-Dienst: Sitzungen, Warteschlangen

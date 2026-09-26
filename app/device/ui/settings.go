@@ -15,6 +15,7 @@ import (
 	"github.com/worldiety/gift/ui"
 
 	"github.com/torbenschinke/eventprint/app/device"
+	"github.com/torbenschinke/eventprint/app/nas"
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/app/printing"
 	"github.com/torbenschinke/eventprint/app/relay"
@@ -104,7 +105,7 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 	case sectionUpload:
 		detail = gift.Component(key, func(ctx *gift.Context) gift.View { return a.uploadSettings(ctx, st, s, save) })
 	case sectionSources:
-		detail = gift.Component(key, func(ctx *gift.Context) gift.View { return a.sourceSettings(ctx, st) })
+		detail = gift.Component(key, func(ctx *gift.Context) gift.View { return a.sourceSettings(ctx, st, s, save) })
 	case sectionKiosk:
 		detail = gift.Component(key, func(ctx *gift.Context) gift.View { return a.kioskSettings(ctx, st, s, save) })
 	case sectionStorage:
@@ -339,7 +340,7 @@ func (a *App) uploadSettings(ctx *gift.Context, st *states, s device.Settings, s
 
 // --- Konten & Quellen -------------------------------------------------------
 
-func (a *App) sourceSettings(ctx *gift.Context, st *states) gift.View {
+func (a *App) sourceSettings(ctx *gift.Context, st *states, s device.Settings, save func(func(*device.Settings))) gift.View {
 	camera := "abgeschaltet"
 	if a.dev.Camera != nil {
 		cs := a.dev.Camera.Status()
@@ -350,13 +351,139 @@ func (a *App) sourceSettings(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return ui.VStack(
-		section("QUELLEN",
+		gift.Component("nas", func(ctx *gift.Context) gift.View { return a.nasSettings(ctx, st, s, save) }),
+		section("WEITERE QUELLEN",
 			ui.Row("Handy-Upload per QR").Subtitle("über den öffentlichen Upload-Dienst").Value("immer an"),
 			ui.Row("USB-Stick").Subtitle("erscheint unter Fotos, sobald eingesteckt").Value("automatisch"),
 			ui.Row("Kamera per USB").Subtitle("Aufnahmen landen im Eingang").Value(camera),
-			ui.Row("Netzwerkfreigabe (SMB/NAS)").Subtitle("Fotos vom NAS im Heimnetz").Value("bald").Disabled(true),
 		),
 	).Gap(u(18))
+}
+
+// nasSettings richtet die Netzwerkfreigabe ein: Adresse, Benutzer und
+// Kennwort eintragen, anmelden, eine der gefundenen Freigaben antippen.
+// Gespeichert wird erst mit der Wahl der Freigabe, also erst, wenn die
+// Anmeldung geklappt hat.
+func (a *App) nasSettings(ctx *gift.Context, st *states, s device.Settings, save func(func(*device.Settings))) gift.View {
+	cfg := s.NAS.Normalized()
+	hostEd := ui.Editor(ctx, "nashost", cfg.Host)
+	userEd := ui.Editor(ctx, "nasuser", cfg.User)
+	passEd := ui.Editor(ctx, "naspass", "")
+	rev := ctx.State("rev", 0)
+	searched := ctx.State("searched", false)
+
+	// Ist ein NAS eingerichtet, zeigt die Box, ob es gerade erreichbar ist.
+	status := xgift.UseResource[nas.Listing](ctx, "status")
+	if cfg.Configured() {
+		status.LoadKeyed([2]any{cfg, ctx.Read(rev)}, func() (nas.Listing, error) {
+			c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+
+			return a.dev.NAS.Browse(a.dev.Subject(), c, ".")
+		})
+	}
+
+	typed := func() nas.Config {
+		return nas.Config{Host: hostEd.Text(), User: userEd.Text(), Password: passEd.Text()}.Normalized()
+	}
+
+	shares := xgift.UseResource[[]string](ctx, "shares")
+	search := func() {
+		want := typed()
+		searched.Set(true)
+		shares.Load(func() ([]string, error) {
+			c, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+
+			return a.dev.NAS.Shares(a.dev.Subject(), c, want)
+		})
+	}
+
+	choose := func(share string) {
+		want := typed()
+		save(func(s *device.Settings) {
+			pw := want.Password
+			if old := s.NAS.Normalized(); pw == "" && old.Host == want.Host && old.User == want.User {
+				pw = old.Password
+			}
+
+			s.NAS = nas.Config{Host: want.Host, User: want.User, Password: pw, Share: share}
+		})
+
+		passEd.SetText("")
+		searched.Set(false)
+		rev.Set(rev.Get() + 1)
+		a.show("NAS eingerichtet: " + share + " auf " + want.Host)
+	}
+
+	field := func(ed *ui.TextEditor, placeholder string) gift.View {
+		return ui.TextField(ed).Placeholder(placeholder).FontSize(u(16)).Frame(u(380), u(44))
+	}
+
+	passHint := "Kennwort"
+	if cfg.Password != "" {
+		passHint = "gespeichert – leer lassen"
+	}
+
+	var rows []gift.View
+	if cfg.Configured() {
+		state := "wird geprüft …"
+		switch {
+		case status.Err() != nil:
+			state = status.Err().Error()
+		case status.Loaded():
+			l := status.Value()
+			state = fmt.Sprintf("erreichbar · %d Ordner · %d Bilder oben", len(l.Folders), len(l.Images))
+		}
+
+		rows = append(rows,
+			ui.Row(cfg.Title()).Subtitle(state).Value("✓"),
+			ui.Row("Fotos durchsuchen").Chevron(outline.AngleRight).OnTap(func() { a.openLibrary(photo.ScopeAll, sourceNAS) }),
+		)
+	}
+
+	rows = append(rows,
+		ui.Row("Adresse").Accessory(field(hostEd, "diskstation.local oder 192.168.178.20")),
+		ui.Row("Benutzer").Accessory(field(userEd, "Benutzer auf dem NAS")),
+		ui.Row("Kennwort").Accessory(field(passEd, passHint)),
+	)
+
+	var found gift.View = ui.Box().Frame(1, 1)
+	switch {
+	case !ctx.Read(searched):
+	case shares.Loading() || !shares.Loaded():
+		found = muted("Anmelden …", 15).PaddingInsets(geom.Insets{Left: u(16)})
+	case shares.Err() != nil:
+		found = body(shares.Err().Error(), 15).MaxLines(3).Foreground(red).PaddingInsets(geom.Insets{Left: u(16)})
+	case len(shares.Value()) == 0:
+		found = muted("Angemeldet, aber dieser Benutzer sieht keine Freigabe.", 15).PaddingInsets(geom.Insets{Left: u(16)})
+	default:
+		chips := []gift.View{muted("Freigabe wählen:", 15)}
+		for _, name := range shares.Value() {
+			chips = append(chips, xgift.Chip(name, name == cfg.Share, u(15), blue, func() { choose(name) }))
+		}
+
+		found = ui.HScroll(chips...).Gap(u(8)).PaddingInsets(geom.Insets{Left: u(16), Right: u(16)}).MinHeight(u(48))
+	}
+
+	actions := []gift.View{primary("Anmelden und Freigaben suchen", search)}
+	if cfg.Host != "" {
+		actions = append(actions, secondary("NAS entfernen", func() {
+			save(func(s *device.Settings) { s.NAS = nas.Config{} })
+			hostEd.SetText("")
+			userEd.SetText("")
+			passEd.SetText("")
+			searched.Set(false)
+			a.show("NAS entfernt. Übernommene Fotos bleiben auf der Box.")
+		}))
+	}
+
+	return ui.VStack(
+		section("NAS IM HEIMNETZ (SMB)", rows...),
+		ui.HStack(actions...).Gap(u(12)),
+		found,
+		muted("Bei einer Synology DiskStation liegen die Fotos meist in der Freigabe „photo“ oder „home“. Am besten legst du einen eigenen Benutzer an, der die Fotos nur lesen darf: Das Kennwort liegt auf der Speicherkarte der Box.", 13).MaxLines(4).PaddingInsets(geom.Insets{Left: u(16)}),
+	).Gap(u(14))
 }
 
 // --- Kiosk ------------------------------------------------------------------

@@ -6,6 +6,7 @@ require (
 	github.com/ebitengine/purego v0.11.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/hajimehoshi/ebiten/v2 v2.10.1
+	github.com/hirochachacha/go-smb2 v1.1.0
 	github.com/worldiety/enum v0.0.0-20250415071812-195794096336
 	github.com/worldiety/gift v0.0.0-20260918144657-fab3dc5cd2cf
 	github.com/worldiety/i18n v0.0.0-20260303170444-ecc6fa6bdd7a
@@ -22,6 +23,7 @@ require (
 require (
 	github.com/ebitengine/gomobile v0.0.0-20260820040257-d11f821a26a6 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
+	github.com/geoffgarside/ber v1.1.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.3 // indirect
 	github.com/go-chi/cors v1.2.2 // indirect
 	github.com/go-text/typesetting v0.3.5 // indirect

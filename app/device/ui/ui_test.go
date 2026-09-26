@@ -5,7 +5,9 @@ import (
 	"context"
 	"image"
 	"image/jpeg"
+	"io/fs"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/worldiety/gift"
@@ -19,10 +21,12 @@ import (
 	"github.com/torbenschinke/eventprint/app/device"
 	cfgdevice "github.com/torbenschinke/eventprint/app/device/cfg"
 	uidevice "github.com/torbenschinke/eventprint/app/device/ui"
+	"github.com/torbenschinke/eventprint/app/nas"
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/pkg/xgift"
 	"github.com/torbenschinke/eventprint/requirements/fun/foto"
 	"github.com/torbenschinke/eventprint/requirements/fun/modus"
+	"github.com/torbenschinke/eventprint/requirements/fun/quellen"
 )
 
 // box ist ein Gerät mit Oberfläche, wie es auf dem Tisch steht: frische
@@ -38,15 +42,32 @@ type box struct {
 func newBox(t *testing.T, seed ...photo.EventID) *box {
 	t.Helper()
 
+	return newBoxWith(t, nil, seed...)
+}
+
+// withNAS setzt eine Freigabe an die Stelle des SMB-Clients.
+func withNAS(c nas.Client) func(*cfgdevice.Options) {
+	return func(o *cfgdevice.Options) { o.NASClient = c }
+}
+
+// newBoxWith startet ein Gerät mit geänderten Betriebsparametern.
+func newBoxWith(t *testing.T, opt func(*cfgdevice.Options), seed ...photo.EventID) *box {
+	t.Helper()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
 	dir := t.TempDir()
-	dev, err := cfgdevice.Start(ctx, cfgdevice.Options{
+	opts := cfgdevice.Options{
 		DataDir:    dir + "/data",
 		RuntimeDir: dir + "/run",
 		CacheDir:   dir + "/cache",
-	})
+	}
+	if opt != nil {
+		opt(&opts)
+	}
+
+	dev, err := cfgdevice.Start(ctx, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,4 +243,81 @@ func TestSettingsAreChangedOnTheDevice(t *testing.T) {
 	}
 
 	spec.Verified(t, modus.RModusEinstellungen)
+}
+
+// memNAS ist eine Freigabe im Speicher, die jede Anmeldung annimmt.
+type memNAS struct{ fs fstest.MapFS }
+
+func (m memNAS) Shares(context.Context, nas.Config) ([]string, error) {
+	return []string{"IPC$", "photo"}, nil
+}
+
+func (m memNAS) Do(_ context.Context, _ nas.Config, fn func(fs.FS) error) error { return fn(m.fs) }
+
+// TestNASIsSetUpAndBrowsedOnTheDevice: Das NAS wird am Gerät eingerichtet,
+// seine Ordner lassen sich durchsuchen, und ein gewähltes Foto landet im
+// Druck-Studio.
+func TestNASIsSetUpAndBrowsedOnTheDevice(t *testing.T) {
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 60, 40)), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	b := newBoxWith(t, withNAS(memNAS{fs: fstest.MapFS{
+		"2024/Urlaub/IMG_0001.jpg":                               {Data: buf.Bytes()},
+		"2024/Urlaub/@eaDir/IMG_0001.jpg/SYNOPHOTO_THUMB_XL.jpg": {Data: buf.Bytes()},
+	}}))
+
+	b.tap("Einstellungen")
+	b.tap("Konten & Quellen")
+
+	fields := b.h.FindAll(gifttest.ByType("ui.TextField"))
+	if len(fields) < 3 {
+		t.Fatalf("Adresse, Benutzer, Kennwort erwartet:\n%s", b.h.Dump())
+	}
+
+	for i, text := range []string{"smb://diskstation/", "anna", "geheim"} {
+		fields[i].Click()
+		b.h.TypeText(text)
+		b.h.Frame()
+	}
+
+	b.tap("Anmelden und Freigaben suchen")
+	b.tap("photo")
+
+	s, err := b.dev.Device.LoadSettings(b.dev.Subject())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := (nas.Config{Host: "diskstation", User: "anna", Password: "geheim", Share: "photo"}); s.NAS != want {
+		t.Fatalf("NAS = %+v, erwartet %+v", s.NAS, want)
+	}
+
+	b.tap("OK")
+	b.tap("Fotos durchsuchen")
+	b.tap("▸ 2024")
+	b.tap("▸ Urlaub")
+
+	// Die Kachel erscheint, sobald die Vorschau geladen ist.
+	gallery := b.waitFor(gifttest.ByType("ui.ImageGallery"))
+	r := gallery.Bounds()
+	time.Sleep(200 * time.Millisecond)
+	b.h.Frame()
+	b.h.ClickAt(geom.Pt(r.Min.X+80, r.Min.Y+60))
+	b.h.Frame()
+
+	b.tap("Übernehmen und drucken")
+	b.waitFor(gifttest.ByText("Format"))
+
+	all, err := b.dev.Photos.FindAll(permission.SU(), photo.Query{Scope: photo.ScopeAll})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(all) != 1 || all[0].Source != photo.SourceNAS || all[0].Name != "IMG_0001.jpg" {
+		t.Fatalf("übernommen: %+v", all)
+	}
+
+	spec.Verified(t, quellen.RQuellenNas)
 }

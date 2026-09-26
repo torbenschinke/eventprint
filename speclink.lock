@@ -298,6 +298,11 @@
       "title": "Lightroom per Handy verbinden",
       "from": "requirements/_sources/quellen.md#lightroom-verbinden"
     },
+    "R-QUELLEN-NAS": {
+      "text": "82f03a05342be7ff251a51e8eda7f06624fd82577eec04b62c82ac0e46e11462",
+      "title": "Fotos vom NAS übernehmen",
+      "from": "requirements/_sources/quellen.md#nas-als-quelle"
+    },
     "R-QUELLEN-USB": {
       "text": "fdd2ea2c5846d3cb151896d36cd2d59f1e5a98a61a3d7d0211864faa4990e287",
       "title": "Bilder vom USB-Stick übernehmen",
@@ -490,8 +495,12 @@
       "fingerprint": "75df9e99dce0600d2757035a29235b0840d0cf2a4b41a040176fe352f75d4574",
       "kind": "markdown"
     },
+    "requirements/_sources/quellen.md#nas-als-quelle": {
+      "fingerprint": "db922b186f18ebb51e7a2da06df460532b6a4803734dc5efb80f0df8826bf55c",
+      "kind": "markdown"
+    },
     "requirements/_sources/quellen.md#quellen": {
-      "fingerprint": "ac350d93bee4f3303b3a02b84aa2f24657ce60cc216111d33a6210c94a5a85cd",
+      "fingerprint": "34a2023be478fd69cc0bb58e923162e7de620b22331c06c30b48b791724ccc01",
       "kind": "markdown"
     },
     "requirements/_sources/quellen.md#usb-stick-als-quelle": {
@@ -864,6 +873,24 @@
       {
         "test": "TestStatusJoinsDeviceAndSignal",
         "text": "aa7a3fe53a03831ea0cf4f8bfd4ebe64cbb008227f485c54a77a71774000f8e3"
+      }
+    ],
+    "R-QUELLEN-NAS": [
+      {
+        "test": "TestBrowseShare",
+        "text": "82f03a05342be7ff251a51e8eda7f06624fd82577eec04b62c82ac0e46e11462"
+      },
+      {
+        "test": "TestNASIsSetUpAndBrowsedOnTheDevice",
+        "text": "82f03a05342be7ff251a51e8eda7f06624fd82577eec04b62c82ac0e46e11462"
+      },
+      {
+        "test": "TestSetUpShare",
+        "text": "82f03a05342be7ff251a51e8eda7f06624fd82577eec04b62c82ac0e46e11462"
+      },
+      {
+        "test": "TestThumbnailsAndRead",
+        "text": "82f03a05342be7ff251a51e8eda7f06624fd82577eec04b62c82ac0e46e11462"
       }
     ],
     "R-QUELLEN-USB": [

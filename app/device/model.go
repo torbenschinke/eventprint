@@ -3,6 +3,7 @@ package device
 import (
 	"time"
 
+	"github.com/torbenschinke/eventprint/app/nas"
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/app/printing"
 )
@@ -68,6 +69,9 @@ type Settings struct {
 	// Upload-Dienst.
 	RelayURL   string `json:"relayUrl,omitempty"`
 	RelayToken string `json:"relayToken,omitempty"`
+
+	// NAS ist die Netzwerkfreigabe mit den Fotos des Haushalts.
+	NAS nas.Config `json:"nas,omitzero"`
 
 	// Printer beschreibt den Drucker.
 	Printer printing.Settings `json:"printer,omitzero"`

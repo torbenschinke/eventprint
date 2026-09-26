@@ -14,6 +14,7 @@ import (
 
 	"github.com/torbenschinke/eventprint/app/camera"
 	"github.com/torbenschinke/eventprint/app/device"
+	"github.com/torbenschinke/eventprint/app/nas"
 	"github.com/torbenschinke/eventprint/app/photo"
 	"github.com/torbenschinke/eventprint/app/printing"
 	"github.com/torbenschinke/eventprint/app/relay"
@@ -31,6 +32,7 @@ type Device struct {
 	Device   device.UseCases
 	Relay    relay.UseCases
 	USB      usb.UseCases
+	NAS      nas.UseCases
 	WiFi     wifi.UseCases
 
 	// Camera ist nil, wenn die Kamera abgeschaltet ist.
@@ -164,6 +166,12 @@ func Start(ctx context.Context, opts Options) (*Device, error) {
 	d.Relay = relay.NewUseCases(poller)
 	d.WiFi = wifi.NewUseCases()
 	d.USB = usb.NewUseCases(usb.ExecRunner{}, usb.StatfsFreeSpace)
+	var nasClient nas.Client = nas.NewSMB()
+	if opts.NASClient != nil {
+		nasClient = opts.NASClient
+	}
+
+	d.NAS = nas.NewUseCases(nasClient, func() nas.Config { return loadSettings().NAS })
 
 	d.grants = grants()
 
@@ -215,6 +223,11 @@ func seedSettings(store device.SettingsStore, opts Options) error {
 		changed = true
 	}
 
+	if s.NAS.Host == "" && opts.NAS.Host != "" {
+		s.NAS = opts.NAS.Normalized()
+		changed = true
+	}
+
 	if !changed {
 		return nil
 	}
@@ -227,13 +240,13 @@ func seedSettings(store device.SettingsStore, opts Options) error {
 // Der Gast bekommt, was er für die Feier braucht, und nichts darüber hinaus:
 // die Fotos der Feier sehen, ein Foto in einem Kiosk-Layout drucken, den
 // QR-Code sehen, und die PIN eingeben dürfen. Alles andere – Mediathek,
-// Einstellungen, USB – bleibt ihm verschlossen, weil ihm die
+// Einstellungen, USB, NAS – bleibt ihm verschlossen, weil ihm die
 // Berechtigungen fehlen, nicht nur die Knöpfe.
 func grants() device.Grants {
 	var owner []permission.ID
 	for _, perms := range [][]permission.ID{
 		photo.Permissions(), printing.Permissions(), device.Permissions(), relay.Permissions(),
-		usb.Permissions(), {wifi.PermScan, wifi.PermStatus, wifi.PermConnect},
+		usb.Permissions(), nas.Permissions(), {wifi.PermScan, wifi.PermStatus, wifi.PermConnect},
 	} {
 		owner = append(owner, perms...)
 	}
