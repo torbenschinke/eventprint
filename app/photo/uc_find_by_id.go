@@ -1,20 +1,37 @@
 package photo
 
 import (
-	"github.com/worldiety/option"
-	"go.wdy.de/nago/auth"
+	"fmt"
+
+	"go.wdy.de/nago/application/permission"
 )
 
-// FindByID liefert ein einzelnes Foto anhand seiner ID.
-type FindByID func(subject auth.Subject, id ID) (option.Opt[Photo], error)
+// FindByID liefert ein einzelnes Foto; false, wenn es nicht (mehr) existiert.
+type FindByID func(subject permission.Auditable, id ID) (Photo, bool, error)
 
 // NewFindByID erzeugt den [FindByID] Anwendungsfall.
 func NewFindByID(repo Repository) FindByID {
-	return func(subject auth.Subject, id ID) (option.Opt[Photo], error) {
+	return func(subject permission.Auditable, id ID) (Photo, bool, error) {
 		if err := subject.Audit(PermFindByID); err != nil {
-			return option.Opt[Photo]{}, err
+			return Photo{}, false, err
 		}
 
-		return repo.FindByID(id)
+		opt, err := repo.FindByID(id)
+		if err != nil {
+			return Photo{}, false, fmt.Errorf("cannot load photo: %w", err)
+		}
+
+		if opt.IsNone() {
+			return Photo{}, false, nil
+		}
+
+		// Private Fotos nur für die, die die Mediathek sehen dürfen; siehe
+		// [Locate].
+		p := opt.Unwrap()
+		if p.Private() && !subject.HasPermission(PermFindAll) {
+			return Photo{}, false, nil
+		}
+
+		return p, true, nil
 	}
 }

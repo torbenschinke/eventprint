@@ -79,6 +79,29 @@ func (p settingsPrinter) Status(ctx context.Context) PrinterStatus {
 }
 
 // target wählt anhand der Einstellungen den konkreten Ausgabekanal.
+// PrintFinish druckt mit einer bestimmten Oberfläche.
+//
+// Die Oberfläche gehört zum Blatt und nicht zum Drucker: Im Druck-Studio
+// wählt man sie je Auftrag. Deshalb überschreibt sie hier die Vorgabe.
+func (p settingsPrinter) PrintFinish(ctx context.Context, jpg []byte, name string, finish Finish) (Result, error) {
+	target := p.target()
+
+	p.EnsureErrorPolicy(ctx)
+
+	if cups, ok := target.(CUPSPrinter); ok {
+		cups.Laminate = finish.laminate()
+		return cups.Print(ctx, jpg, name)
+	}
+
+	return target.Print(ctx, jpg, name)
+}
+
+// FinishPrinter wird von Druckern implementiert, die die Oberfläche je
+// Auftrag wählen können.
+type FinishPrinter interface {
+	PrintFinish(ctx context.Context, jpg []byte, name string, finish Finish) (Result, error)
+}
+
 func (p settingsPrinter) target() Printer {
 	if p.load == nil {
 		return DiscardPrinter{}
@@ -92,7 +115,6 @@ func (p settingsPrinter) target() Printer {
 	return CUPSPrinter{
 		Queue:      cfg.Queue,
 		PageSize:   cfg.PageSize,
-		Laminate:   cfg.Laminate,
 		PrintSpeed: cfg.Speed(),
 	}
 }

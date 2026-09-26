@@ -7,18 +7,18 @@ import (
 	"sync"
 	"time"
 
-	"go.wdy.de/nago/auth"
+	"go.wdy.de/nago/application/permission"
 	"go.wdy.de/nago/pkg/std"
 )
 
 // Retry stellt einen fehlgeschlagenen Auftrag erneut in die Warteschlange.
-type Retry func(subject auth.Subject, id JobID) error
+type Retry func(subject permission.Auditable, id JobID) error
 
 // NewRetry erzeugt den [Retry] Anwendungsfall. Typischer Anwendungsfall auf
 // einer Feier: das Papier war leer, nach dem Nachlegen sollen die
 // fehlgeschlagenen Aufträge ohne erneutes Suchen der Fotos nachlaufen.
 func NewRetry(ctx context.Context, mutex *sync.Mutex, repo Repository, printer Printer, findJobByID FindJobByID, queue chan<- JobID) Retry {
-	return func(subject auth.Subject, id JobID) error {
+	return func(subject permission.Auditable, id JobID) error {
 		if err := subject.Audit(PermRetry); err != nil {
 			return err
 		}

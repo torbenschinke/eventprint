@@ -63,11 +63,19 @@ func (s State) Done() bool { return s == StateDone || s == StateFailed }
 type Job struct {
 	ID JobID `json:"id,omitempty"`
 
-	// Photo verweist auf das zu druckende Foto.
-	Photo photo.ID `json:"photo,omitempty"`
+	// Photos sind die Motive dieses Blattes in der Reihenfolge der Felder.
+	Photos []photo.ID `json:"photos,omitempty"`
 
-	// Template ist das gewählte Layout.
-	Template TemplateID `json:"tpl,omitempty"`
+	// Layout ist die vollständige Gestaltung des Blattes.
+	Layout Layout `json:"layout"`
+
+	// Batch fasst die Blätter zusammen, die mit einem Tipp auf "Drucken"
+	// entstanden sind. Die Oberfläche zeigt den Fortschritt je Batch.
+	Batch BatchID `json:"batch,omitempty"`
+
+	// Sheet und Sheets nummerieren die Blätter eines Batches ab 1.
+	Sheet  int `json:"sheet,omitempty"`
+	Sheets int `json:"sheets,omitempty"`
 
 	// Printer ist der Name der CUPS-Warteschlange.
 	Printer string `json:"printer,omitempty"`
@@ -110,6 +118,9 @@ func (j Job) Duration() time.Duration {
 
 	return j.FinishedAt.Sub(j.CreatedAt).Truncate(time.Second)
 }
+
+// BatchID fasst die Blätter eines Druckvorgangs zusammen.
+type BatchID string
 
 // Repository speichert alle Druckaufträge.
 type Repository = data.Repository[Job, JobID]

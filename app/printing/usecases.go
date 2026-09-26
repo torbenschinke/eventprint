@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"go.wdy.de/nago/pkg/events"
 	"go.wdy.de/nago/pkg/std"
 
 	"github.com/torbenschinke/eventprint/app/photo"
@@ -14,16 +13,37 @@ import (
 // UseCases bündelt alle Anwendungsfälle rund um das Drucken.
 type UseCases struct {
 	Print       Print
+	PrintSimple PrintSimple
 	Preview     Preview
 	FindAllJobs FindAllJobs
 	FindJobByID FindJobByID
 	Retry       Retry
+	Cancel      Cancel
 	Diagnose    Diagnose
 	Resume      Resume
 
 	// Printer ist der konfigurierte Ausgabekanal, damit die Oberfläche das
 	// Ziel anzeigen kann.
 	Printer Printer
+}
+
+// Options sind die Abhängigkeiten der Druck-Anwendungsfälle.
+type Options struct {
+	Repository Repository
+	Printer    Printer
+
+	// Locate liest die Originale der Motive.
+	Locate photo.Locate
+
+	// RenderOptions wird bei jedem Rendern erneut ausgewertet, damit eine
+	// geänderte Einstellung sofort greift. Nil bedeutet: keine Korrekturen.
+	RenderOptions func() RenderOptions
+
+	// MaxKioskCopies begrenzt die Exemplare eines Gastes.
+	MaxKioskCopies func() int
+
+	// Observe erfährt jeden abgeschlossenen Auftrag, etwa um Papier zu zählen.
+	Observe func(Job)
 }
 
 // enqueueTimeout begrenzt das Warten auf einen freien Platz in der
@@ -55,33 +75,33 @@ func enqueue(ctx context.Context, queue chan<- JobID, id JobID) error {
 
 // NewUseCases verdrahtet die Anwendungsfälle und startet den Druck-Worker.
 //
-// renderOptions wird bei jedem Rendern erneut ausgewertet, damit eine
-// geänderte Einstellung sofort greift. nil bedeutet: keine Bildkorrekturen.
-//
-// Der Worker endet, sobald ctx abgebrochen wird – also beim Herunterfahren
-// der Anwendung.
-func NewUseCases(ctx context.Context, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal, renderOptions func() RenderOptions) UseCases {
+// Der Worker endet, sobald ctx abgebrochen wird – also beim Herunterfahren.
+func NewUseCases(ctx context.Context, opts Options) UseCases {
 	var mutex sync.Mutex
 
 	// Der Puffer entkoppelt die Oberfläche vom Drucker. Ist er voll, wartet
-	// der aufrufende Klick – das ist gewollt, denn dann stimmt etwas nicht.
-	queue := make(chan JobID, 64)
+	// der aufrufende Tipp – das ist gewollt, denn dann stimmt etwas nicht.
+	queue := make(chan JobID, 256)
 
+	repo, printer := opts.Repository, opts.Printer
 	findJobByID := NewFindJobByID(repo)
+	renderOptions := orDefaultRenderOptions(opts.RenderOptions)
+	motifs := motifLoader(opts.Locate)
+	visible := visibleTo(opts.Locate)
 
-	renderOptions = orDefaultRenderOptions(renderOptions)
-
-	worker := newWorker(&mutex, bus, repo, printer, openOriginal, renderOptions)
+	worker := newWorker(&mutex, repo, printer, motifs, renderOptions, opts.Observe)
 	recoverStaleJobs(ctx, &mutex, repo, printer, queue)
 	go worker.run(ctx, queue)
 	go newResumeGuard(printer).run(ctx)
 
 	return UseCases{
-		Print:       NewPrint(ctx, &mutex, bus, repo, printer, queue),
-		Preview:     NewPreview(openOriginal, NativeRaster4x6, renderOptions),
+		Print:       NewPrint(ctx, &mutex, repo, printer, queue),
+		PrintSimple: NewPrintSimple(ctx, &mutex, repo, printer, queue, opts.MaxKioskCopies, visible),
+		Preview:     NewPreview(motifs, renderOptions, visible),
 		FindAllJobs: NewFindAllJobs(repo),
 		FindJobByID: findJobByID,
 		Retry:       NewRetry(ctx, &mutex, repo, printer, findJobByID, queue),
+		Cancel:      NewCancel(ctx, &mutex, repo, printer),
 		Diagnose:    NewDiagnose(ctx, printer),
 		Resume:      NewResume(ctx, printer),
 		Printer:     printer,

@@ -14,6 +14,8 @@ const (
 	idPreview     permission.ID = "de.torbenschinke.eventprint.printing.preview"
 	idDiagnose    permission.ID = "de.torbenschinke.eventprint.printing.diagnose"
 	idResume      permission.ID = "de.torbenschinke.eventprint.printing.resume"
+	idPrintSimple permission.ID = "de.torbenschinke.eventprint.printing.print_simple"
+	idCancel      permission.ID = "de.torbenschinke.eventprint.printing.cancel"
 )
 
 var (
@@ -65,4 +67,26 @@ var (
 			"Träger dieser Berechtigung können einen angehaltenen Drucker wieder freigeben, etwa nach einem Papierwechsel.",
 			"Holders of this authorisation can resume a stopped printer, for instance after changing the paper."),
 	)
+
+	PermPrintSimple = permission.Declare[PrintSimple](idPrintSimple,
+		permtext.Name(idPrintSimple, "Im Kiosk drucken", "Print in the kiosk"),
+		permtext.Description(idPrintSimple,
+			"Träger dieser Berechtigung drucken ein Foto in einem der Kiosk-Layouts, in begrenzter Anzahl.",
+			"Holders of this authorisation print one photo in one of the kiosk layouts, in limited quantity."),
+	)
+
+	PermCancel = permission.Declare[Cancel](idCancel,
+		permtext.Name(idCancel, "Druckaufträge abbrechen", "Cancel print jobs"),
+		permtext.Description(idCancel,
+			"Träger dieser Berechtigung brechen Aufträge ab, die noch nicht gedruckt sind.",
+			"Holders of this authorisation cancel jobs that have not been printed yet."),
+	)
 )
+
+// Permissions liefert alle Berechtigungen dieses Kontexts.
+func Permissions() []permission.ID {
+	return []permission.ID{
+		PermPrint, PermPrintSimple, PermFindAllJobs, PermFindJobByID, PermRetry,
+		PermPreview, PermDiagnose, PermResume, PermCancel,
+	}
+}

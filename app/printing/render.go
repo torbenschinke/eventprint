@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"image/color"
 	"image/draw"
 	"image/jpeg"
 	"io"
@@ -288,64 +287,16 @@ func PaperLandscape(tpl TemplateID, imgW, imgH int) bool {
 	}
 }
 
-// renderTemplate legt das Motiv gemäß Layout auf eine weiße Seite.
+// renderTemplate legt das Motiv gemäß Kiosk-Layout auf eine Seite.
+//
+// Es gibt nur einen Renderer: Die drei Kiosk-Layouts sind Kombinationen des
+// allgemeinen [Layout] und laufen durch [Compose]. Die Gesichtserkennung galt
+// bei ihnen schon immer nur dem Polaroid; das bleibt so, damit ein
+// formatfüllender Druck nicht plötzlich anders beschnitten wird.
 func renderTemplate(img image.Image, tpl TemplateID, raster Raster, opts RenderOptions) *image.RGBA {
-	bounds := img.Bounds()
+	layout := tpl.Layout()
 
-	pageW, pageH := raster.Short(), raster.Long()
-	if PaperLandscape(tpl, bounds.Dx(), bounds.Dy()) {
-		pageW, pageH = raster.Long(), raster.Short()
-	}
-
-	canvas := image.NewRGBA(image.Rect(0, 0, pageW, pageH))
-	draw.Draw(canvas, canvas.Bounds(), image.NewUniform(color.White), image.Point{}, draw.Src)
-
-	visibleW, visibleH := VisibleMedia4x6.Short(), VisibleMedia4x6.Long()
-	if pageW > pageH {
-		visibleW, visibleH = visibleH, visibleW
-	}
-	visible := image.Rect(
-		(pageW-visibleW)/2,
-		(pageH-visibleH)/2,
-		(pageW-visibleW)/2+visibleW,
-		(pageH-visibleH)/2+visibleH,
-	)
-
-	switch tpl {
-	case TemplatePassepartout:
-		// Ein Passepartout ist ein Rahmen, kein Rest. Der Rand ist deshalb auf
-		// allen vier Seiten exakt gleich breit, und das Motiv wird formatfüllend
-		// eingesetzt (cover) – im Zweifel also beschnitten.
-		//
-		// Die frühere Fassung passte das Motiv vollständig ein (contain). Das
-		// bewahrte zwar jeden Bildpunkt, ließ den sichtbaren Rand aber je nach
-		// Bildformat unterschiedlich breit ausfallen, was auf dem Papier
-		// schlicht nach einem Fehler aussah.
-		area := image.Rect(
-			visible.Min.X+PassepartoutMargin,
-			visible.Min.Y+PassepartoutMargin,
-			visible.Max.X-PassepartoutMargin,
-			visible.Max.Y-PassepartoutMargin,
-		)
-		drawCover(canvas, area, img)
-
-	case TemplatePolaroid:
-		// klassische Sofortbild-Proportionen: schmaler Rand oben/seitlich,
-		// breiter Steg unten zum Beschriften.
-		side := min(visibleW, visibleH) * 6 / 100
-		bottom := min(visibleW, visibleH) * 22 / 100
-		area := image.Rect(visible.Min.X+side, visible.Min.Y+side, visible.Max.X-side, visible.Max.Y-bottom)
-		if opts.AutoCrop && opts.DetectFaces != nil {
-			drawCoverCrop(canvas, area, img, cropForFaces(img.Bounds(), opts.DetectFaces(img), area))
-		} else {
-			drawCover(canvas, area, img)
-		}
-
-	default: // TemplateFull
-		drawCover(canvas, canvas.Bounds(), img)
-	}
-
-	return canvas
+	return Compose(Sheet{Layout: layout, Images: []image.Image{img}}, raster, opts)
 }
 
 // drawCover skaliert das Motiv formatfüllend in area und beschneidet mittig,

@@ -5,11 +5,6 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-
-	"go.wdy.de/nago/application/user"
-	"go.wdy.de/nago/pkg/events"
-
-	"github.com/torbenschinke/eventprint/app/photo"
 )
 
 // worker arbeitet die Druckwarteschlange streng seriell ab. Das ist keine
@@ -17,21 +12,25 @@ import (
 // Dye-Sublimation-Gerät kann ohnehin nur ein Bild gleichzeitig verarbeiten.
 type worker struct {
 	mutex         *sync.Mutex
-	bus           events.Bus
 	repo          Repository
 	printer       Printer
-	openOriginal  photo.OpenOriginal
+	motifs        loadMotifs
 	renderOptions func() RenderOptions
+	observe       func(Job)
 }
 
-func newWorker(mutex *sync.Mutex, bus events.Bus, repo Repository, printer Printer, openOriginal photo.OpenOriginal, renderOptions func() RenderOptions) *worker {
+func newWorker(mutex *sync.Mutex, repo Repository, printer Printer, motifs loadMotifs, renderOptions func() RenderOptions, observe func(Job)) *worker {
+	if observe == nil {
+		observe = func(Job) {}
+	}
+
 	return &worker{
 		mutex:         mutex,
-		bus:           bus,
 		repo:          repo,
 		printer:       printer,
-		openOriginal:  openOriginal,
+		motifs:        motifs,
 		renderOptions: renderOptions,
+		observe:       observe,
 	}
 }
 
@@ -73,7 +72,9 @@ func (w *worker) process(ctx context.Context, id JobID) {
 
 	job.State = StatePrinting
 	job.Message = ""
-	w.store(job)
+	if !w.storeUnlessCanceled(ctx, job) {
+		return
+	}
 
 	res, err := w.render(ctx, job)
 	if err != nil {
@@ -91,9 +92,18 @@ func (w *worker) process(ctx context.Context, id JobID) {
 	// CUPS – sichtbar für die Bedienung, die ihn im Zweifel dort wiederfindet.
 	job.PrinterJob = res.JobID
 	job.Message = res.Message
-	w.store(job)
+	if !w.storeUnlessCanceled(ctx, job) {
+		return
+	}
 
 	outcome := w.await(ctx, job)
+
+	// Während des Wartens kann der Auftrag abgebrochen worden sein. Dann
+	// steht dieser Ausgang bereits fest und darf nicht überschrieben werden.
+	if current, ok := w.load(job.ID); ok && current.Reason == reasonCanceled {
+		return
+	}
+
 	job.FinishedAt = time.Now()
 	job.Reason = outcome.Reason
 
@@ -104,7 +114,7 @@ func (w *worker) process(ctx context.Context, id JobID) {
 		// bleibt stehen.
 		job.Message = outcome.Message
 
-		slog.Info("print job done", "job", string(job.ID), "printerJob", job.PrinterJob, "template", string(job.Template))
+		slog.Info("print job done", "job", string(job.ID), "printerJob", job.PrinterJob, "format", string(job.Layout.Format), "design", string(job.Layout.Design))
 	} else {
 		job.State = StateFailed
 		job.Message = outcome.Message
@@ -139,35 +149,53 @@ func (w *worker) await(ctx context.Context, job Job) Outcome {
 
 func (w *worker) finish(job Job) {
 	w.store(job)
-	w.bus.Publish(JobFinished{Job: job.ID, State: job.State, Message: job.Message})
+	w.observe(job)
 }
 
-// render lädt das Original, wendet das Layout an und übergibt das Ergebnis an
-// den Drucker.
+// render lädt die Motive, legt das Blatt an und übergibt es dem Drucker.
 func (w *worker) render(ctx context.Context, job Job) (Result, error) {
-	// Der Worker läuft ohne Nutzerkontext, deshalb als Systemnutzer.
-	subject := user.SU()
-
-	optReader, err := w.openOriginal(subject, job.Photo)
+	sheet, err := w.motifs(job.Photos, job.Layout)
 	if err != nil {
 		return Result{}, err
 	}
 
-	if optReader.IsNone() {
-		return Result{}, errPhotoGone
-	}
-
-	reader := optReader.Unwrap()
-	defer func() {
-		_ = reader.Close()
-	}()
-
-	buf, err := RenderWithOptions(reader, job.Template, NativeRaster4x6, w.renderOptions())
+	buf, err := RenderSheet(sheet, NativeRaster4x6, w.renderOptions())
 	if err != nil {
 		return Result{}, err
 	}
 
-	return w.printer.Print(ctx, buf, string(job.Photo))
+	name := string(job.ID)
+	if fp, ok := w.printer.(FinishPrinter); ok {
+		return fp.PrintFinish(ctx, buf, name, job.Layout.Finish)
+	}
+
+	return w.printer.Print(ctx, buf, name)
+}
+
+// storeUnlessCanceled speichert den Zwischenstand, sofern der Auftrag nicht
+// inzwischen abgebrochen wurde, und meldet, ob es weitergehen darf.
+//
+// Der Worker arbeitet mit einer Kopie, die er vor dem Rendern geladen hat.
+// Ein Abbruch in dieser Zeit stünde nur im Repository; ein blindes Speichern
+// der Kopie löschte ihn und das Blatt käme trotzdem. Wurde der Auftrag schon
+// an CUPS übergeben, wird er dort zurückgenommen.
+func (w *worker) storeUnlessCanceled(ctx context.Context, job Job) bool {
+	w.mutex.Lock()
+	opt, err := w.repo.FindByID(job.ID)
+	if err == nil && opt.IsSome() && opt.Unwrap().Reason == reasonCanceled {
+		w.mutex.Unlock()
+		cancelPrinterJob(ctx, w.printer, job)
+		slog.Info("print job canceled while in progress", "job", string(job.ID))
+
+		return false
+	}
+
+	if err := w.repo.Save(job); err != nil {
+		slog.Error("cannot save print job", "job", string(job.ID), "err", err)
+	}
+	w.mutex.Unlock()
+
+	return true
 }
 
 func (w *worker) load(id JobID) (Job, bool) {

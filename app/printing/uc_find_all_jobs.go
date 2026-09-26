@@ -6,16 +6,16 @@ import (
 	"iter"
 	"slices"
 
-	"go.wdy.de/nago/auth"
+	"go.wdy.de/nago/application/permission"
 )
 
 // FindAllJobs liefert alle Druckaufträge, beginnend mit dem neuesten.
-type FindAllJobs func(subject auth.Subject) (iter.Seq2[Job, error], error)
+type FindAllJobs func(subject permission.Auditable) (iter.Seq2[Job, error], error)
 
 // NewFindAllJobs erzeugt den [FindAllJobs] Anwendungsfall. Die Aufträge
 // werden absteigend nach Erstellzeitpunkt geliefert.
 func NewFindAllJobs(repo Repository) FindAllJobs {
-	return func(subject auth.Subject) (iter.Seq2[Job, error], error) {
+	return func(subject permission.Auditable) (iter.Seq2[Job, error], error) {
 		// Die Verweigerung kommt sofort und nicht erst beim ersten Schritt
 		// durch die Folge.
 		if err := subject.Audit(PermFindAllJobs); err != nil {

@@ -1,40 +1,36 @@
 package photo
 
 import (
+	"fmt"
 	"io"
+	"os"
 
-	"github.com/worldiety/option"
-	"go.wdy.de/nago/application/image"
-	"go.wdy.de/nago/auth"
+	"go.wdy.de/nago/application/permission"
 )
 
-// OpenOriginal öffnet die unveränderten Originaldaten eines Fotos, so wie sie
-// von Kamera oder Smartphone geliefert wurden.
-type OpenOriginal func(subject auth.Subject, id ID) (option.Opt[io.ReadCloser], error)
+// OpenOriginal öffnet die unveränderte Bilddatei eines Fotos.
+//
+// Gedruckt wird aus genau dieser Datei. Vorschau, Druck und Export lesen
+// damit dieselbe Quelle – ein Ausdruck kann nicht anders aussehen als das,
+// was die Mediathek zeigt, nur weil zwei Kopien auseinandergelaufen sind.
+type OpenOriginal func(subject permission.Auditable, id ID) (io.ReadCloser, error)
 
 // NewOpenOriginal erzeugt den [OpenOriginal] Anwendungsfall.
-//
-// Für den Druck werden bewusst die Originaldaten und nicht eine der
-// verkleinerten SrcSet-Varianten verwendet, damit die vollen 300 dpi des
-// Dye-Sublimation-Druckers ausgenutzt werden.
-func NewOpenOriginal(findByID FindByID, openReader image.OpenReader) OpenOriginal {
-	return func(subject auth.Subject, id ID) (option.Opt[io.ReadCloser], error) {
-		// Die Originaldaten sind mehr als die Anzeige: Sie tragen den
-		// EXIF-Block mit Aufnahmezeit und Gerät. Wer ein Vorschaubild sehen
-		// darf, darf deshalb nicht zwingend auch das hier.
+func NewOpenOriginal(repo Repository, originals Originals) OpenOriginal {
+	return func(subject permission.Auditable, id ID) (io.ReadCloser, error) {
 		if err := subject.Audit(PermOpenOriginal); err != nil {
-			return option.Opt[io.ReadCloser]{}, err
+			return nil, err
 		}
 
-		optPhoto, err := findByID(subject, id)
+		opt, err := repo.FindByID(id)
 		if err != nil {
-			return option.Opt[io.ReadCloser]{}, err
+			return nil, fmt.Errorf("cannot load photo: %w", err)
 		}
 
-		if optPhoto.IsNone() {
-			return option.Opt[io.ReadCloser]{}, nil
+		if opt.IsNone() {
+			return nil, fmt.Errorf("photo %s: %w", id, os.ErrNotExist)
 		}
 
-		return openReader(subject, optPhoto.Unwrap().Image)
+		return originals.Open(opt.Unwrap().File)
 	}
 }

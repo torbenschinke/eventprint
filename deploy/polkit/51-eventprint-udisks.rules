@@ -1,0 +1,45 @@
+// Erlaubt dem Dienstnutzer der Fotobox, einen USB-Stick einzuhängen,
+// auszuhängen und abzuschalten.
+//
+// Nach der Feier müssen die Fotos vom Gerät, und der Stick ist der einzige
+// Weg, den jeder Gastgeber dabeihat. Auf einem Desktop hängt gvfs den Stick
+// von selbst ein; hier ist gvfs maskiert, und die Fotobox läuft als
+// systemd-Dienst ohne Anmeldesitzung. Sie hängt den Stick deshalb selbst über
+// udisksctl ein, und udisks fragt dafür polkit.
+//
+// Die mitgelieferten Regeln von udisks erlauben das nur einer aktiven lokalen
+// Sitzung. Ein Dienst hat weder Sitz noch Sitzung, `active` ist für ihn immer
+// falsch. Aus demselben Grund fragt udisks bei ihm stets die Varianten
+// "-other-seat" ab: Ein Gerät gehört aus Sicht von udisks immer zu einem
+// fremden Sitz, wenn der Fragende keinen hat. Diese Regel prüft deshalb den
+// Benutzernamen und verzichtet auf local/active, wie die Regel für
+// NetworkManager.
+//
+// Vergeben werden genau die Aktionen für Einhängen, Aushängen und Auswerfen.
+// filesystem-unmount-others braucht es, wenn der Stick noch von einem
+// früheren Einhängen durch einen anderen Nutzer hängt, etwa weil jemand am
+// Terminal war. Ausdrücklich NICHT vergeben sind:
+//
+//   - filesystem-mount-system: Datenträger, die udisks als Systemplatte
+//     einstuft, bleiben tabu. Die Anwendung schließt sie zwar selbst aus,
+//     aber eine zweite Sperre kostet nichts.
+//   - modify-device, modify-device-other-seat: Partitionieren und Formatieren.
+//     Wer Fotos kopieren soll, muss keinen Stick löschen können.
+//   - encrypted-unlock*: Verschlüsselte Sticks braucht die Fotobox nicht, und
+//     ein Kennwort fände ohnehin keinen Weg in einen Dienst ohne Sitzung.
+//   - loop-setup, manage-swapspace, open-device und alles Weitere.
+polkit.addRule(function (action, subject) {
+    if (subject.user !== "eventprint") {
+        return;
+    }
+
+    if (action.id === "org.freedesktop.udisks2.filesystem-mount" ||
+        action.id === "org.freedesktop.udisks2.filesystem-mount-other-seat" ||
+        action.id === "org.freedesktop.udisks2.filesystem-unmount-others" ||
+        action.id === "org.freedesktop.udisks2.eject-media" ||
+        action.id === "org.freedesktop.udisks2.eject-media-other-seat" ||
+        action.id === "org.freedesktop.udisks2.power-off-drive" ||
+        action.id === "org.freedesktop.udisks2.power-off-drive-other-seat") {
+        return polkit.Result.YES;
+    }
+});

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"go.wdy.de/nago/auth"
+	"go.wdy.de/nago/application/permission"
 	"go.wdy.de/nago/pkg/std"
 )
 
@@ -14,7 +14,7 @@ import (
 // die Warteschlange an, und nach dem Wechsel geht nichts mehr, bis sie
 // freigegeben wird. Dieser Anwendungsfall ersetzt das "sudo cupsenable" im
 // Terminal durch eine Schaltfläche.
-type Resume func(subject auth.Subject) error
+type Resume func(subject permission.Auditable) error
 
 // NewResume erzeugt den [Resume] Anwendungsfall.
 //
@@ -22,7 +22,7 @@ type Resume func(subject auth.Subject) error
 // weitergedruckt. Das ist kein ungewollter Ausdruck: Die Fotobox verfolgt ihn
 // noch und hätte ihn nach Ablauf ihrer Frist selbst storniert.
 func NewResume(ctx context.Context, printer Printer) Resume {
-	return func(subject auth.Subject) error {
+	return func(subject permission.Auditable) error {
 		if err := subject.Audit(PermResume); err != nil {
 			return err
 		}

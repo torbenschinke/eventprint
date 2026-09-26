@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"go.wdy.de/nago/auth"
+	"go.wdy.de/nago/application/permission"
 )
 
 // diagnoseTimeout begrenzt die Abfrage, damit ein hängendes lpstat nicht die
@@ -16,7 +16,7 @@ const diagnoseTimeout = 3 * time.Second
 // Die Druckstatus-Seite zeigt ihn an, damit die häufigsten Ursachen ohne
 // Terminal erkennbar sind: Warteschlange gelöscht, Drucker angehalten, kein
 // Papier.
-type Diagnose func(subject auth.Subject) (PrinterStatus, error)
+type Diagnose func(subject permission.Auditable) (PrinterStatus, error)
 
 // NewDiagnose erzeugt den [Diagnose] Anwendungsfall.
 //
@@ -24,7 +24,7 @@ type Diagnose func(subject auth.Subject) (PrinterStatus, error)
 // gemeldet und nicht als "alles in Ordnung" ausgegeben – eine falsche
 // Entwarnung wäre schlimmer als gar keine Aussage.
 func NewDiagnose(ctx context.Context, printer Printer) Diagnose {
-	return func(subject auth.Subject) (PrinterStatus, error) {
+	return func(subject permission.Auditable) (PrinterStatus, error) {
 		// Zwei verschiedene Dinge, deshalb zwei Wege: "Du darfst nicht fragen"
 		// ist ein Fehler des Aufrufs und kommt als error zurück. "Der Drucker
 		// hat nicht geantwortet" ist ein Befund über den Drucker und steht in

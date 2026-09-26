@@ -3,42 +3,54 @@ package printing
 import (
 	"fmt"
 
-	"go.wdy.de/nago/auth"
-	"go.wdy.de/nago/pkg/std"
+	"go.wdy.de/nago/application/permission"
 
 	"github.com/torbenschinke/eventprint/app/photo"
 )
 
-// Preview rendert ein Foto mit dem gewählten Layout, ohne es zu drucken.
-// Damit kann die Oberfläche zeigen, wie der Ausdruck aussehen wird.
-type Preview func(subject auth.Subject, id photo.ID, tpl TemplateID) ([]byte, error)
+// PreviewCmd beschreibt eine Vorschau.
+type PreviewCmd struct {
+	// Photos sind die Motive des Blattes; leer zeigt das Layout mit
+	// Platzhaltern.
+	Photos []photo.ID
 
-// NewPreview erzeugt den [Preview] Anwendungsfall. Er rendert exakt dasselbe
-// Bild wie der Druck-Worker, sodass die Vorschau verbindlich ist – inklusive
-// des automatischen Bildausschnitts.
-func NewPreview(openOriginal photo.OpenOriginal, raster Raster, renderOptions func() RenderOptions) Preview {
+	Layout Layout
+
+	// MaxEdge ist die lange Kante der Vorschau in Pixeln.
+	MaxEdge int
+}
+
+// Preview zeigt, wie ein Blatt gedruckt wird, als JPEG.
+//
+// Sie entsteht mit demselben Renderer wie der Ausdruck. Die Wahl des Layouts
+// soll keine Überraschung sein, und das gelingt nur, wenn Vorschau und Druck
+// nicht zwei getrennte Darstellungen sind.
+type Preview func(subject permission.Auditable, cmd PreviewCmd) ([]byte, error)
+
+// NewPreview erzeugt den [Preview] Anwendungsfall.
+func NewPreview(motifs loadMotifs, renderOptions func() RenderOptions, visible func(permission.Auditable, []photo.ID) error) Preview {
 	renderOptions = orDefaultRenderOptions(renderOptions)
 
-	return func(subject auth.Subject, id photo.ID, tpl TemplateID) ([]byte, error) {
+	return func(subject permission.Auditable, cmd PreviewCmd) ([]byte, error) {
 		if err := subject.Audit(PermPreview); err != nil {
 			return nil, err
 		}
 
-		optReader, err := openOriginal(subject, id)
-		if err != nil {
-			return nil, err
+		layout := cmd.Layout.Normalized()
+
+		sheet := placeholderSheet(layout)
+		if len(cmd.Photos) > 0 {
+			if err := visible(subject, cmd.Photos); err != nil {
+				return nil, err
+			}
+
+			var err error
+			if sheet, err = motifs(cmd.Photos, layout); err != nil {
+				return nil, err
+			}
 		}
 
-		if optReader.IsNone() {
-			return nil, std.NewLocalizedError("Foto nicht gefunden", "Das Foto ist nicht mehr vorhanden.")
-		}
-
-		reader := optReader.Unwrap()
-		defer func() {
-			_ = reader.Close()
-		}()
-
-		buf, err := RenderWithOptions(reader, tpl, raster, renderOptions())
+		buf, err := PreviewSheet(sheet, cmd.MaxEdge, renderOptions())
 		if err != nil {
 			return nil, fmt.Errorf("cannot render preview: %w", err)
 		}

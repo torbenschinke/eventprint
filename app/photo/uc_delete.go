@@ -1,23 +1,21 @@
 package photo
 
 import (
+	"fmt"
 	"sync"
 
-	"go.wdy.de/nago/auth"
-	"go.wdy.de/nago/pkg/events"
+	"go.wdy.de/nago/application/permission"
 )
 
-// Delete entfernt ein Foto aus der Historie.
-type Delete func(subject auth.Subject, id ID) error
+// Delete entfernt Fotos samt Original.
+//
+// Anders als früher bleibt kein Archivexemplar zurück: Auf einem Heimdrucker
+// ist Löschen gemeint, wie es dasteht, und die Speicherkarte ist endlich.
+type Delete func(subject permission.Auditable, ids ...ID) error
 
 // NewDelete erzeugt den [Delete] Anwendungsfall.
-//
-// Es werden nur die Metadaten entfernt. Die Bilddaten selbst verbleiben im
-// Image-Subsystem und werden bei einem Backup mitgenommen, was für eine
-// Veranstaltung das gewünschte Verhalten ist: ein versehentlich gelöschtes
-// Foto ist so wiederherstellbar.
-func NewDelete(mutex *sync.Mutex, bus events.Bus, repo Repository) Delete {
-	return func(subject auth.Subject, id ID) error {
+func NewDelete(mutex *sync.Mutex, repo Repository, originals Originals) Delete {
+	return func(subject permission.Auditable, ids ...ID) error {
 		if err := subject.Audit(PermDelete); err != nil {
 			return err
 		}
@@ -25,11 +23,24 @@ func NewDelete(mutex *sync.Mutex, bus events.Bus, repo Repository) Delete {
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		if err := repo.DeleteByID(id); err != nil {
-			return err
-		}
+		for _, id := range ids {
+			opt, err := repo.FindByID(id)
+			if err != nil {
+				return fmt.Errorf("cannot load photo: %w", err)
+			}
 
-		bus.Publish(Deleted{Photo: id})
+			if opt.IsNone() {
+				continue
+			}
+
+			if err := originals.Remove(opt.Unwrap().File); err != nil {
+				return fmt.Errorf("cannot remove original: %w", err)
+			}
+
+			if err := repo.DeleteByID(id); err != nil {
+				return fmt.Errorf("cannot delete photo: %w", err)
+			}
+		}
 
 		return nil
 	}

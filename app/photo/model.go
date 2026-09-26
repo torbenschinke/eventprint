@@ -1,3 +1,10 @@
+// Package photo verwaltet die Fotos des Geräts: Import aus allen Quellen,
+// Ablage der Originale, Auswahl für den Druck und Weitergabe.
+//
+// Woher ein Bild kommt – Kamera, Handy, Lightroom, USB-Stick –, spielt nach
+// dem Import keine Rolle mehr. Es liegt als unverändertes Original auf der
+// Speicherkarte, und alles Weitere (Vorschau, Druck, Export) liest genau diese
+// Datei.
 package photo
 
 import (
@@ -6,16 +13,14 @@ import (
 	"fmt"
 	"time"
 
-	"go.wdy.de/nago/application/image"
 	"go.wdy.de/nago/pkg/data"
 )
 
 // ID identifiziert ein Foto.
 //
-// Die ID ist bewusst zeitlich sortierbar aufgebaut (Unix-Millis, links mit
-// Nullen aufgefüllt, gefolgt von Zufall). Dadurch liefert die lexikographisch
-// sortierte Iteration des Repositories automatisch die chronologische
-// Reihenfolge, ohne dass ein Index nötig wäre.
+// Die ID ist zeitlich sortierbar aufgebaut (Unix-Millis, links mit Nullen
+// aufgefüllt, gefolgt von Zufall). Die lexikographisch sortierte Iteration des
+// Repositories liefert dadurch die chronologische Reihenfolge ohne Index.
 type ID string
 
 // NewID erzeugt eine neue, zeitlich sortierbare ID für den Zeitpunkt t.
@@ -25,50 +30,76 @@ func NewID(t time.Time) ID {
 	return ID(fmt.Sprintf("%013d-%s", t.UTC().UnixMilli(), hex.EncodeToString(buf[:])))
 }
 
+// EventID ordnet ein Foto einer Feier zu, also einem Lauf des Kiosk-Modus.
+//
+// Leer bedeutet: privat, im Heimbetrieb entstanden. Die Unterscheidung ist
+// keine Ordnungshilfe, sondern eine Schranke. Im Kiosk sehen Gäste
+// ausschließlich die Fotos der laufenden Feier – nie die private Mediathek.
+type EventID string
+
 // Source beschreibt, woher ein Foto stammt.
 type Source string
 
 const (
-	// SourceCamera markiert Fotos, die von der angeschlossenen Kamera
-	// (PTP/MTP bzw. Tethering-Verzeichnis) eingespielt wurden.
+	// SourceCamera markiert Aufnahmen der angeschlossenen Kamera.
 	SourceCamera Source = "camera"
 
-	// SourceUpload markiert Fotos, die ein Gast per Smartphone hochgeladen hat.
-	SourceUpload Source = "upload"
-
-	// SourceRelay markiert einen Internet-Upload über photoupld.
+	// SourceRelay markiert Uploads vom Handy über den öffentlichen
+	// Upload-Dienst.
 	SourceRelay Source = "relay"
+
+	// SourceLightroom markiert Bilder aus Adobe Lightroom.
+	SourceLightroom Source = "lightroom"
+
+	// SourceUSB markiert Bilder von einem USB-Stick.
+	SourceUSB Source = "usb"
 )
 
+// String liefert den Anzeigenamen.
 func (s Source) String() string {
 	switch s {
 	case SourceCamera:
 		return "Kamera"
-	case SourceUpload:
-		return "Gast-Upload"
 	case SourceRelay:
-		return "Internet-Upload"
+		return "Handy"
+	case SourceLightroom:
+		return "Lightroom"
+	case SourceUSB:
+		return "USB-Stick"
 	default:
 		return string(s)
 	}
 }
 
-// Photo ist das Aggregat eines einzelnen Bildes in der Fotobox.
+// Photo ist das Aggregat eines einzelnen Bildes.
 type Photo struct {
 	ID ID `json:"id,omitempty"`
 
-	// Image verweist auf das SrcSet im Nago-Image-Subsystem. Unter demselben
-	// Schlüssel liegt im Blob-Store zusätzlich das unveränderte Original,
-	// welches für den Druck verwendet wird.
-	Image image.ID `json:"img,omitempty"`
-
-	// Name ist der ursprüngliche Dateiname, sofern bekannt.
+	// Name ist der ursprüngliche Dateiname, sofern bekannt. Er wird beim
+	// Export auf den USB-Stick wiederverwendet, damit die Gäste ihre Bilder
+	// wiedererkennen.
 	Name string `json:"name,omitempty"`
 
-	// Source gibt an, ob das Foto von der Kamera oder von einem Gast stammt.
+	// File ist der Dateiname des Originals im Ablageverzeichnis.
+	File string `json:"file,omitempty"`
+
 	Source Source `json:"src,omitempty"`
 
-	// Width und Height sind die Abmessungen des Originals in Pixeln.
+	// Event ist die Feier, auf der das Foto entstanden ist; leer bei privaten
+	// Fotos.
+	Event EventID `json:"event,omitempty"`
+
+	// Unseen markiert ein Foto, das noch im Eingang liegt: angekommen, aber
+	// weder angesehen noch gedruckt.
+	Unseen bool `json:"unseen,omitempty"`
+
+	Favorite bool `json:"fav,omitempty"`
+
+	// Prints zählt die erfolgreich gedruckten Blätter mit diesem Foto.
+	Prints int `json:"prints,omitempty"`
+
+	// Width und Height sind die Maße in der Lage, in der das Bild betrachtet
+	// wird – also nach Auswertung der EXIF-Ausrichtung.
 	Width  int `json:"w,omitempty"`
 	Height int `json:"h,omitempty"`
 
@@ -93,5 +124,56 @@ func (p Photo) String() string {
 // Landscape meldet, ob das Foto im Querformat vorliegt.
 func (p Photo) Landscape() bool { return p.Width >= p.Height }
 
+// Private meldet, ob das Foto zu keiner Feier gehört.
+func (p Photo) Private() bool { return p.Event == "" }
+
 // Repository speichert die Metadaten aller Fotos.
 type Repository = data.Repository[Photo, ID]
+
+// Scope wählt aus, welche Fotos eine Liste zeigt.
+type Scope int
+
+const (
+	// ScopeAll sind alle Fotos, private wie die aller Feiern.
+	ScopeAll Scope = iota
+
+	// ScopeInbox sind private Fotos, die von selbst angekommen sind: vom
+	// Handy über den Upload-Dienst oder von der Kamera.
+	ScopeInbox
+
+	// ScopeFavorites sind die markierten Fotos.
+	ScopeFavorites
+
+	// ScopePrinted sind Fotos, die schon einmal gedruckt wurden.
+	ScopePrinted
+
+	// ScopeEvent sind die Fotos einer bestimmten Feier.
+	ScopeEvent
+)
+
+// Query beschreibt eine Liste von Fotos.
+type Query struct {
+	Scope Scope
+
+	// Event ist bei [ScopeEvent] die gewünschte Feier.
+	Event EventID
+
+	// Limit begrenzt die Zahl der Treffer; 0 bedeutet unbegrenzt.
+	Limit int
+}
+
+// matches entscheidet, ob ein Foto zur Abfrage gehört.
+func (q Query) matches(p Photo) bool {
+	switch q.Scope {
+	case ScopeInbox:
+		return p.Private() && (p.Source == SourceRelay || p.Source == SourceCamera)
+	case ScopeFavorites:
+		return p.Favorite
+	case ScopePrinted:
+		return p.Prints > 0
+	case ScopeEvent:
+		return p.Event == q.Event
+	default:
+		return true
+	}
+}

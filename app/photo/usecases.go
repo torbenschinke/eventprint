@@ -1,52 +1,39 @@
 package photo
 
-import (
-	"sync"
-
-	"go.wdy.de/nago/application/image"
-	"go.wdy.de/nago/pkg/events"
-)
-
-// Options steuern den Import eines Fotos.
-type Options struct {
-	// Source gibt an, woher das Bild stammt. Leer bedeutet [SourceUpload].
-	Source Source
-}
+import "sync"
 
 // UseCases bündelt alle Anwendungsfälle rund um Fotos.
 type UseCases struct {
-	Import       Import
-	FindByID     FindByID
-	FindAll      FindAll
-	FindLatest   FindLatest
-	Delete       Delete
-	OpenOriginal OpenOriginal
-
-	InspectArchive InspectArchive
-	ExportArchive  ExportArchive
+	Import         Import
+	FindAll        FindAll
+	FindEvent      FindEvent
+	FindByID       FindByID
+	Delete         Delete
+	SetFavorite    SetFavorite
+	MarkSeen       MarkSeen
+	MarkPrinted    MarkPrinted
+	OpenOriginal   OpenOriginal
+	Locate         Locate
+	InspectStorage InspectStorage
 	PurgeEvent     PurgeEvent
 }
 
 // NewUseCases verdrahtet die Anwendungsfälle mit ihren Abhängigkeiten.
-//
-// archive sichert jedes eingehende Bild zusätzlich unverändert als Datei.
-// nil schaltet die Sicherung ab.
-func NewUseCases(bus events.Bus, repo Repository, images image.UseCases, archive Archive, archiveDir string, purgeImage PurgeImage) UseCases {
+func NewUseCases(repo Repository, originals Originals) UseCases {
 	var mutex sync.Mutex
 
-	findByID := NewFindByID(repo)
-	findAll := NewFindAll(repo)
-
 	return UseCases{
-		Import:       NewImport(&mutex, bus, repo, images.CreateSrcSet, archive),
-		FindByID:     findByID,
-		FindAll:      findAll,
-		FindLatest:   NewFindLatest(findAll),
-		Delete:       NewDelete(&mutex, bus, repo),
-		OpenOriginal: NewOpenOriginal(findByID, images.OpenReader),
-
-		InspectArchive: NewInspectArchive(archiveDir),
-		ExportArchive:  NewExportArchive(archiveDir),
-		PurgeEvent:     NewPurgeEvent(&mutex, bus, repo, purgeImage, archiveDir),
+		Import:         NewImport(&mutex, repo, originals),
+		FindAll:        NewFindAll(repo),
+		FindEvent:      NewFindEvent(repo),
+		FindByID:       NewFindByID(repo),
+		Delete:         NewDelete(&mutex, repo, originals),
+		SetFavorite:    NewSetFavorite(&mutex, repo),
+		MarkSeen:       NewMarkSeen(&mutex, repo),
+		MarkPrinted:    NewMarkPrinted(&mutex, repo),
+		OpenOriginal:   NewOpenOriginal(repo, originals),
+		Locate:         NewLocate(repo, originals),
+		InspectStorage: NewInspectStorage(originals),
+		PurgeEvent:     NewPurgeEvent(&mutex, repo, originals),
 	}
 }

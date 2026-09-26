@@ -13,6 +13,10 @@ import (
 // die Warteschlange umgestellt wird. Ein Tippfehler darin fiele sonst erst am
 // Abend der Feier auf – durch einen doppelten Ausdruck.
 func TestEnforceAbortPolicyPassesTheRightArguments(t *testing.T) {
+	// Ohne diesen Ersatz fragte der Test das CUPS des Rechners, auf dem er
+	// läuft – und scheiterte überall dort, wo es keine Warteschlange CZ01
+	// gibt, also auf jedem Entwicklerrechner.
+	stubQueues(t, "CZ01 accepting requests since Sat 26 Sep 2026")
 	read := recordingLpadmin(t, 0)
 
 	if err := EnforceAbortPolicy(context.Background(), "CZ01"); err != nil {
