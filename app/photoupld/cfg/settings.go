@@ -18,6 +18,28 @@ func (Settings) GlobalSettings() bool { return true }
 var _ = enum.Variant[settings.GlobalSettings, Settings](enum.Rename[Settings]("eventprint.upld.settings"))
 
 func (s Settings) UploadURL(id string, fallback func() string) string {
+	return s.publicURL("/upload", url.Values{"u": {id}}, fallback)
+}
+
+// OAuthStartURL ist der Link, den die Fotobox als QR-Code zeigt, wenn ihr
+// Besitzer ein Konto bei Adobe verbinden will.
+func (s Settings) OAuthStartURL(state string, fallback func() string) string {
+	return s.publicURL(OAuthStartPath, url.Values{"s": {state}}, fallback)
+}
+
+// OAuthCallbackURL ist die Rücksprungadresse, die bei Adobe hinterlegt sein
+// muss. Die Fotobox nennt sie Adobe bei jeder Anmeldung; weicht sie von der
+// hinterlegten ab, lehnt Adobe die Anmeldung ab.
+func (s Settings) OAuthCallbackURL(fallback func() string) string {
+	return s.publicURL(OAuthCallbackPath, nil, fallback)
+}
+
+// publicURL bildet eine von außen erreichbare Adresse des Dienstes.
+//
+// Alle Adressen hängen an derselben Basis. Liefe eine davon an der
+// eingestellten öffentlichen Adresse vorbei, zeigte die Box einen QR-Code,
+// der nur im lokalen Netz funktioniert.
+func (s Settings) publicURL(path string, query url.Values, fallback func() string) string {
 	base := strings.TrimSpace(s.PublicURL)
 	if base == "" {
 		base = fallback()
@@ -29,9 +51,7 @@ func (s Settings) UploadURL(id string, fallback func() string) string {
 	if !strings.Contains(base, "://") {
 		u, _ = url.Parse("https://" + base)
 	}
-	u.Path = strings.TrimSuffix(u.Path, "/") + "/upload"
-	q := u.Query()
-	q.Set("u", id)
-	u.RawQuery = q.Encode()
+	u.Path = strings.TrimSuffix(u.Path, "/") + path
+	u.RawQuery = query.Encode()
 	return u.String()
 }

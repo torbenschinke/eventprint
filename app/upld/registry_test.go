@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"go.wdy.de/nago/application/image"
+
+	"github.com/torbenschinke/eventprint/app/printing"
 )
 
 func TestOpenRotatesIdentityAndPurgesImages(t *testing.T) {
@@ -94,5 +96,71 @@ func TestPurgeKeepsUsedSession(t *testing.T) {
 
 	if !r.Valid(id) {
 		t.Fatal("eine benutzte Sitzung wurde verworfen")
+	}
+}
+
+// TestEnqueueKeepsInboxTemplate hält fest, dass ein leeres Layout leer bleibt.
+//
+// Vorher machte die Registry aus jedem unbekannten Layout "full" – auch aus
+// dem leeren. Ein Bild für den Eingang wäre damit unverhofft gedruckt worden.
+// Ein gesetztes, aber unbekanntes Layout wird dagegen weiter normalisiert.
+func TestEnqueueKeepsInboxTemplate(t *testing.T) {
+	tests := []struct {
+		name string
+		in   printing.TemplateID
+		want printing.TemplateID
+	}{
+		{name: "inbox", in: InboxTemplate, want: InboxTemplate},
+		{name: "known", in: printing.TemplatePassepartout, want: printing.TemplatePassepartout},
+		{name: "unknown", in: "gibt-es-nicht", want: printing.TemplateFull},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewRegistry(nil)
+			id, _ := r.Open("box")
+			jobID, _ := NewJobID()
+			if err := r.Enqueue(id, Job{ID: jobID, Image: "img", Template: tt.in}); err != nil {
+				t.Fatal(err)
+			}
+
+			jobs, err := r.Pending("box")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(jobs) != 1 || jobs[0].Template != tt.want {
+				t.Fatalf("Layout %q wurde zu %q, erwartet %q", tt.in, jobs[0].Template, tt.want)
+			}
+		})
+	}
+}
+
+func TestRemainingCountsDownToFull(t *testing.T) {
+	r := NewRegistry(nil)
+	id, _ := r.Open("box")
+
+	if n, err := r.Remaining(id); err != nil || n != MaxJobsPerSession {
+		t.Fatalf("Remaining = %d, %v; erwartet %d", n, err, MaxJobsPerSession)
+	}
+
+	for range MaxJobsPerSession {
+		jobID, _ := NewJobID()
+		if err := r.Enqueue(id, Job{ID: jobID, Image: image.ID(jobID)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if n, _ := r.Remaining(id); n != 0 {
+		t.Fatalf("Remaining = %d bei voller Warteschlange", n)
+	}
+
+	jobID, _ := NewJobID()
+	if err := r.Enqueue(id, Job{ID: jobID, Image: "zuviel"}); err != ErrFull {
+		t.Fatalf("Enqueue auf volle Warteschlange: %v, erwartet ErrFull", err)
+	}
+
+	if _, err := r.Remaining("gibt-es-nicht"); err != ErrExpired {
+		t.Fatalf("Remaining einer unbekannten Sitzung: %v, erwartet ErrExpired", err)
 	}
 }

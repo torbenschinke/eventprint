@@ -99,10 +99,33 @@ func (r *Registry) Enqueue(id UploadID, job Job) error {
 	if len(s.Jobs) >= MaxJobsPerSession {
 		return ErrFull
 	}
-	job.Template = printing.TemplateByID(job.Template).ID
+	// Ein leeres Layout ist kein Versehen, sondern der Eingang: Das Bild wird
+	// an der Box abgelegt und nicht gedruckt. Normalisiert werden deshalb nur
+	// gesetzte Werte – ein unbekanntes Layout soll lieber randlos gedruckt als
+	// verworfen werden, ein leeres aber keinesfalls unverhofft gedruckt.
+	if job.Template != InboxTemplate {
+		job.Template = printing.TemplateByID(job.Template).ID
+	}
 	s.Jobs = append(s.Jobs, job)
 	s.Images[job.Image] = struct{}{}
 	return nil
+}
+
+// Remaining liefert, wie viele Aufträge die Sitzung noch aufnehmen kann.
+//
+// Der Eingang nimmt viele Bilder auf einmal entgegen. Wer vorher weiß, wie
+// viel Platz ist, muss kein Bild aufwendig verarbeiten, nur um es danach an
+// der vollen Warteschlange abprallen zu lassen. Verbindlich bleibt trotzdem
+// [Registry.Enqueue]: Zwei Gäste können gleichzeitig senden.
+func (r *Registry) Remaining(id UploadID) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s, ok := r.byUpload[id]
+	if !ok {
+		return 0, ErrExpired
+	}
+	s.touch()
+	return max(0, MaxJobsPerSession-len(s.Jobs)), nil
 }
 
 func (r *Registry) Pending(token TokenID) ([]Job, error) {

@@ -11,7 +11,7 @@ import (
 	nagoui "go.wdy.de/nago/presentation/ui"
 	"go.wdy.de/nago/presentation/ui/alert"
 
-	"github.com/torbenschinke/eventprint/app/photobox/ui/preview"
+	"github.com/torbenschinke/eventprint/app/photoupld/ui/preview"
 	"github.com/torbenschinke/eventprint/app/printing"
 	"github.com/torbenschinke/eventprint/app/upld"
 )
@@ -25,6 +25,12 @@ func PageUpload(wnd core.Window, opts Options) core.View {
 	id := upld.UploadID(wnd.Values()["u"])
 	if id == "" || !opts.Registry.Valid(id) {
 		return expired()
+	}
+
+	// Die Box entscheidet über den Modus, nicht der Gast: Sie hängt m=inbox an
+	// die Adresse im QR-Code, wenn sie als privater Drucker zuhause steht.
+	if wnd.Values()["m"] == modeInbox {
+		return pageInbox(wnd, opts, id)
 	}
 
 	img := core.StateOf[image.ID](wnd, "photoupld-image")

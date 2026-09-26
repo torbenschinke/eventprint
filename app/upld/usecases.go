@@ -12,18 +12,28 @@ type UseCases struct {
 	FindPendingJobs FindPendingJobs
 	OpenJobImage    OpenJobImage
 	AckJob          AckJob
+
+	RegisterOAuth RegisterOAuth
+	CollectOAuth  CollectOAuth
+	StartOAuth    StartOAuth
+	CompleteOAuth CompleteOAuth
 }
 
-// NewUseCases verdrahtet die Anwendungsfälle mit der Registry.
+// NewUseCases verdrahtet die Anwendungsfälle mit den Registries.
 //
 // uploadURL bildet die von außen erreichbare Adresse einer Sitzung. Sie steckt
 // nicht in der Domäne, weil sie vom Betrieb abhängt und nicht von der Sache.
-func NewUseCases(registry *Registry, images image.UseCases) UseCases {
+func NewUseCases(registry *Registry, oauth *OAuthRegistry, images image.UseCases) UseCases {
 	return UseCases{
 		OpenSession:     NewOpenSession(registry),
 		FindPendingJobs: NewFindPendingJobs(registry),
 		OpenJobImage:    NewOpenJobImage(registry, images.OpenReader),
 		AckJob:          NewAckJob(registry),
+
+		RegisterOAuth: NewRegisterOAuth(oauth),
+		CollectOAuth:  NewCollectOAuth(oauth),
+		StartOAuth:    NewStartOAuth(oauth),
+		CompleteOAuth: NewCompleteOAuth(oauth),
 	}
 }
 
