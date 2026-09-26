@@ -28,10 +28,10 @@ readonly SPEC_DOC="${ROOT_DIR}/SPECIFICATION.md"
 
 cd "${ROOT_DIR}"
 
-# Die Anwendungen dieses Moduls. photobox braucht cgo und OpenCV, photoupld
+# Die Anwendungen dieses Moduls. gift-app braucht cgo und OpenCV, photoupld
 # nicht – deshalb steht die Anforderung je Anwendung dabei.
 readonly APPS=(
-  "photobox:cgo"
+  "gift-app:cgo"
   "photoupld:pure"
 )
 

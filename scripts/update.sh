@@ -30,7 +30,7 @@ log() { printf '%s eventprint-update: %s\n' "$(date -Is)" "$*"; }
 
 # Die Anwendungen, die auf dem Gerät gebraucht werden. Der Upload-Dienst läuft
 # woanders; hier entsteht nur die Fotobox.
-readonly APPS=("photobox")
+readonly APPS=("gift-app")
 
 binaries_present() {
   local app

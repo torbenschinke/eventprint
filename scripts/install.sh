@@ -80,15 +80,16 @@ PACKAGES=(
   gphoto2                         # Tethering der Kamera
   network-manager                 # Funknetz vor Ort wechseln (nmcli)
   polkitd                         # Freigabe dafuer, siehe deploy/polkit/
+  udisks2                         # USB-Stick einhaengen (udisksctl), siehe deploy/polkit/
 
   # Kioskbetrieb auf dem Touchscreen
   xserver-xorg xinit              # X11; Wayland kann den Fernseher nicht spiegeln
   openbox                         # Fenstersteuerung ohne Menue und ohne Leiste
   lightdm                         # automatische Anmeldung
-  chromium                        # die Oberflaeche selbst
-  x11-xserver-utils               # xrandr und xset
+  x11-xserver-utils               # xrandr, xset und xhost
   unclutter                       # versteckt den Mauszeiger
-  curl                            # wartet beim Start auf den Dienst
+  libgl1 libegl1 libgl1-mesa-dri  # OpenGL fuer gift; geladen wird es zur Laufzeit
+  libx11-6 libxrandr2 libxcursor1 libxi6 libxinerama1 libxxf86vm1
 )
 
 if [[ ${FACECROP} -eq 1 ]]; then
@@ -394,15 +395,19 @@ fi
 # polkit-Freigabe zu. Die mitgelieferte Regel von Raspberry Pi OS greift hier
 # nicht, weil sie eine angemeldete lokale Sitzung verlangt - die ein Dienst
 # nicht hat.
+#
+# Dasselbe gilt fuer udisks: Ohne Freigabe kann der Dienst keinen USB-Stick
+# einhaengen, und die Fotos einer Feier kaemen nicht mehr von der Box.
 install_polkit_rule() {
-  local dst=/etc/polkit-1/rules.d/50-eventprint-networkmanager.rules
-
   if [[ ! -d /etc/polkit-1/rules.d ]]; then
-    warn "polkit ist nicht eingerichtet; der Funknetz-Wechsel bleibt gesperrt."
+    warn "polkit ist nicht eingerichtet; Funknetz-Wechsel und USB-Stick bleiben gesperrt."
     return 0
   fi
 
-  run install -m 0644 "${PREFIX}/deploy/polkit/50-eventprint-networkmanager.rules" "${dst}"
+  local rule
+  for rule in "${PREFIX}"/deploy/polkit/*.rules; do
+    run install -m 0644 "${rule}" "/etc/polkit-1/rules.d/$(basename "${rule}")"
+  done
 }
 
 install_polkit_rule
@@ -415,7 +420,6 @@ install_polkit_rule
 # Kiosk-Nutzer hat keine Shell, keine sudo-Rechte und ausser dem Browser
 # nichts.
 KIOSK_USER="${KIOSK_USER:-fotobox}"
-KIOSK_URL="${KIOSK_URL:-http://localhost:3000}"
 
 setup_kiosk() {
   # Die Shell ist /bin/bash und ausdruecklich nicht /usr/sbin/nologin.
@@ -478,7 +482,7 @@ setup_kiosk() {
   else
     cat >"${home}/.config/openbox/autostart" <<EOF
 # Von install.sh angelegt. Startet die Fotobox-Sitzung.
-EVENTPRINT_KIOSK_URL=${KIOSK_URL} /usr/local/bin/eventprint-kiosk-session &
+/usr/local/bin/eventprint-kiosk-session &
 EOF
     chown "${KIOSK_USER}:${KIOSK_USER}" "${home}/.config/openbox/autostart"
     chmod 0644 "${home}/.config/openbox/autostart"
@@ -661,18 +665,20 @@ cat <<EOF
 
   Stand:
 ${printer_line}
-    Oberflaeche:   http://$(hostname -I 2>/dev/null | awk '{print $1}'):3000
 
   Naechste Schritte:
 
     1. Neu starten. Danach laeuft alles von selbst:
          sudo reboot
 
-    2. Beim ersten Aufruf eine Betreuer-PIN vergeben:
-         Auf dem Startbildschirm fuenfmal zuegig den QR-Code antippen.
-         Die Fotobox ist fabrikneu und hat noch keine PIN, vergibt sie also,
-         wer davorsteht. Das gehoert an den Aufbau - nicht auf den Abend,
-         wenn schon Gaeste da sind.
+    2. Die Box startet im Heimbetrieb. Unter Einstellungen > Kiosk-Modus
+         eine Betreuer-PIN vergeben, bevor sie auf eine Feier geht; ohne PIN
+         beendet den Kiosk nur ein Neustart.
+
+    3. Upload-Dienst und Adobe Lightroom traegt man am bequemsten in
+         /etc/default/eventprint ein (EVENTPRINT_RELAY_URL,
+         EVENTPRINT_RELAY_TOKEN, EVENTPRINT_ADOBE_CLIENT_ID,
+         EVENTPRINT_ADOBE_SECRET), statt Tokens auf dem Touchscreen zu tippen.
 
   Beim naechsten Hochfahren holt eventprint-update.service den Stand von
   origin/${BRANCH} und baut bei Bedarf neu. Schlaegt das fehl, startet die

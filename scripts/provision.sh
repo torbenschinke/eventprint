@@ -61,6 +61,45 @@ if [[ ${units_changed} -eq 1 ]]; then
   systemctl enable eventprint-provision.service eventprint-update.service eventprint.service >/dev/null 2>&1
 fi
 
+# Die polkit-Regeln und die Kiosk-Sitzung stammen aus dem Repository und
+# werden angeglichen wie die Units. Vorher brachte sie nur install.sh auf das
+# Geraet; eine Aenderung daran hing an einer Neuinstallation – und damit an
+# jemandem mit root vor der Box.
+if [[ -d /etc/polkit-1/rules.d ]]; then
+  for rule in "${ROOT_DIR}"/deploy/polkit/*.rules; do
+    [[ -f "${rule}" ]] || continue
+    dst="/etc/polkit-1/rules.d/$(basename "${rule}")"
+    if ! cmp -s "${rule}" "${dst}"; then
+      log "polkit-Regel $(basename "${rule}") angleichen"
+      install -m 0644 "${rule}" "${dst}"
+      changed=1
+    fi
+  done
+fi
+
+for script in kiosk-session.sh:eventprint-kiosk-session mirror-displays.sh:eventprint-mirror-displays; do
+  src="${ROOT_DIR}/deploy/kiosk/${script%%:*}"
+  dst="/usr/local/bin/${script##*:}"
+  [[ -f "${src}" ]] || continue
+  if ! cmp -s "${src}" "${dst}"; then
+    log "Kiosk-Skript ${script##*:} angleichen"
+    install -m 0755 "${src}" "${dst}"
+    changed=1
+  fi
+done
+
+# udisks2 haengt USB-Sticks ein, auf die die Fotos einer Feier kopiert werden.
+# Aeltere Installationen haben es nicht. Ohne Netz gelingt die Nachinstallation
+# nicht; dann eben beim naechsten Start – die Box startet trotzdem.
+if ! command -v udisksctl >/dev/null 2>&1; then
+  log "udisks2 nachinstallieren"
+  if timeout 300 env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends udisks2 >/dev/null 2>&1; then
+    changed=1
+  else
+    log "udisks2 liess sich nicht installieren; USB-Export bleibt bis dahin gesperrt"
+  fi
+fi
+
 # ------------------------------------------------------------------ Journal ---
 # Nach der ersten Veranstaltung war das Journal des Abends verloren. Raspberry
 # Pi OS liefert 40-rpi-volatile-storage.conf aus und haelt die Logs im RAM, um

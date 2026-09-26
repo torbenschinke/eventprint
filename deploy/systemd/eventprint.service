@@ -1,7 +1,7 @@
 [Unit]
 Description=eventprint Fotobox
 Documentation=file:/opt/eventprint/README.md
-After=network.target cups.service eventprint-update.service eventprint-provision.service
+After=network.target cups.service eventprint-update.service eventprint-provision.service display-manager.service
 
 # Wants, nicht Requires: Scheitert die Aktualisierung – etwa ohne Netz –, muss
 # die Fotobox trotzdem mit dem vorhandenen Stand starten. Genau dafür endet
@@ -16,24 +16,42 @@ Group=eventprint
 # lp und lpadmin: Aufträge übergeben und die Fehlerbehandlung der
 # Warteschlange auf abort-job stellen. Ohne lpadmin wiederholt CUPS
 # gescheiterte Aufträge von sich aus und druckt Bilder ein zweites Mal.
-# plugdev und video: Zugriff auf die Kamera am USB.
-SupplementaryGroups=lp lpadmin plugdev video
+# plugdev: Kamera am USB. video und render: die GPU, auf die gift zeichnet.
+SupplementaryGroups=lp lpadmin plugdev video render
 
 WorkingDirectory=/opt/eventprint
 EnvironmentFile=-/etc/default/eventprint
-ExecStart=/opt/eventprint/dist/photobox
+ExecStart=/opt/eventprint/dist/gift-app
 
-# nago legt seine Daten unter STATE_DIRECTORY ab, das systemd hier setzt:
-# /var/lib/eventprint. Dort liegen auch die gesicherten Originale.
+# Die Oberfläche zeichnet in die X-Sitzung des Kiosk-Nutzers. Der Dienst
+# läuft trotzdem hier und nicht in der Sitzung: Hier hat er seine Daten,
+# seine polkit-Freigaben und einen Aufpasser, der ihn nach einem Absturz neu
+# startet. Die Sitzung erlaubt ihm den Zugriff mit xhost, siehe
+# deploy/kiosk/kiosk-session.sh. Solange die Sitzung noch nicht steht,
+# scheitert der Start und systemd versucht es einfach wieder.
+Environment=DISPLAY=:0
+
+# Fotos, Aufträge und Einstellungen liegen unter STATE_DIRECTORY, also
+# /var/lib/eventprint.
 StateDirectory=eventprint
 Environment=HOME=/var/lib/eventprint
-Environment=HOST=0.0.0.0
+
+# Der Kiosk-Zustand liegt unter RUNTIME_DIRECTORY, also /run/eventprint.
+# Preserve hält ihn über einen Neustart des Dienstes hinweg – ein Absturz
+# darf Gästen nicht die private Mediathek öffnen. /run ist aber ein tmpfs:
+# Stecker ziehen und wieder einstecken beendet den Kiosk, und genau das ist
+# der vorgesehene Weg zurück in den Heimbetrieb.
+RuntimeDirectory=eventprint
+RuntimeDirectoryPreserve=yes
 
 Restart=always
-RestartSec=5
+RestartSec=3
 
 NoNewPrivileges=yes
 PrivateTmp=yes
+# PrivateTmp verbirgt auch den Socket des X-Servers; er wird eigens
+# hereingereicht.
+BindReadOnlyPaths=/tmp/.X11-unix
 ProtectHome=yes
 ProtectSystem=full
 ProtectControlGroups=yes
