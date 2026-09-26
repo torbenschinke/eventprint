@@ -182,7 +182,7 @@ func (a *App) exportSheet(ctx *gift.Context, st *states) gift.View {
 	case ctx.Read(progress) != "":
 		status = ui.VStack(body(progress.Get(), 16), ui.ProgressBar(0).Indeterminate().Frame(geom.Unbounded(), u(6))).Gap(u(8))
 	case res.Err() != nil:
-		status = body(res.Err().Error(), 16).Foreground(red).MaxLines(3)
+		status = body(humane(res.Err()), 16).Foreground(red).MaxLines(3)
 	case len(plan.drives) == 0:
 		status = ui.HStack(
 			ui.Icon(outline.ArchiveArrowDown).Size(u(28)).Foreground(ui.ColorSecondaryLabel),

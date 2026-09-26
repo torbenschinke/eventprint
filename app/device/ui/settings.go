@@ -60,7 +60,7 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 
 	// Auf kleinen Panels sind Liste und Detail zwei Seiten wie am iPhone;
 	// open sagt, ob gerade das Detail vorne liegt.
-	open := ctx.State("open", false)
+	open := st.settingsOpen
 	ctx.Read(open)
 
 	res := xgift.UseResource[device.Settings](ctx, "settings")
@@ -143,7 +143,14 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 		}
 	}
 
-	scroller := ui.VScroll(ui.VStack(detail, ui.Box().Frame(1, ui.OnScreenKeyboardHeight())).MaxWidth(u(700)).
+	// Auf großen Bildschirmen eine mittige Spalte, damit Zeilen nicht über
+	// die ganze Breite laufen; auf kleinen die volle Breite.
+	column := ui.VStack(detail, ui.Box().Frame(1, ui.OnScreenKeyboardHeight()))
+	if !compact {
+		column = column.MaxWidth(u(760))
+	}
+
+	scroller := ui.VScroll(ui.VStack(column).Align(geom.Top).
 		PaddingInsets(geom.Insets{Left: u(pick(24, 16)), Right: u(pick(24, 16)), Bottom: u(24)})).Flex(1)
 
 	if compact {
@@ -153,7 +160,7 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 				link("‹ Einstellungen", func() { open.Set(false) }),
 				title(name, 17).Flex(1).Align(ui.AlignCenter),
 				ui.Box().Frame(u(120), 1),
-			).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(8), Right: u(8)}).MinHeight(u(44)),
+			).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(10), Right: u(10), Top: u(10)}).MinHeight(u(44)),
 			scroller,
 		).Background(ui.ColorBackground)}
 
@@ -168,7 +175,7 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 		xgift.Fill(ui.VScroll(sidebar)).Width(u(400)),
 		xgift.VHairline(),
 		grow(ui.VStack(
-			title(name, 17).Align(ui.AlignCenter).PaddingInsets(geom.Insets{Top: u(16), Bottom: u(8)}),
+			ui.HStack(fill(), title(name, 17), fill()).PaddingInsets(geom.Insets{Top: u(16), Bottom: u(8)}),
 			scroller,
 		).Background(ui.ColorBackground)),
 	).Flex(1)
@@ -232,7 +239,7 @@ func (a *App) wifiSettings(ctx *gift.Context, st *states) gift.View {
 	status := "Netze werden gesucht …"
 	switch {
 	case res.Err() != nil:
-		status = res.Err().Error()
+		status = humane(res.Err())
 	case res.Loaded() && len(rows) == 0:
 		status = "Keine Netze gefunden."
 	case res.Loaded():
@@ -347,7 +354,7 @@ func (a *App) printerSettings(ctx *gift.Context, st *states, s device.Settings, 
 	}
 
 	for _, q := range names {
-		chips = append(chips, xgift.Chip(q, s.Printer.Queue == q, u(15), blue, func() {
+		chips = append(chips, xgift.Chip(strings.ReplaceAll(q, "_", " "), s.Printer.Queue == q, u(15), blue, func() {
 			save(func(s *device.Settings) { s.Printer.Queue = q })
 		}))
 	}
@@ -359,7 +366,7 @@ func (a *App) printerSettings(ctx *gift.Context, st *states, s device.Settings, 
 
 	return ui.VStack(
 		section("WARTESCHLANGE",
-			ui.Row("").Accessory(ui.HStack(chips...).Gap(u(8))),
+			ui.HScroll(chips...).Gap(u(8)).PaddingInsets(geom.Insets{Left: u(16), Right: u(16), Top: u(8), Bottom: u(8)}),
 		),
 		muted("Im Testbetrieb laufen Aufträge durch, ohne dass etwas gedruckt wird.", 13).PaddingInsets(geom.Insets{Left: u(16)}),
 		section("DRUCK",
@@ -583,7 +590,7 @@ func (a *App) kioskSettings(ctx *gift.Context, st *states, s device.Settings, sa
 		}
 
 		face := ui.ButtonStyle{Background: parseHex(c, amber), Border: ring, CornerRadius: u(20)}
-		accents = append(accents, ui.Button(ui.Box().Frame(u(26), u(26)), func() { save(func(s *device.Settings) { s.Accent = c }) }).
+		accents = append(accents, ui.Button(ui.Box().Frame(u(22), u(22)), func() { save(func(s *device.Settings) { s.Accent = c }) }).
 			Style(face).HoverStyle(face).PressedStyle(face).Frame(u(44), u(44)).Label("Farbe "+c))
 	}
 
@@ -632,8 +639,8 @@ func (a *App) kioskSettings(ctx *gift.Context, st *states, s device.Settings, sa
 		section("DRUCKEN IM KIOSK",
 			ui.Row("Handy-Uploads sofort drucken").Accessory(ui.Toggle(s.PrintUploads, func(v bool) { save(func(s *device.Settings) { s.PrintUploads = v }) })),
 			ui.Row("Kamerabilder sofort drucken").Accessory(ui.Toggle(s.PrintCamera, func(v bool) { save(func(s *device.Settings) { s.PrintCamera = v }) })),
-			ui.Row("Layouts für Gäste").Accessory(ui.HStack(layoutChips...).Gap(u(6))),
-			ui.Row("Vorgabe ohne Wahl").Accessory(ui.HStack(defaultChips...).Gap(u(6))),
+			chipRow("Layouts für Gäste", layoutChips),
+			chipRow("Vorgabe ohne Wahl", defaultChips),
 			ui.Row("Höchstens je Foto").Accessory(xgift.Stepper(s.MaxCopies, 1, 5, u(16), func(v int) { save(func(s *device.Settings) { s.MaxCopies = v }) })),
 		),
 		section("ZUGANG",
@@ -666,7 +673,7 @@ func (a *App) storageSettings(ctx *gift.Context, st *states, s device.Settings) 
 
 	rows := []gift.View{}
 	for _, e := range events {
-		rows = append(rows, ui.Row(e.Title).Subtitle(e.StartedAt.Local().Format("Mon 02.01.2006 15:04")).
+		rows = append(rows, ui.Row(e.Title).Subtitle(e.StartedAt.Local().Format(" 02.01.2006 15:04")).
 			Chevron(outline.AngleRight).OnTap(func() {
 			a.exportEvent = e.ID
 			a.exportAll = false
@@ -713,7 +720,7 @@ func (a *App) infoSettings(ctx *gift.Context, st *states) gift.View {
 
 	rows := []gift.View{
 		ui.Row("Version").Value(version),
-		ui.Row("Daten").Value(a.dev.Options.DataDir),
+		ui.Row("Daten").Subtitle(a.dev.Options.DataDir),
 	}
 
 	if addrs, err := net.InterfaceAddrs(); err == nil {
@@ -725,4 +732,14 @@ func (a *App) infoSettings(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return section("GERÄT", rows...)
+}
+
+// chipRow ist eine Zeile mit Beschriftung und Chips darunter. Nebeneinander
+// passen mehrere Chips auf kleinen Panels nicht in eine Listenzeile; so
+// laufen sie seitlich weiter und lassen sich wischen.
+func chipRow(label string, chips []gift.View) gift.View {
+	return ui.VStack(
+		body(label, 16),
+		ui.HScroll(chips...).Gap(u(6)),
+	).Gap(u(8)).PaddingInsets(geom.Insets{Left: u(16), Right: u(16), Top: u(10), Bottom: u(10)})
 }

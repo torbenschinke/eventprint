@@ -117,6 +117,12 @@ type states struct {
 
 	wifiSSID *gift.State[string]
 
+	// settingsOpen sagt auf kleinen Panels, ob in den Einstellungen das
+	// Detail vorne liegt. Es steht hier und nicht in den Einstellungen
+	// selbst, damit andere Bildschirme direkt in einen Abschnitt springen
+	// können.
+	settingsOpen *gift.State[bool]
+
 	// fit zählt die Wechsel der Bemessung; jeder baut alles neu auf.
 	fit *gift.State[int]
 }
@@ -264,6 +270,7 @@ func (a *App) Root(ctx *gift.Context) gift.View {
 		kioskCopies:   ctx.State("kioskCopies", 1),
 		wifiSSID:      ctx.State("wifiSSID", ""),
 		fit:           ctx.State("fit", 0),
+		settingsOpen:  ctx.State("settingsOpen", false),
 	}
 	a.st = st
 	a.startTicker(st)
@@ -290,7 +297,9 @@ func (a *App) Root(ctx *gift.Context) gift.View {
 			gift.Component("sheet", func(ctx *gift.Context) gift.View { return a.sheetView(ctx, st) }),
 		).
 			Presented(st.sheet.Get() != SheetNone).
-			OnDismiss(func() { a.dismissSheet() }),
+			OnDismiss(func() { a.dismissSheet() }).
+			// Abdunkeln statt aufhellen, auch im dunklen Erscheinungsbild.
+			Scrim(ui.RGBA(0, 0, 0, 110)),
 		ui.OnScreenKeyboard(),
 	).Align(geom.Bottom)
 }

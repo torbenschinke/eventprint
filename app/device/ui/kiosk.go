@@ -70,7 +70,10 @@ func (a *App) kioskScreen(ctx *gift.Context, st *states, k device.Kiosk) gift.Vi
 	} else {
 		grid = ui.ImageGallery(g).
 			Layout(brickRows(u(rowHeight())).Gap(u(pick(14, 8)))).
-			Tile(ui.TileStyle{CornerRadius: u(16), Palette: []ui.Color{kioskCard, kioskRaised}}).
+			Tile(ui.TileStyle{Palette: []ui.Color{kioskCard, kioskRaised}}).
+			// Vorladen über den sichtbaren Rand hinaus, damit beim Wischen
+			// keine leeren Kacheln hereinkommen.
+			Overscan(u(400)).
 			OnSelect(func(id asset.ID) {
 				xgift.ShowSelection(g, nil)
 				st.kioskPhoto.Set(photo.ID(id))
@@ -168,7 +171,7 @@ func (a *App) kioskInvite(d kioskData) gift.View {
 	} else {
 		code = ui.VStack(
 			title("Gerade nicht möglich", pick(17, 15)).Foreground(white),
-			body(orDash(d.address.Problem), pick(14, 13)).Foreground(kioskMuted).MaxLines(3),
+			body(orDash(d.address.Problem), pick(14, 13)).Foreground(kioskMuted).MaxLines(3).Align(ui.AlignCenter),
 		).Gap(u(8)).Align(geom.Center).Frame(u(edge), u(edge)).Background(kioskRaised).CornerRadius(u(16)).Padding(u(pick(16, 10)))
 	}
 
@@ -305,9 +308,11 @@ func (a *App) pinSheet(ctx *gift.Context, st *states) gift.View {
 
 	// So breit wie das Tastenfeld und nicht breiter: drei Tasten, zwei
 	// Abstände, der Innenrand des Dialogs.
-	return sheetCard(3*u(72)+2*u(24)+2*u(28),
-		ui.HStack(fill(), ui.VStack(title("Betreuung", 24), muted("PIN eingeben", 15)).Gap(u(4)).Align(geom.Center), fill()),
-		xgift.PinPad(device.PinLength, pin, u(72), st.pin.Set, func(full string) {
+	key := pick(72, 50)
+
+	return sheetCard(3*u(key)+2*u(24)+2*u(pick(28, 16)),
+		ui.HStack(fill(), ui.VStack(title("Betreuung", pick(24, 18)), muted("PIN eingeben", pick(15, 13))).Gap(u(4)).Align(geom.Center), fill()),
+		xgift.PinPad(device.PinLength, pin, u(key), st.pin.Set, func(full string) {
 			err := a.dev.Device.Unlock(a.dev.Subject(), full)
 			st.pin.Set("")
 			if a.fail(err) {

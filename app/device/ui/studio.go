@@ -70,6 +70,10 @@ func studioHeader() float32   { return pick(56, 44) }
 func filmstripWidth() float32 { return pick(124, 84) }
 func inspectorWidth() float32 { return pick(380, clamp(vw()*0.4, 280, 340)) }
 
+// filmThumb ist die Kante eines Bildes im Filmstreifen: die Breite ohne den
+// Innenrand und den Rahmen des aktiven Bildes.
+func filmThumb() float32 { return filmstripWidth() - 2*pick(16, 10) - 2*4 }
+
 // statusBarHeight ist die Höhe der Statusleiste über allen Bildschirmen.
 func statusBarHeight() float32 { return pick(32, 28) }
 
@@ -109,7 +113,7 @@ func (a *App) filmstrip(ctx *gift.Context, st *states, items []photo.Location) g
 
 	cells := []gift.View{}
 	for i, it := range items {
-		img := thumb(it.Path, u(filmstripWidth()-36))
+		img := thumb(it.Path, u(filmThumb()))
 		if i == active {
 			img = img.Border(ui.Border{Width: u(4), Color: blue})
 		}
@@ -122,7 +126,7 @@ func (a *App) filmstrip(ctx *gift.Context, st *states, items []photo.Location) g
 	cells = append(cells, iconButton(outline.Plus, "Fotos hinzufügen", ui.ColorAccent, func() {
 		a.selected = append([]photo.ID(nil), a.studio...)
 		a.openLibraryKeep(photo.ScopeAll)
-	}).Frame(u(filmstripWidth()-36), u(filmstripWidth()-36)))
+	}).Frame(u(filmThumb()), u(filmThumb())))
 
 	return xgift.Fill(ui.VScroll(ui.VStack(cells...).Gap(u(pick(12, 8))).Align(geom.Top).Padding(u(pick(16, 10)))).
 		Background(ui.ColorBackground)).Width(u(filmstripWidth()))
@@ -313,8 +317,8 @@ func choiceCard(name, hint string, selected bool, fn func()) gift.View {
 	).Gap(u(2)).Align(geom.Leading), fn).
 		Style(style).HoverStyle(style).
 		PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.15), Border: border, CornerRadius: u(14)}).
-		PaddingInsets(geom.Insets{Left: u(pick(14, 10)), Right: u(pick(14, 10)), Top: u(pick(12, 8)), Bottom: u(pick(12, 8))}).
-		MinHeight(u(pick(72, 58))).
+		PaddingInsets(geom.Insets{Left: u(pick(14, 10)), Right: u(pick(14, 10)), Top: u(pick(12, 5)), Bottom: u(pick(12, 5))}).
+		MinHeight(u(pick(72, 50))).
 		Align(geom.Leading)
 }
 

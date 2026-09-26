@@ -327,17 +327,18 @@ func (a *App) printerWidget(st *states, d homeData) gift.View {
 func (a *App) phoneWidget(d homeData) gift.View {
 	edge := pick(150, clamp(vh()*0.16, 64, 110))
 
-	var code gift.View
-	if d.address.URL != "" {
-		code = xgift.QRCode(d.address.URL, u(edge))
-	} else {
-		code = ui.VStack(muted(orDash(d.address.Problem), 13).MaxLines(4)).Frame(u(edge), u(edge)).
-			Align(geom.Center).Background(ui.ColorBackground).CornerRadius(u(12)).Padding(u(8))
-	}
-
 	hint := "Kamera öffnen, Code scannen, Fotos wählen. Sie landen im Eingang – gedruckt wird erst, wenn du hier auswählst."
 	if compact {
 		hint = "Code scannen, Fotos wählen – sie landen im Eingang."
+	}
+
+	// Ohne Upload-Dienst gibt es keinen Code; dann steht dort, warum, als
+	// Text in voller Breite statt gequetscht in einem Quadrat.
+	var code gift.View = ui.Box().Frame(0, 0)
+	if d.address.URL != "" {
+		code = xgift.QRCode(d.address.URL, u(edge))
+	} else {
+		hint = orDash(d.address.Problem) + " Einrichten unter Einstellungen → Handy-Upload."
 	}
 
 	return card(
@@ -348,7 +349,7 @@ func (a *App) phoneWidget(d homeData) gift.View {
 		ui.HStack(
 			code,
 			muted(hint, pick(15, 13)).MaxLines(6).Flex(1),
-		).Gap(u(pick(18, 10))).Align(geom.Center).Flex(1),
+		).Gap(u(gapIf(d.address.URL != "", pick(18, 10)))).Align(geom.Center).Flex(1),
 	).Flex(1)
 }
 
@@ -375,7 +376,10 @@ func (a *App) appIcons(st *states, width float32) gift.View {
 		{"NAS", outline.Server, navy, func() { a.openLibrary(photo.ScopeAll, sourceNAS) }},
 		{"Aufträge", outline.List, green, func() { st.screen.Set(ScreenJobs) }},
 		{"USB-Stick", outline.ArchiveArrowDown, grey, func() { a.openLibrary(photo.ScopeAll, sourceUSB) }},
-		{"Einstellungen", outline.Cog, ui.RGB(0x5E, 0x5E, 0x63), func() { st.screen.Set(ScreenSettings) }},
+		{"Einstellungen", outline.Cog, ui.RGB(0x5E, 0x5E, 0x63), func() {
+			st.settingsOpen.Set(false)
+			st.screen.Set(ScreenSettings)
+		}},
 	}
 
 	gap := pick(18, 10)
@@ -390,7 +394,7 @@ func (a *App) appIcons(st *states, width float32) gift.View {
 		face := ui.ButtonStyle{Background: ui.ColorClear, Border: noBorder}
 		cells = append(cells, ui.Button(ui.VStack(
 			xgift.IconTile(ap.sym, ap.face, u(edge)),
-			ui.Text(ap.label).FontSize(u(pick(14, 12))).MaxLines(1),
+			ui.Text(ap.label).FontSize(u(pick(14, 11))).MaxLines(1),
 		).Gap(u(pick(8, 4))).Align(geom.Center), ap.fn).
 			Style(face).HoverStyle(face).
 			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.06), CornerRadius: u(16)}).
@@ -428,9 +432,17 @@ func thumb(path string, edge float32) ui.ImageView {
 	return ui.Image(asset.File(path)).
 		Fit(ui.FitCover).
 		Frame(edge, edge).
-		CornerRadius(edge / 10).
 		Clip(true).
 		Placeholder(ui.Fade(ui.ColorLabel, 0.08))
+}
+
+// gapIf ist gap, wenn es etwas zu trennen gibt, sonst 0.
+func gapIf(cond bool, gap float32) float32 {
+	if cond {
+		return gap
+	}
+
+	return 0
 }
 
 func orDash(s string) string {

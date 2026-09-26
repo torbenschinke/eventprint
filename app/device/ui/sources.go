@@ -127,7 +127,7 @@ func (a *App) usbBrowser(ctx *gift.Context, st *states) gift.View {
 	if len(d.drives) == 0 {
 		hint := "Kein USB-Stick eingesteckt. Stecke einen Stick ein – er erscheint hier von selbst."
 		if res.Err() != nil {
-			hint = res.Err().Error()
+			hint = humane(res.Err())
 		}
 
 		return ui.VStack(header(hint), fill()).Flex(1)
@@ -252,6 +252,7 @@ func (a *App) nasBrowser(ctx *gift.Context, st *states) gift.View {
 				muted("Trage dein NAS einmal in den Einstellungen ein – Adresse, Benutzer und Kennwort. Danach erscheinen seine Fotos hier.", 17).MaxLines(3),
 				primary("Zu den Einstellungen", func() {
 					st.settings.Set(sectionSources)
+					st.settingsOpen.Set(true)
 					st.screen.Set(ScreenSettings)
 				}),
 			).Gap(u(16)).Padding(u(pick(32, 16))).Align(geom.TopLeading),

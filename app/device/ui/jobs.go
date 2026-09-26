@@ -92,14 +92,14 @@ func (a *App) jobsScreen(ctx *gift.Context, st *states) gift.View {
 		rows = append(rows, ui.Row("Noch keine Aufträge").Subtitle("Gedruckte Blätter erscheinen hier."))
 	}
 
-	return ui.VScroll(ui.VStack(
+	return ui.VScroll(ui.VStack(ui.VStack(
 		ui.HStack(
 			iconButton(outline.Home, "Home", ui.ColorAccent, func() { st.screen.Set(ScreenHome) }),
-			title("Aufträge", 30).Flex(1),
+			title("Aufträge", pick(30, 24)).Flex(1),
 		).Gap(u(12)).Align(geom.Center),
 		a.printerCard(d, refresh),
 		section("DRUCKAUFTRÄGE", rows...),
-	).Gap(u(20)).Padding(u(32)).MaxWidth(u(900))).Flex(1)
+	).Gap(u(20)).Padding(u(pick(32, 16))).MaxWidth(u(900))).Align(geom.Top)).Flex(1)
 }
 
 // printerCard zeigt den Zustand des Druckers und die Handgriffe dazu.

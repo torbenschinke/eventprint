@@ -11,6 +11,8 @@ import (
 	"github.com/worldiety/gift/font/inter"
 	"github.com/worldiety/gift/geom"
 	"github.com/worldiety/gift/ui"
+	"log/slog"
+	"strings"
 
 	"github.com/torbenschinke/eventprint/pkg/xgift"
 )
@@ -276,4 +278,22 @@ func grow(v gift.View) xgift.FillView { return xgift.Fill(v).Flex(1) }
 // floating hebt eine schwebende Leiste vom unteren Rand ab.
 func floating(v gift.View) gift.View {
 	return ui.VStack(v).PaddingInsets(geom.Insets{Bottom: u(pick(24, 12)), Left: u(12), Right: u(12)})
+}
+
+// humane macht aus einem Fehler eine Zeile für Menschen. Fehler von
+// Programmen wie nmcli oder lsblk tragen Befehlszeilen und Ausgaben, die auf
+// dem Bildschirm niemandem helfen und über den Rand laufen; sie landen im
+// Protokoll.
+func humane(err error) string {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "executable file not found"):
+		slog.Warn("tool missing", "err", err)
+		return "Auf diesem Gerät nicht verfügbar."
+	case strings.Contains(msg, "exit status") || strings.Contains(msg, "exec:"):
+		slog.Warn("tool failed", "err", err)
+		return "Das hat nicht geklappt. Einzelheiten stehen im Protokoll."
+	default:
+		return msg
+	}
 }
