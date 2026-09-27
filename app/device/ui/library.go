@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/worldiety/gift"
 	"github.com/worldiety/gift/asset"
@@ -155,7 +156,7 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 	if len(d.events) > 0 {
 		items = append(items, muted("FEIERN", 13).PaddingInsets(geom.Insets{Left: u(12), Top: u(pick(14, 8))}))
 		for _, e := range d.events {
-			items = append(items, row(e.Title, outline.WandMagicSparkles, e.StartedAt.Local().Format("02.01."),
+			items = append(items, row(e.Title, outline.WandMagicSparkles, eventLabel(e, d.events),
 				local && scope == photo.ScopeEvent && event == e.ID, func() {
 					a.st.libEvent.Set(e.ID)
 					a.openLibrary(photo.ScopeEvent, "")
@@ -171,6 +172,26 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 
 	return xgift.Fill(ui.VScroll(ui.VStack(items...).Gap(u(pick(4, 2))).Padding(u(pick(16, 10)))).
 		Background(ui.ColorBackground)).Width(u(pick(300, clamp(vw()*0.27, 190, 250))))
+}
+
+// eventLabel ist die Datumsangabe einer Feier in der Seitenleiste: der Tag,
+// und die Uhrzeit dazu, wenn es am selben Tag eine gleichnamige gab – sonst
+// stünden drei gleiche Zeilen untereinander. Aus einem anderen Jahr kommt die
+// Jahreszahl dazu.
+func eventLabel(e device.Event, all []device.Event) string {
+	at := e.StartedAt.Local()
+	label := at.Format("02.01.")
+	if at.Year() != time.Now().Year() {
+		label = at.Format("02.01.06")
+	}
+
+	for _, o := range all {
+		if o.ID != e.ID && o.Title == e.Title && o.StartedAt.Local().YearDay() == at.YearDay() && o.StartedAt.Local().Year() == at.Year() {
+			return at.Format("02.01. 15:04")
+		}
+	}
+
+	return label
 }
 
 // gallery liefert die dauerhafte Galerie eines Bildschirms.
