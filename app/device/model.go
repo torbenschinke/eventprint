@@ -70,6 +70,10 @@ type Settings struct {
 	RelayURL   string `json:"relayUrl,omitempty"`
 	RelayToken string `json:"relayToken,omitempty"`
 
+	// RelayAccount ist die Mailadresse des Kontos, mit dem die Box
+	// gekoppelt wurde; leer, wenn das Token von Hand eingetragen ist.
+	RelayAccount string `json:"relayAccount,omitempty"`
+
 	// Appearance ist das Erscheinungsbild im Heimbetrieb: hell, dunkel oder
 	// nach der Tageszeit. Der Kiosk ist immer dunkel.
 	Appearance Appearance `json:"appearance,omitempty"`

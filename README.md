@@ -238,13 +238,30 @@ gedruckt.
 `photoupld` ist ein kleiner Nago-Dienst im Internet; das Gerät selbst bleibt
 von außen unerreichbar und fragt ihn regelmäßig ab.
 
+**Dienst einrichten** (einmal, durch den Betreiber):
+
 1. `go run ./cmd/photoupld` auf dem öffentlichen Server starten.
 2. Als `admin@localhost` anmelden und unter **Einstellungen → Foto-Upload** die
    öffentliche Basis-URL eintragen.
-3. Im Admin-Center einen Access Token ohne Impersonation erstellen und ihm die
-   Rolle **Fotobox-Relay** zuweisen.
-4. URL und Token am Gerät unter **Einstellungen → Handy-Upload** eintragen
-   oder in `/etc/default/eventprint`.
+3. Einen Mailserver (SMTP) im Admin-Center hinterlegen. Über ihn gehen die
+   Kopplungscodes hinaus.
+
+**Box koppeln** (durch jeden registrierten Nutzer, für beliebig viele Boxen):
+
+1. An der Box **Einstellungen → Handy-Upload**, die Adresse des Dienstes und
+   die eigene Mailadresse eintragen, **Code per Mail anfordern**.
+2. Den sechsstelligen Code aus der Mail auf dem Ziffernfeld eintippen. Er
+   gilt 30 Minuten; nach fünf falschen Versuchen ist er verbraucht.
+3. Fertig: Dienst und Box tauschen das Zugangstoken selbst aus. Es trägt die
+   Rolle **Fotobox-Relay**, heißt in der Verwaltung „Fotobox „…““ nach dem
+   Titel der Feier und lässt sich dort löschen. Der Nutzer bekommt eine Mail,
+   dass eine Box gekoppelt wurde.
+
+Einen Code bekommt nur, wer registriert ist, seine Adresse bestätigt hat und
+nicht gesperrt ist. Die Box erfährt nie, ob es ein Konto gibt. Ein von Hand
+angelegtes Token lässt sich an der Box unter **Token von Hand eintragen**
+weiterhin verwenden, ebenso `EVENTPRINT_RELAY_URL` und
+`EVENTPRINT_RELAY_TOKEN`.
 
 Der QR-Code im Heimbetrieb trägt `m=inbox`: Die Upload-Seite fragt dann keine
 Gestaltung ab und nimmt mehrere Bilder auf einmal, die im Eingang landen. Im
@@ -469,6 +486,7 @@ app/nas/             NAS per SMB: Freigaben, Ordner, Vorschaubilder, Übernahme
 app/usb/             USB-Sticks: erkennen, kopieren, auswerfen, lesen
 app/wifi/            Funknetz über NetworkManager
 app/upld/            Upload-Dienst: Sitzungen, Warteschlangen
+app/pairing/         Upload-Dienst: Boxen per Mail und Einmalcode koppeln
 app/photoupld/       Upload-Dienst: Verdrahtung und Seite für das Handy
 
 pkg/xgift/           generische gift-Bausteine, gedacht für upstream

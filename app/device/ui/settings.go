@@ -403,29 +403,149 @@ func (a *App) printerSettings(ctx *gift.Context, st *states, s device.Settings, 
 func (a *App) uploadSettings(ctx *gift.Context, st *states, s device.Settings, save func(func(*device.Settings))) gift.View {
 	tick := ctx.Read(st.tick)
 	urlEd := ui.Editor(ctx, "relayurl", s.RelayURL)
-	tokenEd := ui.Editor(ctx, "relaytoken", s.RelayToken)
+	mailEd := ui.Editor(ctx, "relaymail", s.RelayAccount)
+	tokenEd := ui.Editor(ctx, "relaytoken", "")
+
+	// Die Kopplung: erst Mailadresse, dann Code. Der Stand gehört diesem
+	// Bildschirm; wer ihn verlässt, fängt neu an.
+	pending := ctx.State("pairing", relay.Pairing{})
+	code := ctx.State("code", "")
+	busy := ctx.State("busy", false)
+	manual := ctx.State("manual", false)
+	ctx.Read(pending)
+	ctx.Read(busy)
 
 	addr := xgift.UseResource[relay.Address](ctx, "addr")
 	addr.LoadKeyed(tick/2, func() (relay.Address, error) { return a.dev.Relay.UploadAddress(a.dev.Subject(), true) })
 
-	var code gift.View = muted(orDash(addr.Value().Problem), 15).MaxLines(3)
-	if u := addr.Value().URL; u != "" {
-		code = ui.HStack(xgift.QRCode(u, 140*scale), muted(u, 13).MaxLines(4).Flex(1)).Gap(16 * scale).Align(geom.Center)
+	var qr gift.View = muted(orDash(addr.Value().Problem), 15).MaxLines(3)
+	if link := addr.Value().URL; link != "" {
+		qr = ui.HStack(xgift.QRCode(link, u(pick(140, 110))), muted(link, 13).MaxLines(4).Flex(1)).Gap(u(16)).Align(geom.Center)
 	}
 
-	return ui.VStack(
-		section("ZUSTAND", ui.Row("").Accessory(code)),
-		section("UPLOAD-DIENST",
-			ui.Row("Adresse").Accessory(ui.TextField(urlEd).Placeholder("https://upload.example.de").FontSize(u(16)).Frame(u(380), u(44))),
-			ui.Row("Token").Accessory(ui.TextField(tokenEd).Placeholder("Zugangstoken").FontSize(u(16)).Frame(u(380), u(44))),
-		),
-		muted("Das Token stammt aus dem Upload-Dienst (Rolle „Fotobox-Relay“). Am bequemsten trägt man beides in /etc/default/eventprint ein.", 13).MaxLines(3).PaddingInsets(geom.Insets{Left: u(16)}),
-		primary("Speichern", func() {
-			url, token := strings.TrimSpace(urlEd.Text()), strings.TrimSpace(tokenEd.Text())
-			save(func(s *device.Settings) { s.RelayURL, s.RelayToken = url, token })
-			a.show("Gespeichert. Die Verbindung wird neu aufgebaut.")
-		}),
-	).Gap(u(18))
+	request := func() {
+		cmd := relay.BeginPairingCmd{URL: urlEd.Text(), Mail: mailEd.Text(), Device: s.EventTitle}
+		busy.Set(true)
+		go func() {
+			c, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			p, err := a.dev.Relay.BeginPairing(a.dev.Subject(), c, cmd)
+			xgift.Post(func() {
+				busy.Set(false)
+				if a.fail(err) {
+					return
+				}
+
+				code.Set("")
+				pending.Set(p)
+			})
+		}()
+	}
+
+	confirm := func(entered string) {
+		p := pending.Get()
+		busy.Set(true)
+		go func() {
+			c, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			outcome, err := a.dev.Relay.CompletePairing(a.dev.Subject(), c, p, entered)
+			xgift.Post(func() {
+				busy.Set(false)
+				code.Set("")
+				if a.fail(err) {
+					return
+				}
+
+				switch outcome {
+				case relay.PairingPaired:
+					pending.Set(relay.Pairing{})
+					save(func(*device.Settings) {})
+					a.show("Verbunden mit " + p.Mail + ". Gäste können jetzt Fotos senden.")
+				case relay.PairingExpired:
+					pending.Set(relay.Pairing{})
+					a.show("Der Code ist abgelaufen. Fordere einen neuen an.")
+				case relay.PairingLocked:
+					pending.Set(relay.Pairing{})
+					a.show("Zu viele falsche Versuche. Fordere einen neuen Code an.")
+				default:
+					a.show("Der Code stimmt nicht. Bitte noch einmal.")
+				}
+			})
+		}()
+	}
+
+	field := func(ed *ui.TextEditor, placeholder string) gift.View {
+		return ui.TextField(ed).Placeholder(placeholder).FontSize(u(16)).Frame(u(pick(380, 300)), u(44))
+	}
+
+	var account []gift.View
+	switch p := pending.Get(); {
+	case p.ID != "":
+		account = []gift.View{
+			body("Wir haben einen Code an "+p.Mail+" geschickt – falls es dazu ein Konto gibt. Er gilt 30 Minuten.", 15).MaxLines(3),
+			ui.HStack(fill(), xgift.PinPad(6, ctx.Read(code), u(pick(64, 50)), code.Set, confirm), fill()),
+			ui.HStack(
+				link("Andere Adresse", func() { pending.Set(relay.Pairing{}) }),
+				fill(),
+				link("Neuen Code anfordern", request),
+			).Align(geom.Center),
+		}
+		if busy.Get() {
+			account = append(account, muted("Einen Moment …", 14))
+		}
+	default:
+		status := "Nicht verbunden"
+		switch {
+		case s.RelayToken != "" && s.RelayAccount != "":
+			status = "Verbunden mit " + s.RelayAccount
+		case s.RelayToken != "":
+			status = "Verbunden mit einem von Hand eingetragenen Token"
+		}
+
+		label := "Code per Mail anfordern"
+		if s.RelayToken != "" {
+			label = "Mit anderem Konto koppeln"
+		}
+
+		if busy.Get() {
+			label = "Wird angefordert …"
+		}
+
+		account = []gift.View{
+			section("KONTO",
+				ui.Row(status),
+				ui.Row("Mailadresse").Accessory(field(mailEd, "du@example.de")),
+			),
+			muted("Trage die Adresse deines Kontos beim Upload-Dienst ein. Du bekommst einen sechsstelligen Code per Mail und tippst ihn hier ein – die Box holt sich ihren Zugang dann selbst.", 13).MaxLines(4).PaddingInsets(geom.Insets{Left: u(16)}),
+			primary(label, request).Disabled(busy.Get()),
+		}
+	}
+
+	rows := []gift.View{
+		section("ZUSTAND", ui.Row("").Accessory(qr)),
+		section("UPLOAD-DIENST", ui.Row("Adresse").Accessory(field(urlEd, "https://upload.example.de"))),
+	}
+	rows = append(rows, account...)
+
+	// Der alte Weg bleibt, versteckt: für Dienste ohne Mailversand oder
+	// wenn ein Administrator ein Token vorbereitet hat.
+	if ctx.Read(manual) {
+		rows = append(rows,
+			section("TOKEN VON HAND", ui.Row("Token").Accessory(field(tokenEd, "Zugangstoken"))),
+			primary("Token speichern", func() {
+				url, token := strings.TrimSpace(urlEd.Text()), strings.TrimSpace(tokenEd.Text())
+				save(func(s *device.Settings) { s.RelayURL, s.RelayToken, s.RelayAccount = url, token, "" })
+				tokenEd.SetText("")
+				a.show("Gespeichert. Die Verbindung wird neu aufgebaut.")
+			}),
+		)
+	} else {
+		rows = append(rows, link("Token von Hand eintragen", func() { manual.Set(true) }))
+	}
+
+	return ui.VStack(rows...).Gap(u(pick(18, 12)))
 }
 
 // --- Konten & Quellen -------------------------------------------------------

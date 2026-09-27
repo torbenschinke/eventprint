@@ -7,8 +7,10 @@ import (
 
 	"go.wdy.de/nago/application"
 	"go.wdy.de/nago/application/hapi"
+	"go.wdy.de/nago/application/user"
 	"go.wdy.de/nago/auth"
 
+	"github.com/torbenschinke/eventprint/app/pairing"
 	"github.com/torbenschinke/eventprint/app/upld"
 )
 
@@ -125,4 +127,48 @@ func warnAboutToken(subject auth.Subject) {
 	slog.Warn("photoupld: Token ohne die noetige Rolle abgelehnt",
 		"subject", subject.ID(),
 		"hinweis", "dem Token die Rolle Fotobox-Relay zuweisen")
+}
+
+// PairingRequest ist die Anfrage einer Box, die gekoppelt werden will.
+type PairingRequest struct {
+	Mail   string `json:"mail"`
+	Device string `json:"device"`
+}
+
+// PairingResponse trägt die Kennung, mit der die Box den Code bestätigt.
+type PairingResponse struct {
+	Pairing pairing.ID `json:"pairing"`
+}
+
+// PairingConfirmation ist der Code, den jemand an der Box eingetippt hat.
+type PairingConfirmation struct {
+	Pairing pairing.ID `json:"pairing"`
+	Code    string     `json:"code"`
+}
+
+// ConfigurePairingAPI hängt die Kopplung an HTTP-Adressen.
+//
+// Beide sind ohne Token erreichbar – die Box hat noch keins. Was sie
+// schützt, steht in [pairing.RequestPairing] und [pairing.ConfirmPairing].
+func ConfigurePairingAPI(api *hapi.API, uc pairing.UseCases) {
+	hapi.Post[PairingRequest](api, hapi.Operation{Path: "/api/v1/pairing", Summary: "Kopplung einer Fotobox anfordern"}).
+		Request(hapi.JSONFromBody(func(dst *PairingRequest, in PairingRequest) error {
+			*dst = in
+			return nil
+		})).
+		Response(hapi.ToJSON[PairingRequest, PairingResponse](func(in PairingRequest) (PairingResponse, error) {
+			// Als System: Die Box hat noch kein Token. Was schützt, steht im
+			// Anwendungsfall.
+			id, err := uc.RequestPairing(user.SU(), pairing.RequestCmd{Mail: in.Mail, Device: in.Device})
+			return PairingResponse{Pairing: id}, err
+		}))
+
+	hapi.Post[PairingConfirmation](api, hapi.Operation{Path: "/api/v1/pairing/confirm", Summary: "Kopplung mit dem Code bestätigen"}).
+		Request(hapi.JSONFromBody(func(dst *PairingConfirmation, in PairingConfirmation) error {
+			*dst = in
+			return nil
+		})).
+		Response(hapi.ToJSON[PairingConfirmation, pairing.Result](func(in PairingConfirmation) (pairing.Result, error) {
+			return uc.ConfirmPairing(user.SU(), pairing.ConfirmCmd{Pairing: in.Pairing, Code: in.Code})
+		}))
 }

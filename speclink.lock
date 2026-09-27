@@ -969,6 +969,36 @@
         "text": "3cb3027c4ed2fce089bb8fda4d543c217e5aea6dcc26d09b0a2ef77bd39f7216"
       }
     ],
+    "R-UPLOAD-KOPPLUNG": [
+      {
+        "test": "TestBoxCannotTellUnknownAccounts",
+        "text": "b7834b7f75cfa5db6fdb884bbeeb2db63dfad55ac112c8428240dd8714de5f91"
+      },
+      {
+        "test": "TestBoxPairsWithMailAndCode",
+        "text": "b7834b7f75cfa5db6fdb884bbeeb2db63dfad55ac112c8428240dd8714de5f91"
+      },
+      {
+        "test": "TestExpiryAndLockout",
+        "text": "b7834b7f75cfa5db6fdb884bbeeb2db63dfad55ac112c8428240dd8714de5f91"
+      },
+      {
+        "test": "TestIssuerFailureIsAnError",
+        "text": "b7834b7f75cfa5db6fdb884bbeeb2db63dfad55ac112c8428240dd8714de5f91"
+      },
+      {
+        "test": "TestPairWithMailAndCode",
+        "text": "b7834b7f75cfa5db6fdb884bbeeb2db63dfad55ac112c8428240dd8714de5f91"
+      },
+      {
+        "test": "TestRepeatedRequestsAreThrottled",
+        "text": "b7834b7f75cfa5db6fdb884bbeeb2db63dfad55ac112c8428240dd8714de5f91"
+      },
+      {
+        "test": "TestUnknownMailLooksTheSame",
+        "text": "b7834b7f75cfa5db6fdb884bbeeb2db63dfad55ac112c8428240dd8714de5f91"
+      }
+    ],
     "R-UPLOAD-SITZUNG": [
       {
         "test": "TestChangedSettingsOpenANewSession",

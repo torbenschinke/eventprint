@@ -32,7 +32,7 @@ func TestUploadAddressExplainsWhyThereIsNoCode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			p := relay.NewPoller(newSettings(c.opts).load, (&inbox{}).deliver)
-			uc := relay.NewUseCases(p)
+			uc := relay.NewUseCases(p, nil)
 
 			for _, inboxMode := range []bool{false, true} {
 				a, err := uc.UploadAddress(su, inboxMode)
@@ -126,7 +126,7 @@ func TestInboxAddressAddsModeAndKeepsSession(t *testing.T) {
 
 	waitFor(t, "Sitzung", func() bool { return p.UploadURL() != "" })
 
-	uc := relay.NewUseCases(p)
+	uc := relay.NewUseCases(p, nil)
 
 	kiosk, err := uc.UploadAddress(su, false)
 	if err != nil {

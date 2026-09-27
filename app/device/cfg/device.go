@@ -169,7 +169,12 @@ func Start(ctx context.Context, opts Options) (*Device, error) {
 	devUC = device.NewUseCases(settingsStore, kioskStore, lock, probes(d, poller, loadSettings), photos.Import, prints.PrintSimple)
 
 	d.Device = devUC
-	d.Relay = relay.NewUseCases(poller)
+	d.Relay = relay.NewUseCases(poller, func(url, token, account string) error {
+		_, err := devUC.SaveSettings(permission.SU(), func(s *device.Settings) {
+			s.RelayURL, s.RelayToken, s.RelayAccount = url, token, account
+		})
+		return err
+	})
 	d.WiFi = wifi.NewUseCases()
 	d.USB = usb.NewUseCases(usb.ExecRunner{}, usb.StatfsFreeSpace)
 	var nasClient nas.Client = nas.NewSMB()

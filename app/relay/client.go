@@ -5,6 +5,7 @@
 package relay
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -121,6 +122,79 @@ func (c *Client) Ack(ctx context.Context, id string) error {
 	return c.json(ctx, http.MethodDelete, "/api/v1/job", url.Values{"id": {id}}, &out)
 }
 
+// PairingOutcome ist die Antwort des Dienstes auf einen Code.
+type PairingOutcome string
+
+const (
+	PairingPaired  PairingOutcome = "paired"
+	PairingInvalid PairingOutcome = "invalid"
+	PairingExpired PairingOutcome = "expired"
+	PairingLocked  PairingOutcome = "locked"
+)
+
+// RequestPairing bittet den Dienst um einen Code an mail. Es braucht kein
+// Token; die Antwort ist die Kennung der Kopplung.
+func (c *Client) RequestPairing(ctx context.Context, mail, device string) (string, error) {
+	var out struct {
+		Pairing string `json:"pairing"`
+	}
+
+	err := c.post(ctx, "/api/v1/pairing", map[string]string{"mail": mail, "device": device}, &out)
+	if err == nil && out.Pairing == "" {
+		err = fmt.Errorf("photoupld returned no pairing id")
+	}
+
+	return out.Pairing, err
+}
+
+// ConfirmPairing schickt den Code und bekommt bei Erfolg das Token.
+func (c *Client) ConfirmPairing(ctx context.Context, pairing, code string) (PairingOutcome, string, error) {
+	var out struct {
+		Status PairingOutcome `json:"status"`
+		Token  string         `json:"token"`
+	}
+
+	if err := c.post(ctx, "/api/v1/pairing/confirm", map[string]string{"pairing": pairing, "code": code}, &out); err != nil {
+		return "", "", err
+	}
+
+	return out.Status, out.Token, nil
+}
+
+// post schickt JSON ohne Token.
+func (c *Client) post(ctx context.Context, path string, in, out any) error {
+	body, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+
+	u := *c.base
+	u.Path = strings.TrimRight(c.base.Path, "/") + path
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("photoupld request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return HTTPError{StatusCode: resp.StatusCode, Status: resp.Status, Body: strings.TrimSpace(string(msg))}
+	}
+
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(out); err != nil {
+		return fmt.Errorf("cannot decode photoupld response: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Client) json(ctx context.Context, method, path string, query url.Values, out any) error {
 	resp, err := c.do(ctx, method, path, query)
 	if err != nil {
@@ -141,7 +215,9 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values) 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("photoupld request failed: %w", err)

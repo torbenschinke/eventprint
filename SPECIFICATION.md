@@ -23,11 +23,11 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 
 |  | measured | complete |
 |---|---:|---:|
-| Source segments accounted for | 39 | 100% |
-| Normative requirements covered | 38 | 100% |
-| … claimed by a test | 38 | 100% |
-| … demonstrated by a run | 38 | 100% |
-| … read by a person | 38 | 0% |
+| Source segments accounted for | 40 | 100% |
+| Normative requirements covered | 39 | 100% |
+| … claimed by a test | 39 | 100% |
+| … demonstrated by a run | 39 | 100% |
+| … read by a person | 39 | 0% |
 
 ## Gaps
 
@@ -74,6 +74,7 @@ A chapter with nothing in it says which of two things happened. _Not declared_ m
 - R-UPLOAD-BESTAETIGUNG
 - R-UPLOAD-BILD
 - R-UPLOAD-EINGANG
+- R-UPLOAD-KOPPLUNG
 - R-UPLOAD-SITZUNG
 
 ## What has actually been run
@@ -82,9 +83,9 @@ A test that claims a requirement is a claim. Evidence that the test ran is somet
 
 |  | count | of normative |
 |---|---:|---:|
-| Normative requirements | 38 |  |
-| … a test claims | 38 | 100% |
-| … a run demonstrated | 38 | 100% |
+| Normative requirements | 39 |  |
+| … a test claims | 39 | 100% |
+| … a run demonstrated | 39 | 100% |
 
 ### How much of the code a run went through
 
@@ -101,7 +102,7 @@ _no coverage profile has been handed to speclink evidence, so nothing is known a
 | `requirements/_sources/modus.md` | markdown | 6 | 6 | 0 | 0 |
 | `requirements/_sources/netz.md` | markdown | 4 | 4 | 0 | 0 |
 | `requirements/_sources/quellen.md` | markdown | 2 | 2 | 0 | 0 |
-| `requirements/_sources/upload.md` | markdown | 5 | 5 | 0 | 0 |
+| `requirements/_sources/upload.md` | markdown | 6 | 6 | 0 | 0 |
 
 ## Themes
 
@@ -183,7 +184,7 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-30 packages in 10 bounded contexts, and 65 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+31 packages in 11 bounded contexts, and 68 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
 8 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
@@ -191,7 +192,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ### Where one context reaches into another
 
-24 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
+25 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
 
 | From | To |
 |---|---|
@@ -212,6 +213,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 | `app/device/ui` | `app/relay` |
 | `app/device/ui` | `app/usb` |
 | `app/device/ui` | `app/wifi` |
+| `app/photoupld/cfg` | `app/pairing` |
 | `app/photoupld/cfg` | `app/upld` |
 | `app/photoupld/ui` | `app/printing` |
 | `app/photoupld/ui` | `app/upld` |
@@ -222,7 +224,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-100 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+108 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/device
 
@@ -407,6 +409,32 @@ _permission_ — `app/nas/perm.go:20`
 #### de.torbenschinke.eventprint.nas.thumbnail
 
 _permission_ — `app/nas/perm.go:34`
+
+### app/pairing
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-pairing-confirmpairing"></a>
+#### ConfirmPairing
+
+_query_ — `app/pairing/uc_confirm_pairing.go:19`
+
+**Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-pairing-requestpairing"></a>
+#### RequestPairing
+
+_query_ — `app/pairing/uc_request_pairing.go:25`
+
+**Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
+
+<a id="req-code-de-torbenschinke-photoupld-pairing-confirm"></a>
+#### de.torbenschinke.photoupld.pairing.confirm
+
+_permission_ — `app/pairing/perm.go:22`
+
+<a id="req-code-de-torbenschinke-photoupld-pairing-request"></a>
+#### de.torbenschinke.photoupld.pairing.request
+
+_permission_ — `app/pairing/perm.go:15`
 
 ### app/photo
 
@@ -680,12 +708,36 @@ _aggregate_ — `app/printing/model.go:63`
 
 ### app/relay
 
+<a id="req-code-github-com-torbenschinke-eventprint-app-relay-beginpairing"></a>
+#### BeginPairing
+
+_query_ — `app/relay/uc_begin_pairing.go:15`
+
+**Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-relay-completepairing"></a>
+#### CompletePairing
+
+_query_ — `app/relay/uc_complete_pairing.go:14`
+
+**Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
+
 <a id="req-code-github-com-torbenschinke-eventprint-app-relay-uploadaddress"></a>
 #### UploadAddress
 
 _query_ — `app/relay/uc_upload_address.go:25`
 
 **Answers to** [R-UPLOAD-EINGANG](#req-R-UPLOAD-EINGANG), [R-UPLOAD-SITZUNG](#req-R-UPLOAD-SITZUNG)
+
+<a id="req-code-de-torbenschinke-eventprint-relay-complete-pair"></a>
+#### de.torbenschinke.eventprint.relay.complete\_pair
+
+_permission_ — `app/relay/perm.go:35`
+
+<a id="req-code-de-torbenschinke-eventprint-relay-pair"></a>
+#### de.torbenschinke.eventprint.relay.pair
+
+_permission_ — `app/relay/perm.go:25`
 
 <a id="req-code-de-torbenschinke-eventprint-relay-upload-address"></a>
 #### de.torbenschinke.eventprint.relay.upload\_address
@@ -853,6 +905,8 @@ _No topology is declared, so what this system talks to is stated nowhere._
 | `DELETE /api/v1/job` | — | `AckResponse` | [AckJob](#req-code-github-com-torbenschinke-eventprint-app-upld-ackjob) | R-UPLOAD-BESTAETIGUNG |
 | `GET /api/v1/job/image` | — | — | [OpenJobImage](#req-code-github-com-torbenschinke-eventprint-app-upld-openjobimage) | R-UPLOAD-BILD |
 | `GET /api/v1/jobs` | — | `JobResponse` | [FindPendingJobs](#req-code-github-com-torbenschinke-eventprint-app-upld-findpendingjobs) | R-UPLOAD-ABHOLUNG |
+| `POST /api/v1/pairing` | `PairingRequest` | `PairingResponse` | [RequestPairing](#req-code-github-com-torbenschinke-eventprint-app-pairing-requestpairing) | R-UPLOAD-KOPPLUNG |
+| `POST /api/v1/pairing/confirm` | `PairingConfirmation` | `Result` | [ConfirmPairing](#req-code-github-com-torbenschinke-eventprint-app-pairing-confirmpairing) | R-UPLOAD-KOPPLUNG |
 | `POST /api/v1/session` | — | `SessionResponse` | [OpenSession](#req-code-github-com-torbenschinke-eventprint-app-upld-opensession) | R-UPLOAD-SITZUNG |
 
 ### What crosses each address
@@ -878,6 +932,41 @@ Reaches `FindPendingJobs`.
 **Takes** _nothing_
 
 **Returns** `JobResponse` — `[]{id:string,template:string,filename:string,createdAt:string}`
+
+#### POST /api/v1/pairing
+
+Reaches `RequestPairing`.
+
+**Takes** `PairingRequest`
+
+| Field | Wire | Shape | Omitted when empty |
+|---|---|---|---:|
+| `Mail` | `mail` | `string` | no |
+| `Device` | `device` | `string` | no |
+
+**Returns** `PairingResponse`
+
+| Field | Wire | Shape | Omitted when empty |
+|---|---|---|---:|
+| `Pairing` | `pairing` | `string` | no |
+
+#### POST /api/v1/pairing/confirm
+
+Reaches `ConfirmPairing`.
+
+**Takes** `PairingConfirmation`
+
+| Field | Wire | Shape | Omitted when empty |
+|---|---|---|---:|
+| `Pairing` | `pairing` | `string` | no |
+| `Code` | `code` | `string` | no |
+
+**Returns** `Result`
+
+| Field | Wire | Shape | Omitted when empty | Means |
+|---|---|---|---:|---|
+| `Status` | `status` | `string` | no |  |
+| `Token` | `token` | `string` | yes | Token ist das Zugangstoken der Box, nur bei \[StatusPaired\]. Es wird genau einmal herausgegeben und nirgends im Klartext gespeichert. |
 
 #### POST /api/v1/session
 
@@ -940,6 +1029,7 @@ Every requirement that was read, and how far each one has got. A mark states wha
 | [R-UPLOAD-BESTAETIGUNG](#req-R-UPLOAD-BESTAETIGUNG) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-BILD](#req-R-UPLOAD-BILD) | functional | business | normative | yes | yes | yes | no |
 | [R-UPLOAD-EINGANG](#req-R-UPLOAD-EINGANG) | functional | business | normative | yes | yes | yes | no |
+| [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG) | functional | mixed | normative | yes | yes | yes | no |
 | [R-UPLOAD-SITZUNG](#req-R-UPLOAD-SITZUNG) | functional | business | normative | yes | yes | yes | no |
 
 ### Reading the marks
@@ -1491,6 +1581,21 @@ _functional, business, normative._
   - `github.com/torbenschinke/eventprint/app/relay.UploadAddress`
 - **Demonstrated by** TestEnqueueKeepsInboxTemplate, TestInboxAddressAddsModeAndKeepsSession, TestInboxTakesSeveralImagesWithoutLayout, TestJobsAreDeliveredOnceAndAcknowledged, TestRemainingCountsDownToFull, TestUploadAddressSelectsInbox
 
+<a id="req-R-UPLOAD-KOPPLUNG"></a>
+### R-UPLOAD-KOPPLUNG — Fotobox mit dem Konto koppeln
+
+Registrierte, bestätigte Nutzer MÜSSEN Fotoboxen per Mailadresse und sechsstelligem, 30 Minuten gültigem Code selbst koppeln können; die Box DARF nicht erfahren, ob es das Konto gibt, das Zugangstoken MUSS automatisch ausgetauscht werden, und falsche Codes MÜSSEN nach wenigen Versuchen sperren.
+
+_functional, mixed, normative._
+
+- **Asked for in** requirements/\_sources/upload.md#fotobox-mit-dem-konto-koppeln
+- **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/pairing.ConfirmPairing`
+  - `github.com/torbenschinke/eventprint/app/pairing.RequestPairing`
+  - `github.com/torbenschinke/eventprint/app/relay.BeginPairing`
+  - `github.com/torbenschinke/eventprint/app/relay.CompletePairing`
+- **Demonstrated by** TestBoxCannotTellUnknownAccounts, TestBoxPairsWithMailAndCode, TestExpiryAndLockout, TestIssuerFailureIsAnError, TestPairWithMailAndCode, TestRepeatedRequestsAreThrottled, TestUnknownMailLooksTheSame
+
 <a id="req-R-UPLOAD-SITZUNG"></a>
 ### R-UPLOAD-SITZUNG — Kurzlebige Upload-Adresse je Fotobox
 
@@ -1595,4 +1700,5 @@ What people wrote, and what became of each part of it.
 | Bild eines Auftrags laden | R-UPLOAD-BILD |
 | Übernahme bestätigen | R-UPLOAD-BESTAETIGUNG |
 | Upload in den Eingang | R-UPLOAD-EINGANG |
+| Fotobox mit dem Konto koppeln | R-UPLOAD-KOPPLUNG |
 

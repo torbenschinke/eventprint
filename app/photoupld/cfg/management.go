@@ -80,6 +80,13 @@ func Enable(cfg *application.Configurator) (Management, error) {
 
 	ConfigureAPI(apiMgmt.API, tokens, uploads, uploadURL)
 
+	pairings, err := enablePairing(cfg, tokens)
+	if err != nil {
+		return Management{}, err
+	}
+
+	ConfigurePairingAPI(apiMgmt.API, pairings)
+
 	const uploadPage core.NavigationPath = "upload"
 	cfg.RootView(uploadPage, func(wnd core.Window) core.View {
 		return uploadui.PageUpload(wnd, uploadui.Options{Registry: registry, CreateSrcSet: images.UseCases.CreateSrcSet})
