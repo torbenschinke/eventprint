@@ -184,7 +184,7 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-31 packages in 11 bounded contexts, and 68 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+31 packages in 11 bounded contexts, and 70 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
 8 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 
@@ -192,7 +192,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ### Where one context reaches into another
 
-25 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
+26 dependencies cross from one context into another. Each is a place the two are no longer independent, and each is worth a reason.
 
 | From | To |
 |---|---|
@@ -215,6 +215,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 | `app/device/ui` | `app/wifi` |
 | `app/photoupld/cfg` | `app/pairing` |
 | `app/photoupld/cfg` | `app/upld` |
+| `app/photoupld/ui` | `app/pairing` |
 | `app/photoupld/ui` | `app/printing` |
 | `app/photoupld/ui` | `app/upld` |
 | `app/photoupld/ui/preview` | `app/printing` |
@@ -224,7 +225,7 @@ _No diagram is included in this document. Pass -figures to speclink generate, af
 
 ## What the code declares
 
-108 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
+113 constructs, each recognised by what it is rather than by an annotation saying so. Everything elsewhere in this document that names one of them points here.
 
 ### app/device
 
@@ -419,6 +420,13 @@ _query_ — `app/pairing/uc_confirm_pairing.go:19`
 
 **Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
 
+<a id="req-code-github-com-torbenschinke-eventprint-app-pairing-findmyboxes"></a>
+#### FindMyBoxes
+
+_query_ — `app/pairing/uc_find_my_boxes.go:11`
+
+**Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
+
 <a id="req-code-github-com-torbenschinke-eventprint-app-pairing-requestpairing"></a>
 #### RequestPairing
 
@@ -426,15 +434,39 @@ _query_ — `app/pairing/uc_request_pairing.go:25`
 
 **Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
 
+<a id="req-code-github-com-torbenschinke-eventprint-app-pairing-unpairbox"></a>
+#### UnpairBox
+
+_use case_ — `app/pairing/uc_unpair_box.go:13`
+
+**Answers to** [R-UPLOAD-KOPPLUNG](#req-R-UPLOAD-KOPPLUNG)
+
 <a id="req-code-de-torbenschinke-photoupld-pairing-confirm"></a>
 #### de.torbenschinke.photoupld.pairing.confirm
 
-_permission_ — `app/pairing/perm.go:22`
+_permission_ — `app/pairing/perm.go:24`
+
+<a id="req-code-de-torbenschinke-photoupld-pairing-find-my-boxes"></a>
+#### de.torbenschinke.photoupld.pairing.find\_my\_boxes
+
+_permission_ — `app/pairing/perm.go:31`
 
 <a id="req-code-de-torbenschinke-photoupld-pairing-request"></a>
 #### de.torbenschinke.photoupld.pairing.request
 
-_permission_ — `app/pairing/perm.go:15`
+_permission_ — `app/pairing/perm.go:17`
+
+<a id="req-code-de-torbenschinke-photoupld-pairing-unpair-box"></a>
+#### de.torbenschinke.photoupld.pairing.unpair\_box
+
+_permission_ — `app/pairing/perm.go:38`
+
+<a id="req-code-github-com-torbenschinke-eventprint-app-pairing-box"></a>
+#### Box
+
+_aggregate_ — `app/pairing/model.go:23`
+
+**Answers to** [R-DEC-ZUSTANDSABLAGE](#req-R-DEC-ZUSTANDSABLAGE)
 
 ### app/photo
 
@@ -1127,6 +1159,7 @@ Ereignisse enthalten, aus denen sich ein Verlauf bilden ließe.
 
 - **Asked for in** requirements/\_sources/entscheidungen.md#form-der-ablage
 - **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/pairing.Box`
   - `github.com/torbenschinke/eventprint/app/photo.Photo`
   - `github.com/torbenschinke/eventprint/app/printing.Job`
 
@@ -1590,11 +1623,18 @@ _functional, mixed, normative._
 
 - **Asked for in** requirements/\_sources/upload.md#fotobox-mit-dem-konto-koppeln
 - **Implemented by**
+  - `github.com/torbenschinke/eventprint/app/pairing.Box.Device`
+  - `github.com/torbenschinke/eventprint/app/pairing.Box.ID`
+  - `github.com/torbenschinke/eventprint/app/pairing.Box.Mail`
+  - `github.com/torbenschinke/eventprint/app/pairing.Box.Owner`
+  - `github.com/torbenschinke/eventprint/app/pairing.Box.PairedAt`
   - `github.com/torbenschinke/eventprint/app/pairing.ConfirmPairing`
+  - `github.com/torbenschinke/eventprint/app/pairing.FindMyBoxes`
   - `github.com/torbenschinke/eventprint/app/pairing.RequestPairing`
+  - `github.com/torbenschinke/eventprint/app/pairing.UnpairBox`
   - `github.com/torbenschinke/eventprint/app/relay.BeginPairing`
   - `github.com/torbenschinke/eventprint/app/relay.CompletePairing`
-- **Demonstrated by** TestBoxCannotTellUnknownAccounts, TestBoxPairsWithMailAndCode, TestExpiryAndLockout, TestIssuerFailureIsAnError, TestPairWithMailAndCode, TestRepeatedRequestsAreThrottled, TestUnknownMailLooksTheSame
+- **Demonstrated by** TestBoxCannotTellUnknownAccounts, TestBoxPairsWithMailAndCode, TestExpiryAndLockout, TestIssuerFailureIsAnError, TestOwnerSeesAndUnpairsOwnBoxes, TestPairWithMailAndCode, TestRepeatedRequestsAreThrottled, TestUnknownMailLooksTheSame
 
 <a id="req-R-UPLOAD-SITZUNG"></a>
 ### R-UPLOAD-SITZUNG — Kurzlebige Upload-Adresse je Fotobox

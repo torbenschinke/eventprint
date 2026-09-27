@@ -25,7 +25,7 @@ type ConfirmCmd struct {
 }
 
 // NewConfirmPairing bindet die Bestätigung an Token-Ausgabe und Mailversand.
-func NewConfirmPairing(s *store, issue Issuer, mailer Mailer, now Clock) ConfirmPairing {
+func NewConfirmPairing(s *store, issue Issuer, boxes Boxes, grant OwnerGrant, mailer Mailer, now Clock) ConfirmPairing {
 	return func(subject auth.Subject, cmd ConfirmCmd) (Result, error) {
 		if err := subject.Audit(PermConfirmPairing); err != nil {
 			return Result{}, err
@@ -71,17 +71,27 @@ func NewConfirmPairing(s *store, issue Issuer, mailer Mailer, now Clock) Confirm
 		delete(s.pending, cmd.Pairing)
 		s.mu.Unlock()
 
-		token, err := issue(p.account, p.device)
+		id, token, err := issue(p.account, p.device)
 		if err != nil {
 			return Result{}, fmt.Errorf("cannot issue token: %w", err)
+		}
+
+		if err := boxes.Save(Box{ID: id, Owner: p.account.ID, Mail: p.account.Mail, Device: p.device, PairedAt: t}); err != nil {
+			return Result{}, fmt.Errorf("cannot record box: %w", err)
+		}
+
+		// Ohne die Rolle sieht der Nutzer seine Box nicht unter "Meine
+		// Fotoboxen"; gekoppelt ist sie trotzdem, deshalb nur protokolliert.
+		if err := grant(p.account.ID); err != nil {
+			slog.Error("pairing: cannot grant owner role", "user", p.account.ID, "err", err)
 		}
 
 		body := fmt.Sprintf(`Hallo,
 
 die Fotobox „%s“ ist jetzt mit deinem Konto verbunden. Fotos, die Gäste über ihren QR-Code senden, erreichen ab sofort diese Box.
 
-Warst du das nicht, lösche das Zugangstoken „%s“ in der Verwaltung des Upload-Dienstes oder bitte den Betreiber darum.
-`, p.device, TokenName(p.device))
+Unter „Meine Fotoboxen“ im Upload-Dienst siehst du alle deine Boxen und kannst jede wieder trennen. Warst du das nicht, trenne die Box „%s“ dort sofort.
+`, p.device, p.device)
 
 		if err := mailer(p.account.Mail, "Fotobox „"+p.device+"“ verbunden", body); err != nil {
 			slog.Error("pairing: cannot send confirmation", "err", err)

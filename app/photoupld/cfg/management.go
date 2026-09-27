@@ -18,10 +18,16 @@ import (
 
 const RelayRole role.ID = "de.torbenschinke.photoupld.relay"
 
+// OwnerRole bekommt, wer eine Box gekoppelt hat; siehe [pairing.OwnerGrant].
+const OwnerRole role.ID = "de.torbenschinke.photoupld.box_owner"
+
 type Management struct {
 	UploadPage core.NavigationPath
-	Registry   *upld.Registry
-	UseCases   upld.UseCases
+
+	// BoxesPage ist "Meine Fotoboxen".
+	BoxesPage core.NavigationPath
+	Registry  *upld.Registry
+	UseCases  upld.UseCases
 }
 
 func Enable(cfg *application.Configurator) (Management, error) {
@@ -87,13 +93,16 @@ func Enable(cfg *application.Configurator) (Management, error) {
 
 	ConfigurePairingAPI(apiMgmt.API, pairings)
 
+	const boxesPage core.NavigationPath = "fotoboxen"
+	cfg.RootView(boxesPage, func(wnd core.Window) core.View { return uploadui.PageBoxes(wnd, pairings) })
+
 	const uploadPage core.NavigationPath = "upload"
 	cfg.RootView(uploadPage, func(wnd core.Window) core.View {
 		return uploadui.PageUpload(wnd, uploadui.Options{Registry: registry, CreateSrcSet: images.UseCases.CreateSrcSet})
 	})
 	go reap(cfg.Context(), registry)
 
-	management := Management{UploadPage: uploadPage, Registry: registry, UseCases: uploads}
+	management := Management{UploadPage: uploadPage, BoxesPage: boxesPage, Registry: registry, UseCases: uploads}
 	cfg.AddContextValue(core.ContextValue("eventprint.photoupld", management))
 	return management, nil
 }

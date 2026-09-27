@@ -14,6 +14,23 @@ import (
 // schickt sie mit dem Code zurück; der Code allein genügt nicht.
 type ID string
 
+// BoxID ist die Kennung des Zugangstokens einer gekoppelten Box.
+type BoxID string
+
+// Box ist eine gekoppelte Fotobox. Der Dienst merkt sich, wer sie wann
+// gekoppelt hat, damit ihr Besitzer sie unter "Meine Fotoboxen" sieht und
+// selbst trennen kann – ohne einen Administrator zu fragen.
+type Box struct {
+	ID       BoxID     `json:"id"`
+	Owner    string    `json:"owner"`
+	Mail     string    `json:"mail"`
+	Device   string    `json:"device"`
+	PairedAt time.Time `json:"pairedAt"`
+}
+
+// Identity macht Box speicherbar.
+func (b Box) Identity() BoxID { return b.ID }
+
 // Account ist ein Nutzer, der Boxen koppeln darf.
 type Account struct {
 	ID   string

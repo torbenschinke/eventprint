@@ -11,6 +11,8 @@ import (
 
 	"github.com/worldiety/speclink/spec"
 	"go.wdy.de/nago/application/user"
+	"go.wdy.de/nago/pkg/blob/fs"
+	nagojson "go.wdy.de/nago/pkg/data/json"
 
 	"github.com/torbenschinke/eventprint/app/pairing"
 	"github.com/torbenschinke/eventprint/app/relay"
@@ -31,7 +33,11 @@ func fakeService(t *testing.T) (*httptest.Server, *string) {
 			mailBody = body
 			return nil
 		},
-		Issuer: func(pairing.Account, string) (string, error) { return "secret-token-for-box", nil },
+		Issuer: func(pairing.Account, string) (pairing.BoxID, string, error) {
+			return "box1", "secret-token-for-box", nil
+		},
+		Boxes: boxStore(t),
+		Owner: func(string) error { return nil },
 	})
 
 	mux := http.NewServeMux()
@@ -70,6 +76,17 @@ func fakeService(t *testing.T) (*httptest.Server, *string) {
 	t.Cleanup(srv.Close)
 
 	return srv, &mailBody
+}
+
+func boxStore(t *testing.T) pairing.Boxes {
+	t.Helper()
+
+	store, err := fs.NewBlobStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return nagojson.NewSloppyJSONRepository[pairing.Box, pairing.BoxID](store)
 }
 
 // An der Box nur die Mailadresse und den Code eintippen: Dienst und Box

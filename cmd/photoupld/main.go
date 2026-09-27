@@ -33,7 +33,9 @@ func main() {
 		if std.Must(users.UseCases.CountUsers()) == 0 {
 			std.Must(users.UseCases.EnableBootstrapAdmin(time.Now().Add(time.Hour), "%6UbRsCuM8N$auy"))
 		}
-		std.Must(photoupld.Enable(cfg))
-		cfg.SetDecorator(cfg.NewScaffold().Login(true).Decorator())
+		mgmt := std.Must(photoupld.Enable(cfg))
+		cfg.SetDecorator(cfg.NewScaffold().Login(true).
+			MenuEntry().Title("Meine Fotoboxen").Forward(mgmt.BoxesPage).OneOfRole(photoupld.OwnerRole).
+			Decorator())
 	}).Run()
 }

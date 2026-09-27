@@ -2,6 +2,7 @@ package pairing_test
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/worldiety/speclink/spec"
 	"go.wdy.de/nago/application/user"
+	"go.wdy.de/nago/pkg/blob/fs"
+	nagojson "go.wdy.de/nago/pkg/data/json"
 
 	"github.com/torbenschinke/eventprint/app/pairing"
 	"github.com/torbenschinke/eventprint/requirements/fun/upload"
@@ -18,11 +21,34 @@ import (
 // service ist der Upload-Dienst im Kleinen: ein bestätigter Nutzer, ein
 // Postfach, eine Uhr und ein Token-Aussteller.
 type service struct {
-	mu     sync.Mutex
-	mails  []sent
-	tokens []string
-	now    time.Time
-	uc     pairing.UseCases
+	mu      sync.Mutex
+	mails   []sent
+	tokens  []string
+	revoked []pairing.BoxID
+	owners  []string
+	now     time.Time
+	uc      pairing.UseCases
+}
+
+// asUser ist ein angemeldeter Nutzer mit allen Rechten, aber eigener
+// Kennung – für die Frage, wem eine Box gehört.
+type asUser struct {
+	user.Subject
+	id user.ID
+}
+
+func (a asUser) ID() user.ID { return a.id }
+
+// boxes ist ein Speicher für gekoppelte Boxen auf der Platte des Tests.
+func boxes(t *testing.T) pairing.Boxes {
+	t.Helper()
+
+	store, err := fs.NewBlobStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return nagojson.NewSloppyJSONRepository[pairing.Box, pairing.BoxID](store)
 }
 
 type sent struct{ to, subject, body string }
@@ -45,12 +71,21 @@ func newService(t *testing.T) *service {
 			s.mails = append(s.mails, sent{to, subject, body})
 			return nil
 		},
-		Issuer: func(a pairing.Account, device string) (string, error) {
+		Issuer: func(a pairing.Account, device string) (pairing.BoxID, string, error) {
 			tok := "token-" + a.ID + "-" + device
 			s.tokens = append(s.tokens, tok)
-			return tok, nil
+			return pairing.BoxID(fmt.Sprint("box", len(s.tokens))), tok, nil
 		},
-		Now: func() time.Time { return s.now },
+		Revoker: func(id pairing.BoxID) error {
+			s.revoked = append(s.revoked, id)
+			return nil
+		},
+		Owner: func(id string) error {
+			s.owners = append(s.owners, id)
+			return nil
+		},
+		Boxes: boxes(t),
+		Now:   func() time.Time { return s.now },
 	})
 
 	return s
@@ -214,7 +249,9 @@ func TestIssuerFailureIsAnError(t *testing.T) {
 			lastBody = body
 			return nil
 		},
-		Issuer: func(pairing.Account, string) (string, error) { return "", errors.New("db down") },
+		Issuer: func(pairing.Account, string) (pairing.BoxID, string, error) { return "", "", errors.New("db down") },
+		Boxes:  boxes(t),
+		Owner:  func(string) error { return nil },
 	})
 
 	id, _ := uc.RequestPairing(su, pairing.RequestCmd{Mail: "a@b.c"})
@@ -230,3 +267,50 @@ func TestIssuerFailureIsAnError(t *testing.T) {
 var lastBody string
 
 var su = user.SU()
+
+// Der Nutzer sieht seine gekoppelten Boxen und trennt sie selbst; fremde
+// Boxen sieht er nicht und trennt er nicht.
+func TestOwnerSeesAndUnpairsOwnBoxes(t *testing.T) {
+	s := newService(t)
+
+	id, _ := s.uc.RequestPairing(su, pairing.RequestCmd{Mail: "anna@example.org", Device: "Wohnzimmer"})
+	if res, _ := s.uc.ConfirmPairing(su, pairing.ConfirmCmd{Pairing: id, Code: s.lastCode(t)}); res.Status != pairing.StatusPaired {
+		t.Fatalf("pairing failed: %+v", res)
+	}
+
+	// Beim ersten Koppeln bekommt der Nutzer die Rolle, mit der er seine
+	// Boxen sieht.
+	if len(s.owners) != 1 || s.owners[0] != "u1" {
+		t.Fatalf("owner role granted to %v", s.owners)
+	}
+
+	anna := asUser{Subject: su, id: "u1"}
+	ben := asUser{Subject: su, id: "u2"}
+
+	mine, err := s.uc.FindMyBoxes(anna)
+	if err != nil || len(mine) != 1 || mine[0].Device != "Wohnzimmer" || mine[0].Mail != "anna@example.org" {
+		t.Fatalf("anna's boxes = %+v, %v", mine, err)
+	}
+
+	if others, _ := s.uc.FindMyBoxes(ben); len(others) != 0 {
+		t.Fatalf("ben sees %+v", others)
+	}
+
+	if err := s.uc.UnpairBox(ben, mine[0].ID); err == nil || len(s.revoked) != 0 {
+		t.Fatalf("ben unpaired anna's box: %v, revoked %v", err, s.revoked)
+	}
+
+	if err := s.uc.UnpairBox(anna, mine[0].ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.revoked) != 1 || s.revoked[0] != mine[0].ID {
+		t.Fatalf("revoked = %v", s.revoked)
+	}
+
+	if left, _ := s.uc.FindMyBoxes(anna); len(left) != 0 {
+		t.Fatalf("after unpairing anna still has %+v", left)
+	}
+
+	spec.Verified(t, upload.RUploadKopplung)
+}

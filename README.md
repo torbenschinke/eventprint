@@ -257,6 +257,10 @@ von außen unerreichbar und fragt ihn regelmäßig ab.
    Titel der Feier und lässt sich dort löschen. Der Nutzer bekommt eine Mail,
    dass eine Box gekoppelt wurde.
 
+Unter **Meine Fotoboxen** im Upload-Dienst sieht jeder Nutzer die Boxen, die
+er gekoppelt hat, und trennt sie selbst – etwa bevor er eine Box verleiht.
+Der Menüpunkt erscheint nach dem ersten Koppeln (Rolle **Fotobox-Besitzer**).
+
 Einen Code bekommt nur, wer registriert ist, seine Adresse bestätigt hat und
 nicht gesperrt ist. Die Box erfährt nie, ob es ein Konto gibt. Ein von Hand
 angelegtes Token lässt sich an der Box unter **Token von Hand eintragen**

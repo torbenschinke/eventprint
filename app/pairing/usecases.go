@@ -6,6 +6,8 @@ import "time"
 type UseCases struct {
 	RequestPairing RequestPairing
 	ConfirmPairing ConfirmPairing
+	FindMyBoxes    FindMyBoxes
+	UnpairBox      UnpairBox
 }
 
 // Options sind die Anschlüsse an den Dienst.
@@ -13,6 +15,9 @@ type Options struct {
 	Accounts Accounts
 	Mailer   Mailer
 	Issuer   Issuer
+	Revoker  Revoker
+	Owner    OwnerGrant
+	Boxes    Boxes
 
 	// Now ist die Uhr; leer heißt time.Now.
 	Now Clock
@@ -29,6 +34,8 @@ func NewUseCases(opts Options) UseCases {
 
 	return UseCases{
 		RequestPairing: NewRequestPairing(s, opts.Accounts, opts.Mailer, now),
-		ConfirmPairing: NewConfirmPairing(s, opts.Issuer, opts.Mailer, now),
+		ConfirmPairing: NewConfirmPairing(s, opts.Issuer, opts.Boxes, opts.Owner, opts.Mailer, now),
+		FindMyBoxes:    NewFindMyBoxes(opts.Boxes),
+		UnpairBox:      NewUnpairBox(opts.Boxes, opts.Revoker),
 	}
 }
