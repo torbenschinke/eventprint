@@ -8,7 +8,7 @@ require (
 	github.com/hajimehoshi/ebiten/v2 v2.10.1
 	github.com/hirochachacha/go-smb2 v1.1.0
 	github.com/worldiety/enum v0.0.0-20250415071812-195794096336
-	github.com/worldiety/gift v0.0.0-20260918144657-fab3dc5cd2cf
+	github.com/worldiety/gift v0.0.0-20260926213929-546ae3785048
 	github.com/worldiety/i18n v0.0.0-20260303170444-ecc6fa6bdd7a
 	github.com/worldiety/option v0.0.0-20251007074526-863facc0bc83
 	github.com/worldiety/speclink v0.0.0-20260831090958-199319ad63d3
