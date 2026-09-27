@@ -97,21 +97,26 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 
 	d := res.Value()
 
+	// Wie die Seitenleiste von Files: Die Auswahl ist eine zarte Kapsel in
+	// der Akzentfarbe mit farbigem Symbol und Text, kein gefüllter Balken.
 	row := func(label string, sym ui.Symbol, count string, active bool, fn func()) gift.View {
 		fg, ic, face := ui.ColorLabel, ui.ColorAccent, ui.ColorClear
+		font := ui.DefaultFont()
 		if active {
-			fg, ic, face = white, white, blue
+			fg, ic, face = blueText, blueText, ui.Fade(blue, 0.13)
+			font = boldFont
 		}
 
-		style := ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(10)}
+		r := capsule(pick(44, 40))
+		style := ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}
 
 		return ui.Button(ui.HStack(
 			ui.Icon(sym).Size(u(pick(22, 18))).Foreground(ic),
-			ui.Text(label).FontSize(u(pick(16, 14))).Foreground(fg).MaxLines(1).Flex(1),
-			ui.Text(count).FontSize(u(pick(14, 12))).Foreground(fg),
+			ui.Text(label).FontSize(u(pick(16, 14))).Font(font).Foreground(fg).MaxLines(1).Flex(1),
+			ui.Text(count).FontSize(u(pick(14, 12))).Foreground(ui.ColorSecondaryLabel),
 		).Gap(u(pick(12, 8))).Align(geom.Center), fn).
 			Style(style).HoverStyle(style).
-			PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.2), CornerRadius: u(10)}).
+			PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.2), CornerRadius: r}).
 			PaddingInsets(geom.Insets{Left: u(pick(12, 8)), Right: u(pick(12, 8))}).
 			MinHeight(u(pick(44, 40)))
 	}
@@ -170,8 +175,15 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 		row("USB-Stick", outline.ArchiveArrowDown, "", source == sourceUSB, func() { a.openLibrary(scope, sourceUSB) }),
 	)
 
-	return xgift.Fill(ui.VScroll(ui.VStack(items...).Gap(u(pick(4, 2))).Padding(u(pick(16, 10)))).
-		Background(ui.ColorBackground)).Width(u(pick(300, clamp(vw()*0.27, 190, 250))))
+	// Die Seitenleiste schwebt als eigene Fläche mit Abstand zum Rand, wie
+	// in Files unter iPadOS 26.
+	m := u(pick(12, 6))
+	panel := ui.VStack(
+		ui.VScroll(ui.VStack(items...).Gap(u(pick(4, 2))).Padding(u(pick(12, 8)))).Flex(1),
+	).Background(ui.ColorSurface).CornerRadius(u(pick(26, 18))).Shadow(paneShadow()).Flex(1)
+
+	return xgift.Fill(ui.VStack(panel).PaddingInsets(geom.Insets{Left: m, Top: m, Bottom: m})).
+		Width(u(pick(300, clamp(vw()*0.27, 190, 250))))
 }
 
 // eventLabel ist die Datumsangabe einer Feier in der Seitenleiste: der Tag,

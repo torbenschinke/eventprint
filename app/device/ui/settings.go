@@ -73,14 +73,16 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 		}
 	}
 
+	// Wie die Einstellungen von iPadOS: die Zeilen ohne eigene Fläche, die
+	// Auswahl eine neutrale Kapsel.
 	rows := []gift.View{}
 	for _, sec := range sections {
-		fg, face := ui.ColorLabel, ui.ColorSurface
+		fg, face := ui.ColorLabel, ui.ColorClear
 		if sec.id == current && !compact {
-			fg, face = white, blue
+			face = ui.Fade(ui.ColorLabel, 0.08)
 		}
 
-		style := ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(10)}
+		style := ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: capsule(46)}
 		rows = append(rows, ui.Button(ui.HStack(
 			xgift.IconTile(sec.sym, sec.face, u(30)),
 			ui.Text(sec.label).FontSize(u(16)).Foreground(fg).Flex(1),
@@ -90,7 +92,7 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 			open.Set(true)
 		}).
 			Style(style).HoverStyle(style).
-			PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.2), CornerRadius: u(10)}).
+			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.14), CornerRadius: capsule(46)}).
 			PaddingInsets(geom.Insets{Left: u(12), Right: u(12)}).
 			MinHeight(u(46)))
 	}
@@ -112,8 +114,10 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 		).Align(geom.Center)}
 	}
 
-	sidebar := ui.VStack(append(head, ui.VStack(rows...).Gap(u(4)))...).
-		Gap(u(pick(12, 6))).Padding(u(pick(20, 10))).Background(ui.ColorBackground)
+	sidebar := ui.VStack(ui.VStack(append(head, ui.VStack(rows...).Gap(u(2)))...).
+		Gap(u(pick(12, 6))).Padding(u(pick(16, 10))).
+		Background(ui.ColorSurface).CornerRadius(u(pick(26, 18))).Shadow(paneShadow())).
+		PaddingInsets(geom.Insets{Left: u(pick(12, 6)), Top: u(pick(12, 6)), Bottom: u(pick(12, 6))})
 
 	var detail gift.View
 	key := fmt.Sprint("detail", current)
@@ -173,7 +177,6 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 
 	return xgift.HStretch(
 		xgift.Fill(ui.VScroll(sidebar)).Width(u(400)),
-		xgift.VHairline(),
 		grow(ui.VStack(
 			ui.HStack(fill(), title(name, 17), fill()).PaddingInsets(geom.Insets{Top: u(16), Bottom: u(8)}),
 			scroller,
@@ -321,7 +324,7 @@ func (a *App) displaySettings(s device.Settings, save func(func(*device.Settings
 			ui.Row("").Accessory(ui.SegmentedControl(current, []string{"Automatisch", "Hell", "Dunkel"}, func(i int) {
 				save(func(s *device.Settings) { s.Appearance = modes[i] })
 				a.refreshTheme()
-			}).FontSize(u(15)).Frame(geom.Unbounded(), u(40))),
+			}).Capsule(true).FontSize(u(15)).Frame(geom.Unbounded(), u(40))),
 		),
 		muted("Automatisch ist die Box von 20 bis 7 Uhr dunkel. Der Kiosk ist immer dunkel.", 13).MaxLines(2).PaddingInsets(geom.Insets{Left: u(16)}),
 		section("",
@@ -385,7 +388,7 @@ func (a *App) printerSettings(ctx *gift.Context, st *states, s device.Settings, 
 							s.Printer.PrintSpeed = printing.SpeedNormal
 						}
 					})
-				}).FontSize(u(14)).Frame(u(220), u(36))),
+				}).Capsule(true).FontSize(u(14)).Frame(u(220), u(36))),
 			ui.Row("Ausschnitt auf Gesichter").Subtitle("Vorgabe für neue Druckvorgänge").Accessory(
 				ui.Toggle(s.FaceCrop, func(v bool) { save(func(s *device.Settings) { s.FaceCrop = v }) })),
 		),

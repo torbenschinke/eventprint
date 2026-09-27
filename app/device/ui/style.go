@@ -225,12 +225,17 @@ func primary(label string, action func()) ui.ButtonView {
 }
 
 // filled ist ein flächiger Knopf in beliebiger Farbe.
+// capsule ist der Radius einer Kapsel der Höhe h: Knöpfe sind seit iOS 26
+// vollständig abgerundet.
+func capsule(h float32) float32 { return u(h / 2) }
+
 func filled(label string, face, fg ui.Color, action func()) ui.ButtonView {
+	r := capsule(pick(52, 44))
 	return ui.Button(ui.Text(label).FontSize(u(pick(17, 16))).Font(boldFont).Foreground(fg), action).
-		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
-		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
-		PressedStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.75), CornerRadius: u(14)}).
-		DisabledStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.35), CornerRadius: u(14)}).
+		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
+		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
+		PressedStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.75), CornerRadius: r}).
+		DisabledStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.35), CornerRadius: r}).
 		MinHeight(u(pick(52, 44))).
 		PaddingInsets(geom.Insets{Left: u(pick(22, 16)), Right: u(pick(22, 16))})
 }
@@ -238,10 +243,11 @@ func filled(label string, face, fg ui.Color, action func()) ui.ButtonView {
 // secondary ist eine Nebenaktion auf heller Fläche.
 func secondary(label string, action func()) ui.ButtonView {
 	face := ui.Fade(ui.ColorAccent, 0.12)
+	r := capsule(pick(48, 44))
 	return ui.Button(ui.Text(label).FontSize(u(16)).Font(boldFont).Foreground(ui.ColorAccent), action).
-		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
-		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: u(14)}).
-		PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorAccent, 0.25), CornerRadius: u(14)}).
+		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
+		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
+		PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorAccent, 0.25), CornerRadius: r}).
 		MinHeight(u(pick(48, 44))).
 		PaddingInsets(geom.Insets{Left: u(pick(18, 14)), Right: u(pick(18, 14))})
 }
@@ -257,10 +263,10 @@ func link(label string, action func()) ui.ButtonView {
 
 // iconButton ist ein quadratischer Knopf mit Symbol.
 func iconButton(sym ui.Symbol, label string, fg ui.Color, action func()) ui.ButtonView {
-	face := ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.05), Border: noBorder, CornerRadius: u(12)}
+	face := ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.05), Border: noBorder, CornerRadius: u(24)}
 	return ui.Button(ui.Icon(sym).Size(u(22)).Foreground(fg), action).
 		Style(face).HoverStyle(face).
-		PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.15), CornerRadius: u(12)}).
+		PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.15), CornerRadius: u(24)}).
 		Frame(u(48), u(48)).
 		Label(label)
 }

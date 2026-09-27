@@ -43,11 +43,10 @@ func paneBackground(tint ui.Color) ui.Background {
 		return ui.ColorSurface
 	}
 
-	// Flach wie die Vorlage (scratchpad liquid-glass.html, iOS): Milch und
-	// Unschärfe, keine Lichtbrechung am Rand und kein Randschein. Beides
-	// ließ die Flächen wie gewölbte Linsen wirken. Die Kante besorgt ein
-	// Haarstrich, siehe glassPane.
-	return ui.Glass().Tint(tint).Blur(u(26)).Refraction(0).Highlight(0).Grain(0.03)
+	// Flach wie iOS 26/27: Milch und Unschärfe, keine Lichtbrechung am
+	// Rand. Die Kante sind zwei Haarlinien, die gift zeichnet: außen dunkel,
+	// innen ein Glanz, der oben links hell ist und unten rechts kaum.
+	return ui.Glass().Tint(tint).Blur(u(26)).Refraction(0).Highlight(0.9).Grain(0.03)
 }
 
 // paneShadow hebt eine Glasfläche leicht vom Hintergrund ab.
@@ -68,8 +67,8 @@ func glassPane(radius float32, tint ui.Color, children ...gift.View) ui.Stack {
 		Background(paneBackground(tint)).
 		CornerRadius(radius).
 		Shadow(paneShadow())
-	if !solid {
-		s = s.Border(ui.Border{Width: 1, Color: paneEdge()})
+	if solid {
+		s = s.Border(ui.Border{Width: 1, Color: ui.ColorSeparator})
 	}
 
 	return s
@@ -85,8 +84,8 @@ func glassPill(height float32, content ...gift.View) ui.Stack {
 		MinHeight(height).
 		Background(paneBackground(paneTint())).
 		CornerRadius(height / 2)
-	if !solid {
-		s = s.Border(ui.Border{Width: 1, Color: paneEdge()})
+	if solid {
+		s = s.Border(ui.Border{Width: 1, Color: ui.ColorSeparator})
 	}
 
 	return s

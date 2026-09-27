@@ -32,11 +32,14 @@ func (a *App) homeShell(ctx *gift.Context, st *states) gift.View {
 		a.nav.previous, a.nav.current = a.nav.current, screen
 	}
 
+	// Die Seiten reichen bis ganz nach oben; die Statuszeile steht als Text
+	// darüber, wie bei iPadOS, und jede Seite hält ihr oben den Platz frei.
 	return ui.ZStack(
 		xgift.Fill(gift.Component("wallpaper", func(ctx *gift.Context) gift.View { return a.wallpaper(ctx, st) })),
+		xgift.Fill(xgift.Pages(a.page(st, a.nav.current), a.page(st, a.nav.previous))),
 		xgift.Fill(ui.VStack(
 			gift.Component("statusbar", func(ctx *gift.Context) gift.View { return a.statusBar(ctx, st, false, "") }),
-			grow(xgift.Pages(a.page(st, a.nav.current), a.page(st, a.nav.previous))),
+			fill(),
 		)),
 	).Flex(1)
 }
@@ -115,10 +118,17 @@ func (a *App) page(st *states, s Screen) xgift.Page {
 		bg = ui.ColorClear
 	}
 
+	// Oben der Platz der Statuszeile; das Studio legt ihn selbst an, weil
+	// sein Hintergrundbild bis an den Rand reichen soll.
+	top := u(statusBarHeight())
+	if s == ScreenStudio {
+		top = 0
+	}
+
 	return xgift.Page{
 		Key:   fmt.Sprint("screen", int(s)),
 		Depth: s.depth(),
-		View:  ui.VStack(grow(content)).Background(bg),
+		View:  ui.VStack(grow(content)).PaddingInsets(geom.Insets{Top: top}).Background(bg),
 	}
 }
 
@@ -194,14 +204,16 @@ func (a *App) statusBar(ctx *gift.Context, st *states, dark bool, pill string) g
 			MinHeight(u(pick(32, 28)))
 	}
 
-	h := u(pick(36, 30))
-	row := []gift.View{glassPill(h, clock), fill()}
+	// Schlichter Text wie die Statuszeile von iPadOS; Glas bleibt den
+	// Flächen vorbehalten.
+	row := []gift.View{clock, fill()}
 	for _, it := range items {
-		row = append(row, glassPill(h, it.lead, ui.Text(it.label).FontSize(u(13)).Font(boldFont).Foreground(fg).MaxLines(1)))
+		row = append(row, ui.HStack(it.lead, ui.Text(it.label).FontSize(u(13)).Font(boldFont).Foreground(fg).MaxLines(1)).
+			Gap(u(6)).Align(geom.Center))
 	}
 
-	return ui.HStack(row...).Gap(u(8)).Align(geom.Center).
-		PaddingInsets(geom.Insets{Left: u(pick(24, 12)), Right: u(pick(24, 12))}).
+	return ui.HStack(row...).Gap(u(18)).Align(geom.Center).
+		PaddingInsets(geom.Insets{Left: u(pick(28, 16)), Right: u(pick(28, 16))}).
 		MinHeight(u(statusBarHeight()))
 }
 
@@ -457,7 +469,7 @@ func (a *App) dock(st *states) gift.View {
 		}},
 	}
 
-	edge := pick(60, clamp(vh()*0.085, 40, 52))
+	edge := pick(64, clamp(vh()*0.085, 40, 52))
 	cells := make([]gift.View, 0, len(apps))
 	for _, ap := range apps {
 		face := ui.ButtonStyle{Background: ui.ColorClear, Border: noBorder}

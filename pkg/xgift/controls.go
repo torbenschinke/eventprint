@@ -70,7 +70,7 @@ func Stepper(value, lo, hi int, fontSize float32, onChange func(int)) gift.View 
 		btn("−", -1, value > lo),
 		ui.Text(strconv.Itoa(value)).FontSize(fontSize).MinWidth(fontSize*2).Align(ui.AlignCenter),
 		btn("+", 1, value < hi),
-	).Align(geom.Center).Background(ui.ColorControl).CornerRadius(10)
+	).Align(geom.Center).Background(ui.ColorControl).CornerRadius(ui.ControlHitTarget / 2)
 }
 
 // IconTile is an icon on a rounded, coloured square, as settings lists and

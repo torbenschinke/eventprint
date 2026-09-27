@@ -40,28 +40,41 @@ func (a *App) studioScreen(ctx *gift.Context, st *states) gift.View {
 	sheets := layout.Sheets(len(a.studio)) * ctx.Read(st.copies)
 	items := res.Value().items
 
-	h := u(pick(44, 38))
-	back := ui.Button(ui.HStack(
-		ui.Icon(outline.ChevronLeft).Size(u(18)).Foreground(ui.ColorLabel),
-		ui.Text("Fotos").FontSize(u(15)).Font(boldFont),
-	).Gap(u(4)).Align(geom.Center), func() {
+	// Wie die Werkzeugleisten von iPadOS 26: Zurück ist eine runde
+	// Glastaste, der Titel ist Text und nie Glas, und die Aktionen teilen
+	// sich eine Kapsel.
+	h := pick(46, 40)
+	glassIcon := func(sym ui.Symbol, label string, fg ui.Color, fn func()) gift.View {
+		return ui.Button(ui.Icon(sym).Size(u(20)).Foreground(fg), fn).
+			Style(clearButton).HoverStyle(clearButton).
+			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.1), CornerRadius: capsule(h)}).
+			Frame(u(h), u(h)).Label(label)
+	}
+
+	back := glassIcon(outline.ChevronLeft, "Zurück zu den Fotos", ui.ColorLabel, func() {
 		a.selected = append([]photo.ID(nil), a.studio...)
 		a.st.screen.Set(ScreenLibrary)
-	}).Style(clearButton).HoverStyle(clearButton).PressedStyle(clearButton).Label("Zurück zu den Fotos")
-
-	clearAll := ui.Button(ui.Text("Leeren").FontSize(u(15)).Font(boldFont).Foreground(ui.ColorAccent), func() {
+	})
+	add := glassIcon(outline.Plus, "Fotos hinzufügen", ui.ColorLabel, func() {
+		a.selected = append([]photo.ID(nil), a.studio...)
+		a.openLibraryKeep(photo.ScopeAll)
+	})
+	clearAll := glassIcon(outline.TrashBin, "Leeren", red, func() {
 		a.studio = nil
 		st.selection.Set(st.selection.Get() + 1)
 		st.screen.Set(ScreenHome)
-	}).Style(clearButton).HoverStyle(clearButton).PressedStyle(clearButton)
+	})
+
+	group := func(items ...gift.View) gift.View {
+		return glassPane(capsule(h), paneTint(), ui.HStack(items...).Align(geom.Center))
+	}
 
 	header := ui.HStack(
-		glassPill(h, back),
+		group(back),
+		title(fmt.Sprintf("Drucken · %d %s", len(a.studio), plural(len(a.studio), "Foto", "Fotos")), pick(20, 17)).MaxLines(1),
 		fill(),
-		glassPill(h, title(fmt.Sprintf("Drucken · %d %s", len(a.studio), plural(len(a.studio), "Foto", "Fotos")), 15)),
-		fill(),
-		glassPill(h, clearAll),
-	).Align(geom.Center).MinHeight(u(studioHeader()))
+		group(add, clearAll),
+	).Gap(u(14)).Align(geom.Center).MinHeight(u(studioHeader()))
 
 	pad := u(pick(22, 10))
 	return ui.ZStack(
@@ -73,7 +86,7 @@ func (a *App) studioScreen(ctx *gift.Context, st *states) gift.View {
 				grow(gift.Component("preview", func(ctx *gift.Context) gift.View { return a.studioPreview(ctx, st) })),
 				xgift.Fill(gift.Component("inspector", func(ctx *gift.Context) gift.View { return a.inspector(ctx, st, sheets) })).Width(u(inspectorWidth())),
 			).Gap(u(pick(18, 10))).Flex(1),
-		).Gap(u(pick(12, 8))).PaddingInsets(geom.Insets{Left: pad, Right: pad, Top: u(pick(6, 2)), Bottom: pad})),
+		).Gap(u(pick(12, 8))).PaddingInsets(geom.Insets{Left: pad, Right: pad, Top: u(statusBarHeight() + pick(4, 2)), Bottom: pad})),
 	).Flex(1)
 }
 
@@ -114,9 +127,9 @@ func inspectorWidth() float32 { return pick(380, clamp(vw()*0.4, 280, 340)) }
 // Innenrand und den Rahmen des aktiven Bildes.
 func filmThumb() float32 { return filmstripWidth() - 2*pick(12, 8) - 2*4 }
 
-// statusBarHeight ist die Höhe der Statusleiste über allen Bildschirmen des
-// Heimbetriebs: Glaskapseln mit etwas Luft darüber und darunter.
-func statusBarHeight() float32 { return pick(54, 42) }
+// statusBarHeight ist die Höhe der Statuszeile über allen Bildschirmen des
+// Heimbetriebs.
+func statusBarHeight() float32 { return pick(34, 28) }
 
 // paperSize ist die Größe des Vorschaublattes im Verhältnis 2 : 3, so groß
 // wie der Platz zwischen Filmstreifen und Gestaltung es erlaubt.
@@ -299,10 +312,10 @@ func (a *App) inspector(ctx *gift.Context, st *states, sheets int) gift.View {
 				l.Finish = printing.FinishMatte
 			}
 		})
-	}).FontSize(u(14)).Frame(u(pick(170, 130)), u(36))
+	}).Capsule(true).FontSize(u(14)).Frame(u(pick(170, 130)), u(36))
 
 	design := glassPane(u(pick(30, 20)), paneTint(),
-		ui.SegmentedControl(tab, []string{"Format", "Design", "Bild", "Text"}, st.studioTab.Set).
+		ui.SegmentedControl(tab, []string{"Format", "Design", "Bild", "Text"}, st.studioTab.Set).Capsule(true).
 			FontSize(u(pick(15, 14))).Frame(geom.Unbounded(), u(pick(40, 36))).Key("tabs"),
 		ui.VScroll(content).Flex(1),
 	).Gap(u(pick(10, 6))).Padding(u(pick(16, 10))).Flex(1)
