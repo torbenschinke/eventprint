@@ -323,7 +323,9 @@ func TestNASIsSetUpAndBrowsedOnTheDevice(t *testing.T) {
 	r := gallery.Bounds()
 	time.Sleep(200 * time.Millisecond)
 	b.h.Frame()
-	b.h.ClickAt(geom.Pt(r.Min.X+80, r.Min.Y+60))
+	// Das Raster läuft unter der schwebenden Kopfzeile durch (Titel, Pfad);
+	// die erste Kachel beginnt darunter.
+	b.h.ClickAt(geom.Pt(r.Min.X+80, r.Min.Y+220))
 	b.h.Frame()
 
 	b.tap("Übernehmen und drucken")

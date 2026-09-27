@@ -59,6 +59,19 @@ func (a *App) library(ctx *gift.Context, st *states) gift.View {
 	).Align(geom.TopLeading).Flex(1)
 }
 
+// floatingHeader legt head über content, das unter ihm durchläuft und dort
+// weich ausgeblendet wird – der Scroll-Rand von iPadOS 26. content muss oben
+// headH Platz lassen, damit sein Anfang nicht unter der Kopfzeile liegt.
+func floatingHeader(content, head gift.View, headH float32) gift.View {
+	return xgift.Fill(ui.ZStack(
+		xgift.Fill(ui.VStack(content)),
+		xgift.Fill(ui.VStack(
+			ui.ZStack(edgeFade(headH, u(pick(28, 18)), ui.ColorSurface), head).Align(geom.Top),
+			fill(),
+		)),
+	))
+}
+
 // librarySidebarWidth ist die Breite der Seitenleiste samt Rand.
 func librarySidebarWidth() float32 { return pick(300, clamp(vw()*0.27, 190, 250)) }
 
@@ -400,11 +413,7 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return ui.ZStack(
-		xgift.Fill(ui.VStack(grid)),
-		xgift.Fill(ui.VStack(
-			ui.ZStack(edgeFade(headH, u(pick(28, 18)), ui.ColorSurface), header).Align(geom.Top),
-			fill(),
-		)),
+		floatingHeader(grid, header, headH),
 		a.selectionBar(st),
 	).Align(geom.Bottom)
 }
