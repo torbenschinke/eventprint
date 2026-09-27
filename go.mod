@@ -12,7 +12,7 @@ require (
 	github.com/worldiety/i18n v0.0.0-20260303170444-ecc6fa6bdd7a
 	github.com/worldiety/option v0.0.0-20251007074526-863facc0bc83
 	github.com/worldiety/speclink v0.0.0-20260831090958-199319ad63d3
-	go.wdy.de/nago v0.0.0-20260825122142-0bc1268bd119
+	go.wdy.de/nago v0.0.0-20260926144453-71642511cc02
 	gocv.io/x/gocv v0.43.0
 	golang.org/x/crypto v0.45.0
 	golang.org/x/image v0.45.0
