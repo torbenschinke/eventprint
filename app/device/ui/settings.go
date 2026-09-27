@@ -155,10 +155,10 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 	}
 
 	scroller := ui.VScroll(ui.VStack(column).Align(geom.Top).
-		PaddingInsets(geom.Insets{Left: u(pick(24, 16)), Right: u(pick(24, 16)), Bottom: u(24)})).Flex(1)
+		PaddingInsets(geom.Insets{Left: u(pick(24, 16)), Right: u(pick(24, 16)), Bottom: u(24)})).Bounce(true).Flex(1)
 
 	if compact {
-		list := xgift.Page{Key: "list", Depth: 0, View: xgift.Fill(ui.VScroll(sidebar)).Key("list")}
+		list := xgift.Page{Key: "list", Depth: 0, View: xgift.Fill(ui.VScroll(sidebar).Bounce(true)).Key("list")}
 		page := xgift.Page{Key: "detail", Depth: 1, View: ui.VStack(
 			ui.HStack(
 				link("‹ Einstellungen", func() { open.Set(false) }),
@@ -176,7 +176,7 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return xgift.HStretch(
-		xgift.Fill(ui.VScroll(sidebar)).Width(u(400)),
+		xgift.Fill(ui.VScroll(sidebar).Bounce(true)).Width(u(400)),
 		grow(ui.VStack(
 			ui.HStack(fill(), title(name, 17), fill()).PaddingInsets(geom.Insets{Top: u(16), Bottom: u(8)}),
 			scroller,
