@@ -86,6 +86,11 @@ func boxStore(t *testing.T) pairing.Boxes {
 		t.Fatal(err)
 	}
 
+	// Schließen, sonst bricht die Dateisperre von nago mit einem Panic ab,
+	// sobald die Speicherbereinigung den Store einsammelt – je nach
+	// Zeitpunkt, also gelegentlich.
+	t.Cleanup(func() { _ = store.Close() })
+
 	return nagojson.NewSloppyJSONRepository[pairing.Box, pairing.BoxID](store)
 }
 

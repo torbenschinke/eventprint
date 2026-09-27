@@ -236,6 +236,7 @@ func filled(label string, face, fg ui.Color, action func()) ui.ButtonView {
 		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
 		PressedStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.75), CornerRadius: r}).
 		DisabledStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.35), CornerRadius: r}).
+		Lift(true).
 		MinHeight(u(pick(52, 44))).
 		PaddingInsets(geom.Insets{Left: u(pick(22, 16)), Right: u(pick(22, 16))})
 }
@@ -248,6 +249,7 @@ func secondary(label string, action func()) ui.ButtonView {
 		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
 		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
 		PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorAccent, 0.25), CornerRadius: r}).
+		Lift(true).
 		MinHeight(u(pick(48, 44))).
 		PaddingInsets(geom.Insets{Left: u(pick(18, 14)), Right: u(pick(18, 14))})
 }

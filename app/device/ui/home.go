@@ -479,6 +479,7 @@ func (a *App) dock(st *states) gift.View {
 		).Gap(u(pick(6, 3))).Align(geom.Center), ap.fn).
 			Style(face).HoverStyle(face).
 			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.08), CornerRadius: u(16)}).
+			Lift(true).
 			Frame(u(edge+pick(52, 34)), geom.Unbounded()).
 			Label(ap.label))
 	}

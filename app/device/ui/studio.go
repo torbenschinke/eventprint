@@ -48,6 +48,7 @@ func (a *App) studioScreen(ctx *gift.Context, st *states) gift.View {
 		return ui.Button(ui.Icon(sym).Size(u(20)).Foreground(fg), fn).
 			Style(clearButton).HoverStyle(clearButton).
 			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.1), CornerRadius: capsule(h)}).
+			Lift(true).
 			Frame(u(h), u(h)).Label(label)
 	}
 
@@ -381,6 +382,7 @@ func choiceCard(name, hint string, selected bool, fn func()) gift.View {
 	).Gap(u(2)).Align(geom.Leading), fn).
 		Style(style).HoverStyle(style).
 		PressedStyle(ui.ButtonStyle{Background: ui.Fade(blue, 0.15), Border: border, CornerRadius: u(14)}).
+		Lift(true).
 		PaddingInsets(geom.Insets{Left: u(pick(14, 10)), Right: u(pick(14, 10)), Top: u(pick(12, 5)), Bottom: u(pick(12, 5))}).
 		MinHeight(u(pick(72, 50))).
 		Align(geom.Leading)

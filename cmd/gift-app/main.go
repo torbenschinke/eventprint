@@ -130,7 +130,7 @@ func run() error {
 		Logger: logger,
 
 		// Eine Box, die den Abend über wartet, soll nicht heiß werden.
-		IdleTPS:    10,
+		IdleTPS:    idleTPS(),
 		IdleFrames: 120,
 
 		// Nur zeichnen, wenn sich etwas ändert. Ohne das zeichnet die Box
@@ -152,4 +152,17 @@ func run() error {
 			return nil
 		},
 	})
+}
+
+// idleTPS ist die Taktrate im Leerlauf. gift liest Berührungen nur im Takt;
+// bei 10 Hz vergingen bis zu 100 ms, bevor ein Knopf auf den Finger
+// reagierte, und das spürt man. 30 Hz halbieren das Warten auf höchstens
+// 33 ms und kosten auf dem Pi wenige Prozent eines Kerns.
+// EVENTPRINT_IDLE_TPS setzt einen anderen Wert.
+func idleTPS() int {
+	if v, err := strconv.Atoi(os.Getenv("EVENTPRINT_IDLE_TPS")); err == nil && v > 0 {
+		return v
+	}
+
+	return 30
 }
