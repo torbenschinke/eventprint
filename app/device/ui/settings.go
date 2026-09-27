@@ -175,13 +175,15 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 		return xgift.Pages(list, page)
 	}
 
-	return xgift.HStretch(
-		xgift.Fill(ui.VScroll(sidebar)).Width(u(400)),
-		grow(ui.VStack(
+	// Wie in der Mediathek: die Seitenleiste als Ebene über dem Inhalt, damit
+	// ihr Schatten nicht unter der Detailspalte verschwindet.
+	return ui.ZStack(
+		xgift.Fill(ui.VStack(grow(ui.VStack(
 			ui.HStack(fill(), title(name, 17), fill()).PaddingInsets(geom.Insets{Top: u(16), Bottom: u(8)}),
 			scroller,
-		)),
-	).Flex(1)
+		))).PaddingInsets(geom.Insets{Left: u(400)})),
+		xgift.Fill(ui.VScroll(sidebar)).Width(u(400)),
+	).Align(geom.TopLeading).Flex(1)
 }
 
 // --- WLAN -------------------------------------------------------------------

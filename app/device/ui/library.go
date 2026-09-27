@@ -50,11 +50,17 @@ func (a *App) library(ctx *gift.Context, st *states) gift.View {
 		content = gift.Component("photos", func(ctx *gift.Context) gift.View { return a.photoBrowser(ctx, st) })
 	}
 
-	return xgift.HStretch(
+	// Die Seitenleiste schwebt über dem Inhalt und wird deshalb nach ihm
+	// gezeichnet: Ihr Schatten fällt auf die Galerie und ihre Kopfzeile,
+	// statt von deren Fläche abgeschnitten zu werden.
+	return ui.ZStack(
+		xgift.Fill(ui.VStack(grow(content)).PaddingInsets(geom.Insets{Left: u(librarySidebarWidth())})),
 		gift.Component("sidebar", func(ctx *gift.Context) gift.View { return a.librarySidebar(ctx, st) }),
-		grow(content),
-	).Flex(1)
+	).Align(geom.TopLeading).Flex(1)
 }
+
+// librarySidebarWidth ist die Breite der Seitenleiste samt Rand.
+func librarySidebarWidth() float32 { return pick(300, clamp(vw()*0.27, 190, 250)) }
 
 // sidebarData sind die Zahlen der Seitenleiste.
 type sidebarData struct {
@@ -183,7 +189,7 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 	).Background(ui.ColorSurface).CornerRadius(u(pick(26, 18))).Shadow(paneShadow()).Flex(1)
 
 	return xgift.Fill(ui.VStack(panel).PaddingInsets(geom.Insets{Left: m, Top: m, Bottom: m})).
-		Width(u(pick(300, clamp(vw()*0.27, 190, 250))))
+		Width(u(librarySidebarWidth()))
 }
 
 // eventLabel ist die Datumsangabe einer Feier in der Seitenleiste: der Tag,
