@@ -56,8 +56,8 @@ github.com/wagslane/go-password-validator v0.3.0 h1:vfxOPzGHkz5S146HDpavl0cw1DSV
 github.com/wagslane/go-password-validator v0.3.0/go.mod h1:TI1XJ6T5fRdRnHqHt14pvy1tNVnrwe7m3/f1f2fDphQ=
 github.com/worldiety/enum v0.0.0-20250415071812-195794096336 h1:5GA/jISeRFoiVDYuxFVHZifGdKM7LX9Qb1Uhit8BdLY=
 github.com/worldiety/enum v0.0.0-20250415071812-195794096336/go.mod h1:0uP0UsAlDy6HB1ZaikFmvMHbrp+ZajhhsOBgzUg0KPY=
-github.com/worldiety/gift v0.0.0-20260927170859-5da791f16b47 h1:p49e2d/Y9jUXyeyx4B/xT2vWEGqsQfKG7kDGYIg76XQ=
-github.com/worldiety/gift v0.0.0-20260927170859-5da791f16b47/go.mod h1:KMwcqj+2sEl13qr/S1R0yXk23vTpBtG6rU3mVSnBX88=
+github.com/worldiety/gift v0.0.0-20260927173643-996b02b3c762 h1:RjL6X9/a5oJPRoGbGUQS1J+vwZTTVkNy4JKN2EfVfSE=
+github.com/worldiety/gift v0.0.0-20260927173643-996b02b3c762/go.mod h1:KMwcqj+2sEl13qr/S1R0yXk23vTpBtG6rU3mVSnBX88=
 github.com/worldiety/i18n v0.0.0-20260303170444-ecc6fa6bdd7a h1:ju7yGsCBtfAIp2Lpi6LLcGQQ4sgZFg+tzMje1yQLSsI=
 github.com/worldiety/i18n v0.0.0-20260303170444-ecc6fa6bdd7a/go.mod h1:5aJpAfnGu9d91kIZyuJenwlHj97wD00IZ8y1CtRLfhQ=
 github.com/worldiety/material-color-utilities v0.0.0-20250324124753-a84b74640c16 h1:9E5bS0EtiWaNaxsjxZtXFQcC95wgjAv6K27qaDhPaJs=

@@ -179,7 +179,7 @@ func (a *App) librarySidebar(ctx *gift.Context, st *states) gift.View {
 	// in Files unter iPadOS 26.
 	m := u(pick(12, 6))
 	panel := ui.VStack(
-		ui.VScroll(ui.VStack(items...).Gap(u(pick(4, 2))).Padding(u(pick(12, 8)))).Bounce(true).Flex(1),
+		ui.VScroll(ui.VStack(items...).Gap(u(pick(4, 2))).Padding(u(pick(12, 8)))).Flex(1),
 	).Background(ui.ColorSurface).CornerRadius(u(pick(26, 18))).Shadow(paneShadow()).Flex(1)
 
 	return xgift.Fill(ui.VStack(panel).PaddingInsets(geom.Insets{Left: m, Top: m, Bottom: m})).
@@ -378,7 +378,6 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 			Layout(brickRows(u(rowHeight()))).
 			Tile(tileStyle()).
 			Overscan(u(400)).
-			Config(gift.ScrollConfig{Bounce: true}).
 			PaddingInsets(geom.Insets{Top: headH, Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(pick(120, 84))}).
 			OnSelect(func(id asset.ID) {
 				a.selected = toPhotoIDs(xgift.TouchSelect(g, toAssetIDs(a.selected), id))
@@ -395,7 +394,7 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return ui.ZStack(
-		xgift.Fill(ui.VStack(grid).Background(ui.ColorSurface)),
+		xgift.Fill(ui.VStack(grid)),
 		xgift.Fill(ui.VStack(
 			ui.ZStack(edgeFade(headH, u(pick(28, 18)), ui.ColorSurface), header).Align(geom.Top),
 			fill(),

@@ -99,7 +99,7 @@ func (a *App) jobsScreen(ctx *gift.Context, st *states) gift.View {
 		).Gap(u(12)).Align(geom.Center),
 		a.printerCard(d, refresh),
 		section("DRUCKAUFTRÄGE", rows...),
-	).Gap(u(20)).Padding(u(pick(32, 16))).MaxWidth(u(900))).Align(geom.Top)).Flex(1)
+	).Gap(u(20)).Padding(u(pick(32, 16))).MinWidth(u(vw()))).Align(geom.Top)).Flex(1)
 }
 
 // printerCard zeigt den Zustand des Druckers und die Handgriffe dazu.

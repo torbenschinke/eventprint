@@ -106,6 +106,10 @@ func (a *App) page(st *states, s Screen) xgift.Page {
 	switch s {
 	case ScreenLibrary:
 		content = gift.Component("library", func(ctx *gift.Context) gift.View { return a.library(ctx, st) })
+		// Weiß wie Files: Die Seitenleiste schwebt mit Schatten über
+		// derselben Fläche, auf der das Raster liegt; eine eigene Fläche
+		// für das Raster schnitte den Schatten ab.
+		bg = ui.ColorSurface
 	case ScreenStudio:
 		content = gift.Component("studio", func(ctx *gift.Context) gift.View { return a.studioScreen(ctx, st) })
 		bg = ui.ColorClear

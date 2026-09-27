@@ -155,10 +155,10 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 	}
 
 	scroller := ui.VScroll(ui.VStack(column).Align(geom.Top).
-		PaddingInsets(geom.Insets{Left: u(pick(24, 16)), Right: u(pick(24, 16)), Bottom: u(24)})).Bounce(true).Flex(1)
+		PaddingInsets(geom.Insets{Left: u(pick(24, 16)), Right: u(pick(24, 16)), Bottom: u(24)})).Flex(1)
 
 	if compact {
-		list := xgift.Page{Key: "list", Depth: 0, View: xgift.Fill(ui.VScroll(sidebar).Bounce(true)).Key("list")}
+		list := xgift.Page{Key: "list", Depth: 0, View: xgift.Fill(ui.VScroll(sidebar)).Key("list")}
 		page := xgift.Page{Key: "detail", Depth: 1, View: ui.VStack(
 			ui.HStack(
 				link("‹ Einstellungen", func() { open.Set(false) }),
@@ -176,11 +176,11 @@ func (a *App) settingsScreen(ctx *gift.Context, st *states) gift.View {
 	}
 
 	return xgift.HStretch(
-		xgift.Fill(ui.VScroll(sidebar).Bounce(true)).Width(u(400)),
+		xgift.Fill(ui.VScroll(sidebar)).Width(u(400)),
 		grow(ui.VStack(
 			ui.HStack(fill(), title(name, 17), fill()).PaddingInsets(geom.Insets{Top: u(16), Bottom: u(8)}),
 			scroller,
-		).Background(ui.ColorBackground)),
+		)),
 	).Flex(1)
 }
 
@@ -291,7 +291,7 @@ func (a *App) wifiPasswordSheet(ctx *gift.Context, st *states) gift.View {
 
 	return sheetCard(u(560),
 		title("Kennwort für „"+ssid+"“", 22),
-		ui.TextField(ed).Placeholder("WLAN-Kennwort").FontSize(u(18)).MinHeight(u(52)).OnSubmit(func(string) { connect() }),
+		field(ui.TextField(ed).Placeholder("WLAN-Kennwort").FontSize(u(18)).MinHeight(u(52)).OnSubmit(func(string) { connect() })),
 		ui.HStack(secondary("Abbrechen", func() { a.dismissSheet() }), primary("Verbinden", connect).Flex(1)).Gap(u(12)),
 	)
 }
@@ -495,7 +495,7 @@ func (a *App) uploadSettings(ctx *gift.Context, st *states, s device.Settings, s
 	}
 
 	field := func(ed *ui.TextEditor, placeholder string) gift.View {
-		return ui.TextField(ed).Placeholder(placeholder).FontSize(u(16)).Frame(u(pick(380, 300)), u(44))
+		return rowField(ui.TextField(ed).Placeholder(placeholder).FontSize(u(16)).Frame(u(pick(380, 300)), u(44)))
 	}
 
 	var account []gift.View
@@ -645,7 +645,7 @@ func (a *App) nasSettings(ctx *gift.Context, st *states, s device.Settings, save
 	}
 
 	field := func(ed *ui.TextEditor, placeholder string) gift.View {
-		return ui.TextField(ed).Placeholder(placeholder).FontSize(u(16)).Frame(u(380), u(44))
+		return rowField(ui.TextField(ed).Placeholder(placeholder).FontSize(u(16)).Frame(u(380), u(44)))
 	}
 
 	passHint := "Kennwort"
@@ -770,7 +770,7 @@ func (a *App) kioskSettings(ctx *gift.Context, st *states, s device.Settings, sa
 			}),
 		).Gap(u(16)).Align(geom.Center).Padding(u(18)).Background(ui.ColorSurface).CornerRadius(u(14)),
 		section("VERANSTALTUNG",
-			ui.Row("Titel").Accessory(ui.TextField(titleEd).Placeholder("z. B. Hochzeit Anna & Ben").FontSize(u(16)).Frame(u(360), u(44)).
+			ui.Row("Titel").Accessory(rowField(ui.TextField(titleEd).Placeholder("z. B. Hochzeit Anna & Ben").FontSize(u(16)).Frame(u(360), u(44))).
 				OnSubmit(func(v string) { save(func(s *device.Settings) { s.EventTitle = strings.TrimSpace(v) }) })),
 			ui.Row("Eventfarbe").Accessory(ui.HStack(accents...).Gap(u(6))),
 		),
@@ -784,7 +784,7 @@ func (a *App) kioskSettings(ctx *gift.Context, st *states, s device.Settings, sa
 		section("ZUGANG",
 			ui.Row("Betreuer-PIN").Value(pinState),
 			ui.Row("Neue PIN").Accessory(ui.HStack(
-				ui.TextField(pinEd).Placeholder("6 Ziffern").FontSize(u(16)).Frame(u(180), u(44)),
+				rowField(ui.TextField(pinEd).Placeholder("6 Ziffern").FontSize(u(16)).Frame(u(180), u(44))),
 				secondary("Festlegen", func() {
 					if !a.fail(a.dev.Device.SetPin(a.dev.Subject(), strings.TrimSpace(pinEd.Text()))) {
 						pinEd.SetText("")

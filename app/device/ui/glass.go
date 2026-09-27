@@ -115,20 +115,12 @@ func caps(s string) ui.TextView {
 
 // edgeFade ist der Scroll-Rand von iPadOS 26: Unter einer schwebenden
 // Kopfzeile verschwindet der Inhalt nicht an einer harten Kante, sondern
-// wird weich ausgeblendet. Die Kopfzeile selbst (solid hoch) bleibt fast
-// deckend, darunter läuft die Deckung über tail auf null aus.
-//
-// gift kennt keine Verlaufsfüllung; ein Dutzend gestaffelter Streifen sieht
-// auf einem ruhigen Hintergrund genauso aus und kostet einen Zeichenaufruf.
+// wird weich ausgeblendet. Die Kopfzeile selbst (solid hoch) bleibt deckend,
+// darunter läuft ein Verlauf über tail auf null aus – ein Verlauf von gift,
+// der so viel kostet wie eine Fläche.
 func edgeFade(solid, tail float32, c ui.Color) gift.View {
-	const steps = 24
-	bands := make([]gift.View, 0, steps+1)
-	bands = append(bands, ui.Box().Frame(geom.Unbounded(), solid*0.8).Background(c))
-	rest := solid*0.2 + tail
-	for i := range steps {
-		t := (float32(i) + 0.5) / steps
-		bands = append(bands, ui.Box().Frame(geom.Unbounded(), rest/steps).Background(ui.Fade(c, 1-t*t*(3-2*t))))
-	}
-
-	return ui.VStack(bands...)
+	return ui.VStack(
+		ui.Box().Frame(geom.Unbounded(), solid*0.75).Background(c),
+		ui.Box().Frame(geom.Unbounded(), solid*0.25+tail).Background(ui.LinearGradient(c, ui.Fade(c, 0))),
+	)
 }

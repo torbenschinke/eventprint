@@ -229,13 +229,19 @@ func primary(label string, action func()) ui.ButtonView {
 // vollständig abgerundet.
 func capsule(h float32) float32 { return u(h / 2) }
 
+// filled ist ein hervorgehobener Knopf wie .glassProminent unter iOS 26:
+// Die Farbe ist kein flacher Anstrich, sondern hat Tiefe – oben ein wenig
+// heller, unten die volle Farbe, darunter ein farbiger, weicher Schatten.
+// Gedrückt hebt er sich, leuchtet von innen und wird heller.
 func filled(label string, face, fg ui.Color, action func()) ui.ButtonView {
 	r := capsule(pick(52, 44))
+	top, bottom := lighten(face, 0.2), face
 	return ui.Button(ui.Text(label).FontSize(u(pick(17, 16))).Font(boldFont).Foreground(fg), action).
-		Style(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
-		HoverStyle(ui.ButtonStyle{Background: face, Border: noBorder, CornerRadius: r}).
-		PressedStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.75), CornerRadius: r}).
+		Style(ui.ButtonStyle{Background: top, BackgroundTo: bottom, Border: noBorder, CornerRadius: r}).
+		HoverStyle(ui.ButtonStyle{Background: top, BackgroundTo: bottom, Border: noBorder, CornerRadius: r}).
+		PressedStyle(ui.ButtonStyle{Background: lighten(face, 0.32), BackgroundTo: lighten(face, 0.12), Border: noBorder, CornerRadius: r}).
 		DisabledStyle(ui.ButtonStyle{Background: ui.Fade(face, 0.35), CornerRadius: r}).
+		Shadow(ui.Shadow{Blur: u(18), OffsetY: u(6), Color: ui.Fade(face, 0.32)}).
 		Lift(true).
 		MinHeight(u(pick(52, 44))).
 		PaddingInsets(geom.Insets{Left: u(pick(22, 16)), Right: u(pick(22, 16))})
@@ -277,6 +283,31 @@ func iconButton(sym ui.Symbol, label string, fg ui.Color, action func()) ui.Butt
 // Linie ohne Breite gälte als "nicht gesetzt"; eine durchsichtige ist
 // ausdrücklich keine.
 var noBorder = ui.Border{Width: 1, Color: ui.ColorClear}
+
+// lighten mischt k Anteile Weiß in c. Farben sind vormultipliziert, und für
+// eine deckende Farbe ist das dasselbe wie im Klartext.
+func lighten(c ui.Color, k float32) ui.Color {
+	r := ui.ResolveColor(c)
+	return ui.Color{R: r.R + (r.A-r.R)*k, G: r.G + (r.A-r.G)*k, B: r.B + (r.A-r.B)*k, A: r.A}
+}
+
+// field ist ein Textfeld wie unter iOS 26: eine zart gefüllte, abgerundete
+// Fläche ohne Rahmen und ohne Fokusring – wo geschrieben wird, zeigt der
+// Cursor.
+func field(tf ui.TextFieldView) ui.TextFieldView {
+	return tf.Background(ui.Fade(ui.ColorLabel, 0.06)).
+		Border(ui.Border{}).
+		FocusRing(ui.Border{}).
+		CornerRadius(u(12)).
+		PaddingInsets(geom.Insets{Left: u(14), Right: u(14)})
+}
+
+// rowField ist ein Textfeld in einer Listenzeile: wie in den Einstellungen
+// von iOS ohne eigene Fläche; die Zeile ist das Feld, der Platzhalter zeigt,
+// dass man hier schreibt.
+func rowField(tf ui.TextFieldView) ui.TextFieldView {
+	return tf.Background(ui.ColorClear).Border(ui.Border{}).FocusRing(ui.Border{})
+}
 
 // fill ist ein dehnbarer Zwischenraum.
 func fill() gift.View { return ui.Spacer() }

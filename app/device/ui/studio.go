@@ -184,7 +184,7 @@ func (a *App) filmstrip(ctx *gift.Context, st *states, items []photo.Location) g
 	}).Frame(u(filmThumb()), u(filmThumb())))
 
 	return xgift.Fill(glassPane(u(pick(28, 20)), paneTint(),
-		ui.VScroll(ui.VStack(cells...).Gap(u(pick(12, 8))).Align(geom.Top).Padding(u(pick(12, 8)))).Bounce(true).Flex(1),
+		ui.VScroll(ui.VStack(cells...).Gap(u(pick(12, 8))).Align(geom.Top).Padding(u(pick(12, 8)))).Flex(1),
 	)).Width(u(filmstripWidth()))
 }
 
@@ -318,7 +318,7 @@ func (a *App) inspector(ctx *gift.Context, st *states, sheets int) gift.View {
 	design := glassPane(u(pick(30, 20)), paneTint(),
 		ui.SegmentedControl(tab, []string{"Format", "Design", "Bild", "Text"}, st.studioTab.Set).Capsule(true).
 			FontSize(u(pick(15, 14))).Frame(geom.Unbounded(), u(pick(40, 36))).Key("tabs"),
-		ui.VScroll(content).Bounce(true).Flex(1),
+		ui.VScroll(content).Flex(1),
 	).Gap(u(pick(10, 6))).Padding(u(pick(16, 10))).Flex(1)
 
 	// Die Druckleiste: Anzahl, Oberfläche und der Knopf, eine Glasfläche für
@@ -488,11 +488,11 @@ func (a *App) textTab(ctx *gift.Context, l printing.Layout, set func(func(*print
 
 	return ui.VStack(
 		body("Beschriftung", 15),
-		ui.TextField(ed).
+		field(ui.TextField(ed).
 			Placeholder("z. B. Sommerfest 2026").
 			FontSize(u(17)).
 			OnChange(func(v string) { set(func(l *printing.Layout) { l.Caption = v }) }).
-			MinHeight(u(48)),
+			MinHeight(u(48))),
 		muted(hint, 13),
 		body("Schrift", 15),
 		ui.HScroll(fonts...).Gap(u(8)),
