@@ -23,18 +23,18 @@ var solid bool
 // paneTint ist die Milch des Glases, paneEdge seine helle Kante.
 func paneTint() ui.Color {
 	if darkPalette {
-		return ui.RGBA(30, 30, 36, 105)
+		return ui.RGBA(30, 30, 36, 90)
 	}
 
-	return ui.RGBA(255, 255, 255, 80)
+	return ui.RGBA(255, 255, 255, 60)
 }
 
 func paneEdge() ui.Color {
 	if darkPalette {
-		return ui.RGBA(255, 255, 255, 46)
+		return ui.RGBA(255, 255, 255, 40)
 	}
 
-	return ui.RGBA(255, 255, 255, 140)
+	return ui.RGBA(255, 255, 255, 110)
 }
 
 // paneBackground ist Glas oder, bei reduzierter Transparenz, die Fläche.
@@ -43,12 +43,16 @@ func paneBackground(tint ui.Color) ui.Background {
 		return ui.ColorSurface
 	}
 
-	return ui.Glass().Tint(tint).Blur(u(24)).Refraction(u(5)).Highlight(0.55).Grain(0.04)
+	// Flach wie die Vorlage (scratchpad liquid-glass.html, iOS): Milch und
+	// Unschärfe, keine Lichtbrechung am Rand und kein Randschein. Beides
+	// ließ die Flächen wie gewölbte Linsen wirken. Die Kante besorgt ein
+	// Haarstrich, siehe glassPane.
+	return ui.Glass().Tint(tint).Blur(u(26)).Refraction(0).Highlight(0).Grain(0.03)
 }
 
 // paneShadow hebt eine Glasfläche leicht vom Hintergrund ab.
 func paneShadow() ui.Shadow {
-	return ui.Shadow{Blur: u(26), OffsetY: u(8), Color: ui.RGBA(0, 0, 0, 30)}
+	return ui.Shadow{Blur: u(30), OffsetY: u(10), Color: ui.RGBA(0, 0, 0, 36)}
 }
 
 // glassCard ist eine Karte aus Glas; sie ersetzt card auf Glasbildschirmen.
