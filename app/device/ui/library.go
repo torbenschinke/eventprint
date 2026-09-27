@@ -358,13 +358,17 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 		hint = res.Err().Error()
 	}
 
+	// Die Kopfzeile schwebt über dem Raster, das unter ihr durchläuft und
+	// dort weich ausgeblendet wird – der Scroll-Rand von iPadOS 26.
+	headH := u(pick(88, 62))
 	header := ui.HStack(
 		ui.VStack(
 			title(name, pick(30, 22)),
 			muted(fmt.Sprintf("%s · %d Fotos", hint, len(list.items)), 15),
 		).Gap(u(2)).Flex(1),
 		a.selectAllButton(list.items),
-	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Top: u(pick(14, 8)), Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(8)})
+	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Top: u(pick(14, 8)), Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(8)}).
+		MinHeight(headH)
 
 	var grid gift.View
 	if res.Loaded() && len(list.items) == 0 {
@@ -374,7 +378,7 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 			Layout(brickRows(u(rowHeight()))).
 			Tile(tileStyle()).
 			Overscan(u(400)).
-			PaddingInsets(geom.Insets{Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(pick(120, 84))}).
+			PaddingInsets(geom.Insets{Top: headH, Left: u(pick(32, 16)), Right: u(pick(32, 16)), Bottom: u(pick(120, 84))}).
 			OnSelect(func(id asset.ID) {
 				a.selected = toPhotoIDs(xgift.TouchSelect(g, toAssetIDs(a.selected), id))
 				st.selection.Set(st.selection.Get() + 1)
@@ -382,8 +386,19 @@ func (a *App) photoBrowser(ctx *gift.Context, st *states) gift.View {
 			Flex(1)
 	}
 
+	if res.Loaded() && len(list.items) == 0 {
+		return ui.ZStack(
+			xgift.Fill(ui.VStack(header, grid).Background(ui.ColorSurface)),
+			a.selectionBar(st),
+		).Align(geom.Bottom)
+	}
+
 	return ui.ZStack(
-		xgift.Fill(ui.VStack(header, grid).Background(ui.ColorSurface)),
+		xgift.Fill(ui.VStack(grid).Background(ui.ColorSurface)),
+		xgift.Fill(ui.VStack(
+			ui.ZStack(edgeFade(headH, u(pick(28, 18)), ui.ColorSurface), header).Align(geom.Top),
+			fill(),
+		)),
 		a.selectionBar(st),
 	).Align(geom.Bottom)
 }

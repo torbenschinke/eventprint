@@ -75,7 +75,7 @@ func wallpaperOf(path string, tone wallTone) *xgift.MemorySource {
 	walls.Unlock()
 
 	img := decodeSmall(path)
-	src := xgift.Memory(encodeWall(tint(blur(img), tone)))
+	src := xgift.Memory(encodeWall(toneWall(blur(img), tone)))
 
 	walls.Lock()
 	defer walls.Unlock()
@@ -197,9 +197,9 @@ func boxPass(dst, src *image.RGBA, r int, horizontal bool) {
 	}
 }
 
-// tint hebt die Sättigung an, wie ein Foto hinter Milchglas leuchtet, und
+// toneWall hebt die Sättigung an, wie ein Foto hinter Milchglas leuchtet, und
 // hellt oder dunkelt nach dem Erscheinungsbild ab.
-func tint(img *image.RGBA, tone wallTone) *image.RGBA {
+func toneWall(img *image.RGBA, tone wallTone) *image.RGBA {
 	b := img.Bounds()
 	cx, cy := float32(b.Dx())/2, float32(b.Dy())/2
 	for y := range b.Dy() {

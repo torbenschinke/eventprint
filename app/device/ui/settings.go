@@ -327,7 +327,15 @@ func (a *App) displaySettings(s device.Settings, save func(func(*device.Settings
 			}).Capsule(true).FontSize(u(15)).Frame(geom.Unbounded(), u(40))),
 		),
 		muted("Automatisch ist die Box von 20 bis 7 Uhr dunkel. Der Kiosk ist immer dunkel.", 13).MaxLines(2).PaddingInsets(geom.Insets{Left: u(16)}),
-		section("",
+		section("GLAS",
+			ui.Row("").Accessory(ui.HStack(
+				muted("Klar", 13),
+				ui.Slider(float64(tintOf(s.GlassTint)), func(v float64) {
+					save(func(s *device.Settings) { s.GlassTint = max(1, int(v*100+0.5)) })
+					a.refreshTheme()
+				}).Step(0.05).Label("Tönung des Glases").Flex(1),
+				muted("Getönt", 13),
+			).Gap(u(12)).Align(geom.Center).Flex(1)),
 			ui.Row("Transparenz reduzieren").Subtitle("Deckende Flächen statt Glas auf Home und im Druck-Studio").
 				Accessory(ui.Toggle(s.ReduceTransparency, func(v bool) {
 					save(func(s *device.Settings) { s.ReduceTransparency = v })

@@ -81,6 +81,10 @@ type Settings struct {
 	// ReduceTransparency macht die Glasflächen im Heimbetrieb deckend.
 	ReduceTransparency bool `json:"reduceTransparency,omitempty"`
 
+	// GlassTint ist die Tönung des Glases in Prozent, von klar (1) bis
+	// getönt (100), wie der Regler von iOS 27. Null heißt Voreinstellung.
+	GlassTint int `json:"glassTint,omitempty"`
+
 	// NAS ist die Netzwerkfreigabe mit den Fotos des Haushalts.
 	NAS nas.Config `json:"nas,omitzero"`
 

@@ -17,16 +17,33 @@ import (
 // Karten vor dem Glas. Das ist lesbarer bei grellem Licht und spart auf
 // einem langsamen Pi die letzten Millisekunden.
 
-// solid ist "Transparenz reduzieren"; gesetzt von ApplyTheme.
-var solid bool
+// solid ist "Transparenz reduzieren", tint die Tönung von 0 (klar) bis 1
+// (getönt); beides gesetzt von ApplyTheme.
+var (
+	solid bool
+	tint  float32 = defaultTint
+)
 
-// paneTint ist die Milch des Glases, paneEdge seine helle Kante.
-func paneTint() ui.Color {
-	if darkPalette {
-		return ui.RGBA(30, 30, 36, 90)
+// defaultTint entspricht der Milch der Vorlage: 24 % Weiß im Hellen.
+const defaultTint = 0.3
+
+// tintOf liest die Tönung aus den Einstellungen.
+func tintOf(percent int) float32 {
+	if percent <= 0 {
+		return defaultTint
 	}
 
-	return ui.RGBA(255, 255, 255, 60)
+	return float32(min(percent, 100)) / 100
+}
+
+// paneTint ist die Milch des Glases, paneEdge seine helle Kante. Die
+// Tönung reicht von fast klar bis fast deckend.
+func paneTint() ui.Color {
+	if darkPalette {
+		return ui.RGBA(30, 30, 36, uint8(30+200*tint))
+	}
+
+	return ui.RGBA(255, 255, 255, uint8(15+215*tint))
 }
 
 func paneEdge() ui.Color {
@@ -94,4 +111,24 @@ func glassPill(height float32, content ...gift.View) ui.Stack {
 // caps ist die kleine Überschrift in Großbuchstaben über einer Glaskarte.
 func caps(s string) ui.TextView {
 	return ui.Text(s).FontSize(u(pick(12, 11))).Font(boldFont).Foreground(ui.ColorSecondaryLabel)
+}
+
+// edgeFade ist der Scroll-Rand von iPadOS 26: Unter einer schwebenden
+// Kopfzeile verschwindet der Inhalt nicht an einer harten Kante, sondern
+// wird weich ausgeblendet. Die Kopfzeile selbst (solid hoch) bleibt fast
+// deckend, darunter läuft die Deckung über tail auf null aus.
+//
+// gift kennt keine Verlaufsfüllung; ein Dutzend gestaffelter Streifen sieht
+// auf einem ruhigen Hintergrund genauso aus und kostet einen Zeichenaufruf.
+func edgeFade(solid, tail float32, c ui.Color) gift.View {
+	const steps = 24
+	bands := make([]gift.View, 0, steps+1)
+	bands = append(bands, ui.Box().Frame(geom.Unbounded(), solid*0.8).Background(c))
+	rest := solid*0.2 + tail
+	for i := range steps {
+		t := (float32(i) + 0.5) / steps
+		bands = append(bands, ui.Box().Frame(geom.Unbounded(), rest/steps).Background(ui.Fade(c, 1-t*t*(3-2*t))))
+	}
+
+	return ui.VStack(bands...)
 }
