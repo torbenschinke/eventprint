@@ -19,17 +19,64 @@ import (
 	"github.com/torbenschinke/eventprint/pkg/xgift"
 )
 
-// homeShell ist der Rahmen des Heimbetriebs: Statusleiste und Bildschirm.
+// homeShell ist der Rahmen des Heimbetriebs: Hintergrundbild, Statusleiste
+// und Bildschirm.
+//
+// Das Hintergrundbild liegt unter allem, auch unter der Statusleiste; der
+// Home-Bildschirm ist durchsichtig und zeigt es, die anderen Bildschirme
+// decken es mit ihrer eigenen Fläche ab. So steht es beim Wechsel still,
+// während die Seiten darüber gleiten.
 func (a *App) homeShell(ctx *gift.Context, st *states) gift.View {
 	screen := ctx.Read(st.screen)
 	if screen != a.nav.current {
 		a.nav.previous, a.nav.current = a.nav.current, screen
 	}
 
-	return ui.VStack(
-		gift.Component("statusbar", func(ctx *gift.Context) gift.View { return a.statusBar(ctx, st, false, "") }),
-		grow(xgift.Pages(a.page(st, a.nav.current), a.page(st, a.nav.previous))),
-	).Background(wallpaper).Flex(1)
+	return ui.ZStack(
+		xgift.Fill(gift.Component("wallpaper", func(ctx *gift.Context) gift.View { return a.wallpaper(ctx, st) })),
+		xgift.Fill(ui.VStack(
+			gift.Component("statusbar", func(ctx *gift.Context) gift.View { return a.statusBar(ctx, st, false, "") }),
+			grow(xgift.Pages(a.page(st, a.nav.current), a.page(st, a.nav.previous))),
+		)),
+	).Flex(1)
+}
+
+// wallpaper ist das Hintergrundbild des Heimbetriebs: das neueste Foto,
+// weichgezeichnet; siehe wallpaper.go.
+func (a *App) wallpaper(ctx *gift.Context, st *states) gift.View {
+	tone := wallLight
+	if a.dark {
+		tone = wallDark
+	}
+
+	res := xgift.UseResource[*xgift.MemorySource](ctx, "wall")
+	res.LoadKeyed([3]any{ctx.Read(st.tick) / 10, ctx.Read(st.photos), tone}, func() (*xgift.MemorySource, error) {
+		return wallpaperOf(a.newestPhoto(), tone), nil
+	})
+
+	if res.Value() == nil {
+		return ui.Box().Background(wallpaper)
+	}
+
+	return ui.Image(res.Value()).Fit(ui.FitCover).Placeholder(wallpaper)
+}
+
+// newestPhoto ist der Pfad des neuesten Fotos: im Eingang, sonst in der
+// Mediathek, sonst keiner.
+func (a *App) newestPhoto() string {
+	subject := a.dev.Subject()
+	for _, scope := range []photo.Scope{photo.ScopeInbox, photo.ScopeAll} {
+		all, err := a.dev.Photos.FindAll(subject, photo.Query{Scope: scope})
+		if err != nil || len(all) == 0 {
+			continue
+		}
+
+		if locs, err := a.dev.Photos.Locate(subject, all[0].ID); err == nil && len(locs) > 0 {
+			return locs[0].Path
+		}
+	}
+
+	return ""
 }
 
 // depth ordnet die Bildschirme für die Bewegung beim Wechsel: Tiefer
@@ -47,7 +94,9 @@ func (s Screen) depth() int {
 }
 
 // page baut einen Bildschirm als Seite mit eigenem, deckendem Hintergrund:
-// Während eines Wechsels liegen zwei Seiten übereinander.
+// Während eines Wechsels liegen zwei Seiten übereinander. Nur der
+// Home-Bildschirm ist durchsichtig; unter ihm liegt das Hintergrundbild, und
+// jede andere Seite gleitet deckend über ihn.
 func (a *App) page(st *states, s Screen) xgift.Page {
 	var content gift.View
 	bg := ui.ColorBackground
@@ -56,13 +105,14 @@ func (a *App) page(st *states, s Screen) xgift.Page {
 		content = gift.Component("library", func(ctx *gift.Context) gift.View { return a.library(ctx, st) })
 	case ScreenStudio:
 		content = gift.Component("studio", func(ctx *gift.Context) gift.View { return a.studioScreen(ctx, st) })
+		bg = ui.ColorClear
 	case ScreenJobs:
 		content = gift.Component("jobs", func(ctx *gift.Context) gift.View { return a.jobsScreen(ctx, st) })
 	case ScreenSettings:
 		content = gift.Component("settings", func(ctx *gift.Context) gift.View { return a.settingsScreen(ctx, st) })
 	default:
 		content = gift.Component("homescreen", func(ctx *gift.Context) gift.View { return a.homeScreen(ctx, st) })
-		bg = wallpaper
+		bg = ui.ColorClear
 	}
 
 	return xgift.Page{
@@ -80,7 +130,9 @@ type status struct {
 	printer string
 }
 
-// statusBar zeigt Uhrzeit, Papier, Upload-Dienst und Funknetz.
+// statusBar zeigt Uhrzeit, Papier, Upload-Dienst und Funknetz. Im
+// Heimbetrieb stehen die Angaben in Glaskapseln über dem Hintergrundbild, im
+// Kiosk (dark) schlicht auf dem dunklen Grund.
 func (a *App) statusBar(ctx *gift.Context, st *states, dark bool, pill string) gift.View {
 	tick := ctx.Read(st.tick)
 	res := xgift.UseResource[status](ctx, "status")
@@ -94,8 +146,8 @@ func (a *App) statusBar(ctx *gift.Context, st *states, dark bool, pill string) g
 		fg = white
 	}
 
-	cloud := "Upload"
-	if s.relay != relay.StateReady {
+	cloud, cloudOK := "Upload", s.relay == relay.StateReady
+	if !cloudOK {
 		cloud = "Kein Upload"
 	}
 
@@ -104,34 +156,52 @@ func (a *App) statusBar(ctx *gift.Context, st *states, dark bool, pill string) g
 		net = s.wifi.SSID
 	}
 
-	items := []gift.View{
+	clock := ui.HStack(
 		ui.Text(now.Format("15:04")).FontSize(u(13)).Font(boldFont).Foreground(fg),
 		ui.Text(weekday(now) + now.Format(" 2. ") + month(now)).FontSize(u(13)).Foreground(ui.ColorSecondaryLabel),
-		fill(),
-	}
+	).Gap(u(7)).Align(geom.Center)
 
-	if pill != "" {
-		items = append(items, ui.Text(pill).FontSize(u(12)).Font(boldFont).Foreground(ink).
-			Background(ui.ColorAccent).CornerRadius(u(10)).
-			PaddingInsets(geom.Insets{Left: u(10), Right: u(10), Top: u(2), Bottom: u(2)}))
-	}
-
-	for _, it := range []struct {
-		sym   ui.Symbol
+	type item struct {
+		lead  gift.View
 		label string
-	}{
-		{outline.Printer, fmt.Sprintf("%d Blatt", s.paper)},
-		{outline.CloudArrowUp, cloud},
-		{outline.Globe, net},
-	} {
-		items = append(items, ui.HStack(
-			ui.Icon(it.sym).Size(u(16)).Foreground(fg),
-			ui.Text(it.label).FontSize(u(13)).Font(boldFont).Foreground(fg),
-		).Gap(u(6)).Align(geom.Center))
 	}
 
-	return ui.HStack(items...).Gap(u(18)).Align(geom.Center).
-		PaddingInsets(geom.Insets{Left: u(pick(28, 16)), Right: u(pick(28, 16))}).
+	dot := ui.Box().Frame(u(8), u(8)).CornerRadius(u(4)).Background(green)
+	if !cloudOK {
+		dot = dot.Background(orange)
+	}
+
+	items := []item{
+		{ui.Icon(outline.Printer).Size(u(16)).Foreground(fg), fmt.Sprintf("%d Blatt", s.paper)},
+		{dot, cloud},
+		{ui.Icon(outline.Globe).Size(u(16)).Foreground(fg), net},
+	}
+
+	if dark {
+		row := []gift.View{clock, fill()}
+		if pill != "" {
+			row = append(row, ui.Text(pill).FontSize(u(12)).Font(boldFont).Foreground(ink).
+				Background(ui.ColorAccent).CornerRadius(u(10)).
+				PaddingInsets(geom.Insets{Left: u(10), Right: u(10), Top: u(2), Bottom: u(2)}))
+		}
+
+		for _, it := range items {
+			row = append(row, ui.HStack(it.lead, ui.Text(it.label).FontSize(u(13)).Font(boldFont).Foreground(fg)).Gap(u(6)).Align(geom.Center))
+		}
+
+		return ui.HStack(row...).Gap(u(18)).Align(geom.Center).
+			PaddingInsets(geom.Insets{Left: u(pick(28, 16)), Right: u(pick(28, 16))}).
+			MinHeight(u(pick(32, 28)))
+	}
+
+	h := u(pick(36, 30))
+	row := []gift.View{glassPill(h, clock), fill()}
+	for _, it := range items {
+		row = append(row, glassPill(h, it.lead, ui.Text(it.label).FontSize(u(13)).Font(boldFont).Foreground(fg).MaxLines(1)))
+	}
+
+	return ui.HStack(row...).Gap(u(8)).Align(geom.Center).
+		PaddingInsets(geom.Insets{Left: u(pick(24, 12)), Right: u(pick(24, 12))}).
 		MinHeight(u(statusBarHeight()))
 }
 
@@ -168,11 +238,12 @@ type homeData struct {
 	address  relay.Address
 }
 
-// homeScreen ist der Home-Bildschirm mit Widgets und App-Symbolen.
+// homeScreen ist der Home-Bildschirm: oben groß die Uhrzeit und was
+// ansteht, daneben der Start in den Kiosk; darunter Eingang, Drucker und
+// Handy als Glaskarten; unten das Dock mit den App-Symbolen.
 //
-// Links die Widgets, rechts die App-Symbole und der Start in den Kiosk. Die
-// Spalten teilen sich die Breite anteilig; auf kleinen Panels werden die
-// Widgets knapper, statt aus dem Bild zu laufen.
+// Die Spalten teilen sich die Breite anteilig; auf kleinen Panels wird alles
+// knapper, statt aus dem Bild zu laufen.
 func (a *App) homeScreen(ctx *gift.Context, st *states) gift.View {
 	tick := ctx.Read(st.tick)
 
@@ -181,27 +252,42 @@ func (a *App) homeScreen(ctx *gift.Context, st *states) gift.View {
 	d := res.Value()
 
 	pad, gap := gutter(), spacing()
-	inner := vw() - 2*pad - gap
-	right := clamp(inner*0.36, 260, 420)
-	if !compact {
-		right = inner * 0.36
-	}
+	inner := vw() - 2*pad - 2*gap
+	inbox := inner * 0.46
 
-	left := inner - right
-
-	lower := xgift.HStretch(
-		xgift.Fill(a.printerWidget(st, d)).Flex(1),
-		xgift.Fill(a.phoneWidget(d)).Flex(1),
+	widgets := xgift.HStretch(
+		xgift.Fill(a.inboxWidget(st, d, inbox)).Width(u(inbox)),
+		xgift.Fill(a.printerWidget(st, d)).Flex(0.8),
+		xgift.Fill(a.phoneWidget(d)).Flex(1.2),
 	).Gap(u(gap)).Flex(1)
 
-	return ui.VStack(xgift.HStretch(
-		xgift.Fill(ui.VStack(a.inboxWidget(st, d, left), lower).Gap(u(gap))).Width(u(left)),
-		xgift.Fill(ui.VStack(
-			a.appIcons(st, right),
-			xgift.Fill(a.kioskWidget(st, d)).Flex(1),
-		).Gap(u(gap))).Flex(1),
-	).Gap(u(gap)).Flex(1)).
-		PaddingInsets(geom.Insets{Top: u(pick(16, 8)), Left: u(pad), Right: u(pad), Bottom: u(pick(32, 12))})
+	return ui.VStack(
+		ui.HStack(
+			a.greeting(d),
+			fill(),
+			a.kioskWidget(st, d),
+		).Align(geom.Top),
+		widgets,
+		ui.HStack(fill(), a.dock(st), fill()),
+	).Gap(u(gap)).
+		PaddingInsets(geom.Insets{Top: u(pick(8, 2)), Left: u(pad), Right: u(pad), Bottom: u(pick(20, 10))})
+}
+
+// greeting ist die Uhrzeit groß wie auf einem Sperrbildschirm und darunter,
+// was ansteht.
+func (a *App) greeting(d homeData) gift.View {
+	line := "Keine neuen Fotos"
+	switch {
+	case d.unseen == 1:
+		line = "1 neues Foto wartet im Eingang"
+	case d.unseen > 1:
+		line = fmt.Sprintf("%d neue Fotos warten im Eingang", d.unseen)
+	}
+
+	return ui.VStack(
+		ui.Text(time.Now().Format("15:04")).FontSize(u(pick(84, 50))).Font(boldFont),
+		ui.Text(line).FontSize(u(pick(19, 15))).Font(boldFont).Foreground(ui.ColorSecondaryLabel),
+	).Gap(u(pick(2, 0))).Align(geom.Leading).PaddingInsets(geom.Insets{Left: u(4)})
 }
 
 func (a *App) loadHome() (homeData, error) {
@@ -244,7 +330,7 @@ func (a *App) inboxWidget(st *states, d homeData, width float32) gift.View {
 	inner := width - 2*pick(22, 14)
 	gap := pick(12, 8)
 	n := clamp(float32(int((inner+gap)/(90+gap))), 1, 5)
-	edge := min((inner-gap*(n-1))/n, pick(150, 120), vh()*0.22)
+	edge := min((inner-gap*(n-1))/n, pick(170, 120), vh()*0.25)
 
 	thumbs := []gift.View{}
 	for i, loc := range d.inbox {
@@ -252,35 +338,33 @@ func (a *App) inboxWidget(st *states, d homeData, width float32) gift.View {
 			break
 		}
 
-		thumbs = append(thumbs, thumb(loc.Path, u(edge)))
+		thumbs = append(thumbs, thumb(loc.Path, u(edge)).CornerRadius(u(edge/8)).
+			Shadow(ui.Shadow{Blur: u(14), OffsetY: u(5), Color: ui.RGBA(0, 0, 0, 45)}))
 	}
 
 	if len(thumbs) == 0 {
 		thumbs = append(thumbs, muted("Noch nichts angekommen. Scanne den QR-Code mit dem Handy, um Fotos zu senden.", pick(16, 14)).MaxLines(3).Flex(1).MinHeight(u(edge)))
 	}
 
-	badge := gift.View(ui.Box().Frame(1, 1))
+	head := []gift.View{caps("EINGANG")}
 	if d.unseen > 0 {
-		badge = ui.Badge(fmt.Sprintf("%d neu", d.unseen)).Color(blue)
+		head = append(head, ui.Badge(fmt.Sprintf("%d neu", d.unseen)).Color(blue))
 	}
 
+	head = append(head, fill(), link(pick2("Alle ansehen", "Alle"), func() { a.openLibrary(photo.ScopeInbox, "") }))
+
 	footer := gift.View(ui.HStack(
-		muted("Fotos von Handy und Kamera warten hier, bis du Format und Design wählst.", 15).MaxLines(2).Flex(1),
+		muted("Vom Handy und von der Kamera – gedruckt wird erst, wenn du wählst.", 14).MaxLines(2).Flex(1),
 		primary("Auswählen und drucken", func() { a.openLibrary(photo.ScopeInbox, "") }),
 	).Gap(u(16)).Align(geom.Center))
 	if compact {
 		footer = primary("Auswählen und drucken", func() { a.openLibrary(photo.ScopeInbox, "") })
 	}
 
-	return card(
-		ui.HStack(
-			xgift.IconTile(outline.Inbox, ui.RGB(0xE8, 0x59, 0x0C), u(pick(34, 28))),
-			title("Eingang", pick(21, 18)),
-			badge,
-			fill(),
-			link(pick2("Alle ansehen", "Alle"), func() { a.openLibrary(photo.ScopeInbox, "") }),
-		).Gap(u(pick(12, 10))).Align(geom.Center),
+	return glassCard(
+		ui.HStack(head...).Gap(u(10)).Align(geom.Center),
 		ui.HStack(thumbs...).Gap(u(gap)),
+		fill(),
 		footer,
 	)
 }
@@ -297,35 +381,27 @@ func (a *App) printerWidget(st *states, d homeData) gift.View {
 	capacity := max(d.settings.PaperCapacity, 1)
 	frac := float64(d.settings.PaperLeft) / float64(capacity)
 
-	detail := "Citizen CZ-01 · 10 × 15 cm"
+	detail := state + " · Citizen CZ-01"
 	if p := d.printer.Problem(); p != "" && !d.settings.Printer.TestMode() {
 		detail = p
 	}
 
-	rows := []gift.View{
-		ui.HStack(
-			xgift.IconTile(outline.Printer, grey, u(pick(34, 26))),
-			title("Drucker", pick(21, 17)).MaxLines(1).Flex(1),
-			ui.Text(state).FontSize(u(pick(15, 13))).Font(boldFont).Foreground(color),
-		).Gap(u(pick(12, 8))).Align(geom.Center),
-		ui.HStack(
-			ui.Text(fmt.Sprint(d.settings.PaperLeft)).FontSize(u(pick(56, 32))).Font(boldFont),
-			body(fmt.Sprintf("von %d Blatt", capacity), pick(17, 14)),
-		).Gap(u(8)).AlignBaseline(),
-		ui.ProgressBar(frac).Tint(green).Frame(geom.Unbounded(), u(pick(10, 8))),
-	}
-
-	if !compact {
-		rows = append(rows, muted(detail, 15).MaxLines(2))
-	}
-
-	rows = append(rows, fill(), link(pick2("Aufträge ansehen", "Aufträge"), func() { a.st.screen.Set(ScreenJobs) }))
-
-	return card(rows...).Flex(1)
+	return glassCard(
+		caps("DRUCKER"),
+		fill(),
+		ui.VStack(
+			ui.Text(fmt.Sprint(d.settings.PaperLeft)).FontSize(u(pick(64, 38))).Font(boldFont),
+			muted(fmt.Sprintf("von %d Blatt", capacity), pick(15, 13)),
+		).Align(geom.Center),
+		ui.ProgressBar(frac).Tint(green).Frame(geom.Unbounded(), u(pick(8, 6))),
+		ui.Text(detail).FontSize(u(pick(14, 12))).Font(boldFont).Foreground(color).MaxLines(2).Align(ui.AlignCenter),
+		fill(),
+		ui.HStack(fill(), link(pick2("Aufträge ansehen", "Aufträge"), func() { a.st.screen.Set(ScreenJobs) }), fill()),
+	).Flex(1)
 }
 
 func (a *App) phoneWidget(d homeData) gift.View {
-	edge := pick(150, clamp(vh()*0.16, 64, 110))
+	edge := pick(150, clamp(vh()*0.2, 64, 120))
 
 	hint := "Kamera öffnen, Code scannen, Fotos wählen. Sie landen im Eingang – gedruckt wird erst, wenn du hier auswählst."
 	if compact {
@@ -333,19 +409,18 @@ func (a *App) phoneWidget(d homeData) gift.View {
 	}
 
 	// Ohne Upload-Dienst gibt es keinen Code; dann steht dort, warum, als
-	// Text in voller Breite statt gequetscht in einem Quadrat.
+	// Text in voller Breite statt gequetscht in einem Quadrat. Der Code liegt
+	// auf einer weißen Karte, damit jede Kamera ihn auf dem Glas findet.
 	var code gift.View = ui.Box().Frame(0, 0)
 	if d.address.URL != "" {
-		code = xgift.QRCode(d.address.URL, u(edge))
+		code = ui.VStack(xgift.QRCode(d.address.URL, u(edge-pick(24, 14)))).
+			Padding(u(pick(12, 7))).Background(white).CornerRadius(u(pick(20, 14)))
 	} else {
 		hint = orDash(d.address.Problem) + " Einrichten unter Einstellungen → Handy-Upload."
 	}
 
-	return card(
-		ui.HStack(
-			xgift.IconTile(outline.MobilePhone, green, u(pick(34, 26))),
-			title(pick2("Vom Handy senden", "Vom Handy"), pick(21, 17)).MaxLines(1).Flex(1),
-		).Gap(u(pick(12, 8))).Align(geom.Center),
+	return glassCard(
+		caps(pick2("VOM HANDY SENDEN", "VOM HANDY")),
 		ui.HStack(
 			code,
 			muted(hint, pick(15, 13)).MaxLines(6).Flex(1),
@@ -353,9 +428,9 @@ func (a *App) phoneWidget(d homeData) gift.View {
 	).Flex(1)
 }
 
-// appIcons ist das Raster der App-Symbole, drei nebeneinander. Die Kante der
-// Symbole folgt der Spaltenbreite.
-func (a *App) appIcons(st *states, width float32) gift.View {
+// dock ist die Leiste der App-Symbole unten in der Mitte, eine Glaskapsel
+// wie bei iPadOS.
+func (a *App) dock(st *states) gift.View {
 	type app struct {
 		label string
 		sym   ui.Symbol
@@ -382,49 +457,46 @@ func (a *App) appIcons(st *states, width float32) gift.View {
 		}},
 	}
 
-	gap := pick(18, 10)
-	cell := (width - 2*gap) / 3
-	edge := clamp(cell-pick(28, 24), 52, 84)
-	if compact {
-		edge = min(edge, vh()*0.13)
-	}
-
+	edge := pick(60, clamp(vh()*0.085, 40, 52))
 	cells := make([]gift.View, 0, len(apps))
 	for _, ap := range apps {
 		face := ui.ButtonStyle{Background: ui.ColorClear, Border: noBorder}
 		cells = append(cells, ui.Button(ui.VStack(
 			xgift.IconTile(ap.sym, ap.face, u(edge)),
-			ui.Text(ap.label).FontSize(u(pick(14, 11))).MaxLines(1),
-		).Gap(u(pick(8, 4))).Align(geom.Center), ap.fn).
+			ui.Text(ap.label).FontSize(u(pick(11.5, 10))).Font(boldFont).MaxLines(1),
+		).Gap(u(pick(6, 3))).Align(geom.Center), ap.fn).
 			Style(face).HoverStyle(face).
-			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.06), CornerRadius: u(16)}).
+			PressedStyle(ui.ButtonStyle{Background: ui.Fade(ui.ColorLabel, 0.08), CornerRadius: u(16)}).
+			Frame(u(edge+pick(52, 34)), geom.Unbounded()).
 			Label(ap.label))
 	}
 
-	return xgift.Grid(3, u(gap), cells...)
+	radius := u((edge + pick(46, 30)) / 2)
+	return glassPane(radius, paneTint(),
+		ui.HStack(cells...).Gap(u(pick(6, 2))).Align(geom.Center),
+	).PaddingInsets(geom.Insets{Left: u(pick(14, 8)), Right: u(pick(14, 8)), Top: u(pick(10, 6)), Bottom: u(pick(8, 5))})
 }
 
+// kioskWidget ist der Start in den Kiosk: eine bernsteinfarben getönte
+// Glaskapsel oben rechts.
 func (a *App) kioskWidget(st *states, d homeData) gift.View {
 	name := d.settings.EventTitle
 	if name == "" {
 		name = "Nächste Feier"
 	}
 
-	hint := "Gäste drucken selbst, deine Mediathek bleibt verborgen. Aktiv bis zum nächsten Neustart."
-	if compact {
-		hint = "Gäste drucken selbst. Aktiv bis zum Neustart."
-	}
+	hint := "Aktiv bis zum Neustart"
 
-	return ui.VStack(
+	return glassPane(u(pick(28, 20)), ui.RGBA(40, 28, 6, 120),
+		ui.Text("KIOSK-MODUS").FontSize(u(pick(12, 11))).Font(boldFont).Foreground(ui.RGB(0xFF, 0xCF, 0x73)),
+		title(name, pick(21, 17)).Foreground(white).MaxLines(1),
 		ui.HStack(
-			ui.Icon(outline.WandMagicSparkles).Size(u(pick(20, 16))).Foreground(amber),
-			ui.Text("KIOSK-MODUS").FontSize(u(pick(13, 12))).Font(boldFont).Foreground(amber),
-		).Gap(u(pick(10, 8))).Align(geom.Center),
-		title(name, pick(24, 18)).Foreground(white).MaxLines(2),
-		ui.Text(hint).FontSize(u(pick(15, 13))).Foreground(ui.RGB(0xC7, 0xC7, 0xCC)).MaxLines(3),
-		fill(),
-		filled("Kiosk starten", amber, ink, func() { a.openSheet(SheetKioskStart) }),
-	).Gap(u(pick(12, 8))).Padding(u(pick(24, 14))).Background(kioskPanel).CornerRadius(u(pick(26, 18))).Flex(1)
+			ui.Text(hint).FontSize(u(pick(13, 12))).Foreground(ui.RGBA(255, 255, 255, 190)).MaxLines(1).Flex(1),
+			filled("Kiosk starten", amber, ink, func() { a.openSheet(SheetKioskStart) }).MinHeight(u(pick(44, 38))),
+		).Gap(u(12)).Align(geom.Center),
+	).Gap(u(pick(6, 3))).
+		Padding(u(pick(20, 12))).
+		Frame(u(pick(360, 300)), geom.Unbounded())
 }
 
 // thumb ist ein quadratisches Vorschaubild eines Originals.

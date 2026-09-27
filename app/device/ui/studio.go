@@ -38,44 +38,85 @@ func (a *App) studioScreen(ctx *gift.Context, st *states) gift.View {
 
 	layout := ctx.Read(st.layout)
 	sheets := layout.Sheets(len(a.studio)) * ctx.Read(st.copies)
+	items := res.Value().items
+
+	h := u(pick(44, 38))
+	back := ui.Button(ui.HStack(
+		ui.Icon(outline.ChevronLeft).Size(u(18)).Foreground(ui.ColorLabel),
+		ui.Text("Fotos").FontSize(u(15)).Font(boldFont),
+	).Gap(u(4)).Align(geom.Center), func() {
+		a.selected = append([]photo.ID(nil), a.studio...)
+		a.st.screen.Set(ScreenLibrary)
+	}).Style(clearButton).HoverStyle(clearButton).PressedStyle(clearButton).Label("Zurück zu den Fotos")
+
+	clearAll := ui.Button(ui.Text("Leeren").FontSize(u(15)).Font(boldFont).Foreground(ui.ColorAccent), func() {
+		a.studio = nil
+		st.selection.Set(st.selection.Get() + 1)
+		st.screen.Set(ScreenHome)
+	}).Style(clearButton).HoverStyle(clearButton).PressedStyle(clearButton)
 
 	header := ui.HStack(
-		link("‹ Fotos", func() {
-			a.selected = append([]photo.ID(nil), a.studio...)
-			a.st.screen.Set(ScreenLibrary)
-		}),
-		title(fmt.Sprintf("Drucken · %d %s", len(a.studio), plural(len(a.studio), "Foto", "Fotos")), 17).Flex(1).Align(ui.AlignCenter),
-		link("Leeren", func() {
-			a.studio = nil
-			st.selection.Set(st.selection.Get() + 1)
-			st.screen.Set(ScreenHome)
-		}),
-	).Gap(u(12)).Align(geom.Center).PaddingInsets(geom.Insets{Left: u(pick(16, 8)), Right: u(pick(16, 8))}).MinHeight(u(studioHeader())).
-		Background(ui.ColorSurface)
+		glassPill(h, back),
+		fill(),
+		glassPill(h, title(fmt.Sprintf("Drucken · %d %s", len(a.studio), plural(len(a.studio), "Foto", "Fotos")), 15)),
+		fill(),
+		glassPill(h, clearAll),
+	).Align(geom.Center).MinHeight(u(studioHeader()))
 
-	return ui.VStack(
-		header,
-		xgift.Hairline(),
-		xgift.HStretch(
-			a.filmstrip(ctx, st, res.Value().items),
-			grow(gift.Component("preview", func(ctx *gift.Context) gift.View { return a.studioPreview(ctx, st) })),
-			xgift.Fill(gift.Component("inspector", func(ctx *gift.Context) gift.View { return a.inspector(ctx, st, sheets) })).Width(u(inspectorWidth())),
-		).Flex(1),
+	pad := u(pick(22, 10))
+	return ui.ZStack(
+		xgift.Fill(gift.Component("stage", func(ctx *gift.Context) gift.View { return a.stage(ctx, st, items) })),
+		xgift.Fill(ui.VStack(
+			header,
+			xgift.HStretch(
+				a.filmstrip(ctx, st, items),
+				grow(gift.Component("preview", func(ctx *gift.Context) gift.View { return a.studioPreview(ctx, st) })),
+				xgift.Fill(gift.Component("inspector", func(ctx *gift.Context) gift.View { return a.inspector(ctx, st, sheets) })).Width(u(inspectorWidth())),
+			).Gap(u(pick(18, 10))).Flex(1),
+		).Gap(u(pick(12, 8))).PaddingInsets(geom.Insets{Left: pad, Right: pad, Top: u(pick(6, 2)), Bottom: pad})),
 	).Flex(1)
 }
 
+// stage ist der Hintergrund des Studios: das aktive Foto, weichgezeichnet
+// und abgedunkelt, damit das Blatt davor das Hellste ist.
+func (a *App) stage(ctx *gift.Context, st *states, items []photo.Location) gift.View {
+	active := ctx.Read(st.active)
+	path := ""
+	if active >= 0 && active < len(items) {
+		path = items[active].Path
+	}
+
+	tone := wallStage
+	if !a.dark {
+		tone = wallLight
+	}
+
+	res := xgift.UseResource[*xgift.MemorySource](ctx, "stage")
+	res.LoadKeyed([2]any{path, tone}, func() (*xgift.MemorySource, error) { return wallpaperOf(path, tone), nil })
+
+	if res.Value() == nil {
+		return ui.Box().Background(canvas)
+	}
+
+	return ui.Image(res.Value()).Fit(ui.FitCover).Placeholder(canvas)
+}
+
+// clearButton ist ein Knopf ohne eigene Fläche, etwa in einer Glaskapsel.
+var clearButton = ui.ButtonStyle{Background: ui.ColorClear, Border: noBorder}
+
 // Die Maße des Druck-Studios. Die Vorschau bekommt, was Filmstreifen und
 // Gestaltung übrig lassen.
-func studioHeader() float32   { return pick(56, 44) }
-func filmstripWidth() float32 { return pick(124, 84) }
+func studioHeader() float32   { return pick(52, 42) }
+func filmstripWidth() float32 { return pick(116, 80) }
 func inspectorWidth() float32 { return pick(380, clamp(vw()*0.4, 280, 340)) }
 
 // filmThumb ist die Kante eines Bildes im Filmstreifen: die Breite ohne den
 // Innenrand und den Rahmen des aktiven Bildes.
-func filmThumb() float32 { return filmstripWidth() - 2*pick(16, 10) - 2*4 }
+func filmThumb() float32 { return filmstripWidth() - 2*pick(12, 8) - 2*4 }
 
-// statusBarHeight ist die Höhe der Statusleiste über allen Bildschirmen.
-func statusBarHeight() float32 { return pick(32, 28) }
+// statusBarHeight ist die Höhe der Statusleiste über allen Bildschirmen des
+// Heimbetriebs: Glaskapseln mit etwas Luft darüber und darunter.
+func statusBarHeight() float32 { return pick(54, 42) }
 
 // paperSize ist die Größe des Vorschaublattes im Verhältnis 2 : 3, so groß
 // wie der Platz zwischen Filmstreifen und Gestaltung es erlaubt.
@@ -113,7 +154,7 @@ func (a *App) filmstrip(ctx *gift.Context, st *states, items []photo.Location) g
 
 	cells := []gift.View{}
 	for i, it := range items {
-		img := thumb(it.Path, u(filmThumb()))
+		img := thumb(it.Path, u(filmThumb())).CornerRadius(u(pick(14, 10)))
 		if i == active {
 			img = img.Border(ui.Border{Width: u(4), Color: blue})
 		}
@@ -128,8 +169,9 @@ func (a *App) filmstrip(ctx *gift.Context, st *states, items []photo.Location) g
 		a.openLibraryKeep(photo.ScopeAll)
 	}).Frame(u(filmThumb()), u(filmThumb())))
 
-	return xgift.Fill(ui.VScroll(ui.VStack(cells...).Gap(u(pick(12, 8))).Align(geom.Top).Padding(u(pick(16, 10)))).
-		Background(ui.ColorBackground)).Width(u(filmstripWidth()))
+	return xgift.Fill(glassPane(u(pick(28, 20)), paneTint(),
+		ui.VScroll(ui.VStack(cells...).Gap(u(pick(12, 8))).Align(geom.Top).Padding(u(pick(12, 8)))).Flex(1),
+	)).Width(u(filmstripWidth()))
 }
 
 // openLibraryKeep öffnet die Mediathek, ohne die Auswahl zu verwerfen.
@@ -188,10 +230,10 @@ func (a *App) studioPreview(ctx *gift.Context, st *states) gift.View {
 
 	return ui.VStack(
 		fill(),
-		muted(label, pick(14, 12)),
-		ui.VStack(paper).Shadow(ui.Shadow{Blur: u(pick(36, 20)), OffsetY: u(pick(14, 8)), Color: ui.RGBA(0, 0, 0, 70)}),
+		ui.VStack(paper).Shadow(ui.Shadow{Blur: u(pick(48, 24)), OffsetY: u(pick(18, 10)), Color: ui.RGBA(0, 0, 0, 110)}),
+		glassPill(u(pick(32, 28)), ui.Text(label).FontSize(u(pick(13, 12))).Foreground(ui.ColorSecondaryLabel)),
 		fill(),
-	).Gap(u(pick(16, 8))).Align(geom.Center).Flex(1).Background(canvas)
+	).Gap(u(pick(18, 8))).Align(geom.Center).Flex(1)
 }
 
 // studioDims liefert die Maße des ersten Fotos eines Blattes.
@@ -259,30 +301,30 @@ func (a *App) inspector(ctx *gift.Context, st *states, sheets int) gift.View {
 		})
 	}).FontSize(u(14)).Frame(u(pick(170, 130)), u(36))
 
-	rows := []gift.View{
+	design := glassPane(u(pick(30, 20)), paneTint(),
 		ui.SegmentedControl(tab, []string{"Format", "Design", "Bild", "Text"}, st.studioTab.Set).
 			FontSize(u(pick(15, 14))).Frame(geom.Unbounded(), u(pick(40, 36))).Key("tabs"),
 		ui.VScroll(content).Flex(1),
-		xgift.Hairline(),
-	}
+	).Gap(u(pick(10, 6))).Padding(u(pick(16, 10))).Flex(1)
 
+	// Die Druckleiste: Anzahl, Oberfläche und der Knopf, eine Glasfläche für
+	// sich unter der Gestaltung. Auf kleinen Panels stecken die
+	// Beschriftungen in den Bedienelementen selbst.
+	var bar ui.Stack
 	if compact {
-		// Anzahl und Oberfläche teilen sich eine Zeile; die Beschriftungen
-		// stecken in den Bedienelementen selbst.
-		rows = append(rows,
+		bar = glassPane(u(20), paneTint(),
 			ui.HStack(stepper, fill(), finishes).Align(geom.Center),
-			xgift.Fill(primary(printLabel, func() { a.print(st) })).Height(u(46)),
-		)
+			xgift.Fill(primary(printLabel, func() { a.print(st) })).Height(u(44)),
+		).Gap(u(8)).Padding(u(10))
 	} else {
-		rows = append(rows,
-			ui.HStack(body("Anzahl je Blatt", 15).Flex(1), stepper).Align(geom.Center),
-			ui.HStack(body("Oberfläche", 15).Flex(1), finishes).Align(geom.Center),
-			xgift.Fill(primary(printLabel, func() { a.print(st) })).Height(u(54)),
+		bar = glassPane(u(30), paneTint(),
+			ui.HStack(stepper, fill(), finishes).Align(geom.Center),
+			xgift.Fill(primary(printLabel, func() { a.print(st) })).Height(u(52)),
 			muted(fmt.Sprintf("Danach noch etwa %d Blatt im Drucker", max(0, paper-sheets)), 13).Align(ui.AlignCenter),
-		)
+		).Gap(u(10)).Padding(u(14))
 	}
 
-	return ui.VStack(rows...).Gap(u(pick(12, 8))).Padding(u(pick(16, 10))).Background(ui.ColorSurface)
+	return ui.VStack(design, bar).Gap(u(pick(14, 8)))
 }
 
 // print gibt den Druckvorgang auf und zeigt den Fortschritt.
@@ -304,9 +346,18 @@ func (a *App) print(st *states) {
 func choiceCard(name, hint string, selected bool, fn func()) gift.View {
 	border := ui.Border{Width: u(2), Color: ui.ColorSeparator}
 	face := ui.ColorSurface
+	if !solid {
+		// Auf Glas sind die Karten selbst nur ein Hauch.
+		border = ui.Border{Width: 1, Color: paneEdge()}
+		face = ui.Fade(ui.ColorLabel, 0.05)
+	}
+
 	if selected {
 		border = ui.Border{Width: u(2), Color: blue}
 		face = blueWash
+		if !solid {
+			face = ui.Fade(blue, 0.28)
+		}
 	}
 
 	style := ui.ButtonStyle{Background: face, Border: border, CornerRadius: u(14)}

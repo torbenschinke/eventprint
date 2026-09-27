@@ -137,6 +137,11 @@ func run() error {
 		// auch im Leerlauf sechzigmal in der Sekunde das ganze Bild, und im
 		// geschlossenen Gehäuse wird der Pi heiß.
 		DrawOnDemand: os.Getenv("EVENTPRINT_DRAW_ALWAYS") == "",
+
+		// Direkt ins Bild statt über einen Zwischenpuffer: Auf dem Pi spart
+		// das bei Full-HD ein Drittel jedes Bildes. Siehe
+		// backend.Config.DirectToScreen.
+		DirectToScreen: os.Getenv("EVENTPRINT_NO_DIRECT") == "",
 		OnUpdate: func() error {
 			if ctx.Err() != nil {
 				return backend.Terminate

@@ -666,3 +666,29 @@ Zum Ansehen der gerenderten Layouts:
 ```bash
 EVENTPRINT_TEST_OUTPUT=/tmp/tpl go test ./app/printing/
 ```
+
+## Screenshots
+
+Die Oberfläche der Fotobox im Heimbetrieb. Home-Bildschirm und Druck-Studio
+liegen auf dem neuesten beziehungsweise dem gerade gewählten Foto, stark
+weichgezeichnet; Statusleiste, Widgets, Dock und Gestaltung schweben als Glas
+darüber. Unter *Einstellungen → Anzeige → Transparenz reduzieren* werden die
+Glasflächen deckend.
+
+**Hell, 1280 × 720** – Home, Mediathek, Druck-Studio
+
+![Home hell](docs/screenshots/light-home.jpg)
+![Mediathek hell](docs/screenshots/light-library.jpg)
+![Druck-Studio hell](docs/screenshots/light-studio.jpg)
+
+**Dunkel, 1280 × 720**
+
+![Home dunkel](docs/screenshots/dark-home.jpg)
+![Mediathek dunkel](docs/screenshots/dark-library.jpg)
+![Druck-Studio dunkel](docs/screenshots/dark-studio.jpg)
+
+**Kompakt, 1024 × 600** (7-Zoll-Panel)
+
+![Home kompakt](docs/screenshots/compact-home.jpg)
+![Mediathek kompakt](docs/screenshots/compact-library.jpg)
+![Druck-Studio kompakt](docs/screenshots/compact-studio.jpg)

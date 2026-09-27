@@ -184,7 +184,7 @@ A screen generated from a type is a screen with no use case behind it, and nothi
 
 ## How the code is composed
 
-31 packages in 11 bounded contexts, and 70 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
+31 packages in 11 bounded contexts, and 71 dependencies between them. Only this module's own packages: a dependency on the standard library or on a third party is not a fact about the shape of this system.
 
 8 packages declare this specification rather than the system — the requirements, the courses of business, the boundary. They are left out of the drawing below: in a project that uses this tool properly they are most of the nodes and most of the arrows, and the architecture disappears underneath its own documentation.
 

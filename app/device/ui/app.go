@@ -200,6 +200,7 @@ func (a *App) apply(d display) {
 // Einstellung hell, dunkel oder automatisch.
 func (a *App) ApplyTheme() {
 	a.dark = a.wantDark()
+	solid = a.wantSolid()
 	setPalette(a.dark)
 
 	if a.gapp == nil {
@@ -232,10 +233,16 @@ func (a *App) wantDark() bool {
 	return s.Appearance.Dark(time.Now())
 }
 
+// wantSolid meldet "Transparenz reduzieren".
+func (a *App) wantSolid() bool {
+	s, err := a.dev.Device.LoadSettings(sys())
+	return err == nil && s.ReduceTransparency
+}
+
 // refreshTheme wechselt das Erscheinungsbild, wenn die Einstellung oder –
 // bei "automatisch" – die Uhrzeit es verlangt. Der Takt ruft es regelmäßig.
 func (a *App) refreshTheme() {
-	if a.wantDark() == a.dark || a.st == nil {
+	if (a.wantDark() == a.dark && a.wantSolid() == solid) || a.st == nil {
 		return
 	}
 

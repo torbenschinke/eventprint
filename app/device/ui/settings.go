@@ -324,6 +324,13 @@ func (a *App) displaySettings(s device.Settings, save func(func(*device.Settings
 			}).FontSize(u(15)).Frame(geom.Unbounded(), u(40))),
 		),
 		muted("Automatisch ist die Box von 20 bis 7 Uhr dunkel. Der Kiosk ist immer dunkel.", 13).MaxLines(2).PaddingInsets(geom.Insets{Left: u(16)}),
+		section("",
+			ui.Row("Transparenz reduzieren").Subtitle("Deckende Flächen statt Glas auf Home und im Druck-Studio").
+				Accessory(ui.Toggle(s.ReduceTransparency, func(v bool) {
+					save(func(s *device.Settings) { s.ReduceTransparency = v })
+					a.refreshTheme()
+				})),
+		),
 		section("BILDSCHIRM",
 			ui.Row("Fläche").Value(size),
 			ui.Row("Vergrößerung").Value(fmt.Sprintf("%.2f × Dichte %v", scale, d.dens())),

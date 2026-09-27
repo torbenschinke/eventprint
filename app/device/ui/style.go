@@ -88,7 +88,12 @@ var (
 func init() { setPalette(false) }
 
 // setPalette setzt die Sonderfarben für hell oder dunkel.
+// darkPalette ist das Erscheinungsbild, für das setPalette zuletzt gesetzt
+// hat.
+var darkPalette bool
+
 func setPalette(dark bool) {
+	darkPalette = dark
 	if dark {
 		blueText = ui.RGB(0x4C, 0x9D, 0xFF)
 		blueWash = ui.RGB(0x14, 0x2A, 0x48)

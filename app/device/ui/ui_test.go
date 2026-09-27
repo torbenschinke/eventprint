@@ -163,7 +163,7 @@ func (b *box) role() device.Role { return b.dev.Subject().Role() }
 func TestHomeModeShowsInboxAfterStart(t *testing.T) {
 	b := newBox(t, "", "")
 
-	b.waitFor(gifttest.ByText("Eingang"))
+	b.waitFor(gifttest.ByText("EINGANG"))
 	b.waitFor(gifttest.ByText("2 neu"))
 
 	if b.role() != device.RoleOwner {
@@ -194,7 +194,7 @@ func TestKioskHidesTheLibraryFromGuests(t *testing.T) {
 		t.Fatal("ein Gast darf ein privates Foto auch über seine Kennung nicht finden")
 	}
 
-	b.h.AssertNone(gifttest.ByText("Eingang"))
+	b.h.AssertNone(gifttest.ByText("EINGANG"))
 
 	spec.Verified(t, modus.RModusKiosk, modus.RModusPrivat)
 }
@@ -228,7 +228,7 @@ func TestKioskOperatorNeedsThePin(t *testing.T) {
 	}
 
 	b.tap("Kiosk beenden")
-	b.waitFor(gifttest.ByText("Eingang"))
+	b.waitFor(gifttest.ByText("EINGANG"))
 
 	if b.role() != device.RoleOwner {
 		t.Fatalf("nach dem Beenden: Rolle %s, erwartet Besitzer", b.role())

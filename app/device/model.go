@@ -78,6 +78,9 @@ type Settings struct {
 	// nach der Tageszeit. Der Kiosk ist immer dunkel.
 	Appearance Appearance `json:"appearance,omitempty"`
 
+	// ReduceTransparency macht die Glasflächen im Heimbetrieb deckend.
+	ReduceTransparency bool `json:"reduceTransparency,omitempty"`
+
 	// NAS ist die Netzwerkfreigabe mit den Fotos des Haushalts.
 	NAS nas.Config `json:"nas,omitzero"`
 
