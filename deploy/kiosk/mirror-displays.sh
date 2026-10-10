@@ -48,9 +48,11 @@ modes_of() {
 
 # ROTATE dreht den Touchscreen. "auto" dreht ein hochkant gebautes Panel ins
 # Querformat: Das Raspberry Pi Touch Display 2 (5 und 7 Zoll) meldet
-# 720x1280, die Box steht aber quer. "left" entspricht dem rotate=270, das die
-# Raspberry-Pi-Dokumentation dafuer nennt; wer das Panel andersherum einbaut,
-# setzt EVENTPRINT_ROTATE=right. Sonst: normal, left, right, inverted.
+# 720x1280, die Box steht aber quer. "right" ist am Panel in der Halterung der
+# Box ausprobiert; "left", wie es die Raspberry-Pi-Dokumentation nahelegt,
+# stand dort auf dem Kopf. Wer das Panel andersherum einbaut, setzt in
+# /etc/default/eventprint EVENTPRINT_ROTATE=left. Sonst: normal, left, right,
+# inverted.
 ROTATE="${EVENTPRINT_ROTATE:-auto}"
 
 # DENSITY erzwingt die Pixeldichte der Oberflaeche (1 oder 2); leer heisst
@@ -70,7 +72,7 @@ rotation_for() {
   h="${first#*x}"
   h="${h%%[!0-9]*}"
   if [[ -n "${w}" && -n "${h}" && "${h}" -gt "${w}" ]]; then
-    printf 'left'
+    printf 'right'
   else
     printf 'normal'
   fi

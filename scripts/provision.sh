@@ -90,6 +90,41 @@ for script in kiosk-session.sh:eventprint-kiosk-session mirror-displays.sh:event
   fi
 done
 
+# Die automatische Anmeldung muss in die Kiosk-Sitzung fuehren. Raspberry Pi
+# OS schreibt sie zurueck, sobald jemand in raspi-config die Anzeigeschicht
+# umstellt: Danach meldete sich der Kiosk-Nutzer in den normalen Desktop an
+# (autologin-session=rpd-x), die Kiosk-Sitzung lief nicht, und die Fotobox
+# bekam keinen Zugriff auf den Bildschirm. Eine Woche lang startete sie alle
+# drei Sekunden neu, und auf dem Touchscreen stand ein ungedrehter Desktop.
+#
+# Angeglichen werden nur die Schluessel, die install.sh setzt, und nur, wenn
+# es den Kiosk-Nutzer gibt. Die Hauptdatei gewinnt gegen conf.d, siehe
+# configure_autologin in install.sh.
+KIOSK_USER="${KIOSK_USER:-fotobox}"
+lightdm_conf=/etc/lightdm/lightdm.conf
+if [[ -f "${lightdm_conf}" ]] && id -u "${KIOSK_USER}" >/dev/null 2>&1; then
+  for pair in \
+    "autologin-user=${KIOSK_USER}" \
+    "autologin-user-timeout=0" \
+    "autologin-session=openbox" \
+    "user-session=openbox"
+  do
+    key="${pair%%=*}"
+    if grep -qxF "${pair}" "${lightdm_conf}"; then
+      continue
+    fi
+
+    log "lightdm: ${pair}"
+    if grep -qE "^[[:space:]]*${key}=" "${lightdm_conf}"; then
+      sed -i -E "s|^[[:space:]]*${key}=.*|${pair}|" "${lightdm_conf}"
+    else
+      sed -i "0,/^\[Seat:\*\]/s//[Seat:*]\n${pair}/" "${lightdm_conf}"
+    fi
+    session_changed=1
+    changed=1
+  done
+fi
+
 # Die Sitzung laeuft zu diesem Zeitpunkt womoeglich schon - mit dem ALTEN
 # Skript. lightdm wartet nicht auf dieses Provisioning, und die automatische
 # Anmeldung ist meist schneller als Update und Build. So ist es beim Umstieg

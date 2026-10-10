@@ -17,6 +17,16 @@ fi
 
 echo "Sitzung startet"
 
+# Die Einstellungen der Box gelten auch hier, vor allem EVENTPRINT_ROTATE:
+# Wer das Panel andersherum einbaut, stellt die Drehung dort um, wo auch alles
+# andere steht, und startet neu. Der Touch zieht mit.
+if [[ -r /etc/default/eventprint ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  . /etc/default/eventprint
+  set +a
+fi
+
 # Kein Bildschirmschoner, kein Abschalten. Die Fotobox steht den Abend über
 # ungenutzt herum, und ein schwarzer Bildschirm sieht aus wie ein Defekt.
 xset s off
