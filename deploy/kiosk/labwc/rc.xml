@@ -34,10 +34,13 @@
   <!-- Die Fotobox ist ein X11-Programm unter Xwayland und versteht keine
        Beruehrungen, nur Klicks. labwc macht deshalb aus dem Finger die Maus.
 
-       Ohne mapToOutput gilt die Beruehrung fuer die ganze Flaeche. Die ist
-       genau der Touchscreen: Ein Fernseher liegt gespiegelt darueber, siehe
-       eventprint-displays. Und die Drehung zieht labwc selbst nach. -->
-  <touch mouseEmulation="yes"/>
+       mapToOutput legt die Beruehrung auf das DSI-Panel, und nur dann rechnet
+       labwc auch dessen Drehung ein. Ohne die Zuordnung galt der Finger
+       ungedreht fuer die ganze Flaeche und traf daneben. Ein Fernseher liegt
+       gespiegelt auf derselben Flaeche, siehe eventprint-displays; ein Panel
+       am HDMI ohne DSI-Ausgang bekommt den Finger ungedreht auf die ganze
+       Flaeche, was ohne Drehung stimmt. -->
+  <touch mapToOutput="DSI-2" mouseEmulation="yes"/>
 
   <windowRules>
     <windowRule identifier="*" serverDecoration="no"/>
