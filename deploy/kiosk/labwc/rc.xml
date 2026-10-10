@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!--
+  Fenstersteuerung der Fotobox unter labwc.
+
+  Der Raspberry Pi 400 ist selbst eine Tastatur. Ein Gast hat sie also immer
+  in der Hand, auch wenn er nur den Touchscreen bedienen soll. Deshalb steht
+  hier keine Tastenbindung, die etwas tut: kein Alt+F4, kein Alt+Tab, kein
+  Menue. Die eine Bindung unten ist ein Platzhalter. Ohne jede Bindung laedt
+  labwc seine eingebauten, und darunter ist eine, die ein Terminal oeffnet.
+
+  Dasselbe gilt fuer die Maus: Nur ein Klick ins Fenster gibt ihm den Fokus.
+  Ein Rechtsklick auf den Hintergrund oeffnete sonst das Menue von labwc.
+-->
+<labwc_config>
+  <core>
+    <!-- Keine Titelleiste: Es gibt genau ein Fenster, und es ist im Vollbild. -->
+    <decoration>server</decoration>
+    <!-- Xwayland laeuft durch. labwc beendet es sonst zehn Sekunden nach dem
+         letzten Fenster – nach einem Absturz der Fotobox etwa –, und das neu
+         gestartete kennt die Freigabe fuer den Dienst nicht mehr. -->
+    <xwaylandPersistence>yes</xwaylandPersistence>
+  </core>
+
+  <keyboard>
+    <keybind key="W-F12"><action name="None"/></keybind>
+  </keyboard>
+
+  <mouse>
+    <context name="Client">
+      <mousebind button="Left" action="Press"><action name="Focus"/></mousebind>
+    </context>
+  </mouse>
+
+  <!-- Die Fotobox ist ein X11-Programm unter Xwayland und versteht keine
+       Beruehrungen, nur Klicks. labwc macht deshalb aus dem Finger die Maus.
+
+       Ohne mapToOutput gilt die Beruehrung fuer die ganze Flaeche. Die ist
+       genau der Touchscreen: Ein Fernseher liegt gespiegelt darueber, siehe
+       eventprint-displays. Und die Drehung zieht labwc selbst nach. -->
+  <touch mouseEmulation="yes"/>
+
+  <windowRules>
+    <windowRule identifier="*" serverDecoration="no"/>
+  </windowRules>
+</labwc_config>

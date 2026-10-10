@@ -77,8 +77,40 @@ if [[ -d /etc/polkit-1/rules.d ]]; then
   done
 fi
 
+# udisks2 haengt USB-Sticks ein, auf die die Fotos einer Feier kopiert werden.
+# Aeltere Installationen haben es nicht. Ohne Netz gelingt die Nachinstallation
+# nicht; dann eben beim naechsten Start – die Box startet trotzdem.
+#
+# Dasselbe gilt fuer libheif, ohne die HEIC-Fotos von iPhones abgelehnt werden,
+# und fuer die Kiosk-Sitzung unter labwc: labwc selbst, wlr-randr zum Drehen
+# und Spiegeln, jq zum Lesen seiner Ausgabe. Sie stehen vor der Sitzung, weil
+# die Anmeldung erst auf labwc umgestellt wird, wenn alles dafuer da ist.
+missing=()
+command -v udisksctl >/dev/null 2>&1 || missing+=(udisks2)
+ldconfig -p 2>/dev/null | grep -q 'libheif\.so\.1' || missing+=(libheif1)
+ldconfig -p 2>/dev/null | grep -q 'libturbojpeg\.so\.0' || missing+=(libturbojpeg0)
+command -v labwc >/dev/null 2>&1 || missing+=(labwc)
+command -v Xwayland >/dev/null 2>&1 || missing+=(xwayland)
+command -v wlr-randr >/dev/null 2>&1 || missing+=(wlr-randr)
+command -v jq >/dev/null 2>&1 || missing+=(jq)
+command -v xhost >/dev/null 2>&1 || missing+=(x11-xserver-utils)
+if [[ ${#missing[@]} -gt 0 ]]; then
+  log "nachinstallieren: ${missing[*]}"
+  if timeout 300 env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}" >/dev/null 2>&1; then
+    changed=1
+  else
+    log "${missing[*]} liess sich nicht installieren; was davon abhaengt, bleibt bis dahin gesperrt"
+  fi
+fi
+
+# ------------------------------------------------------------------- Kiosk ---
+# Skripte und labwc-Konfiguration der Kiosk-Sitzung. Die Konfiguration liegt
+# beim Kiosk-Nutzer, weil labwc dort zuerst sucht und eine Datei dort die des
+# Systems ersetzt – samt Leiste und Dateimanager, die Raspberry Pi OS unter
+# /etc/xdg/labwc startet.
+KIOSK_USER="${KIOSK_USER:-fotobox}"
 session_changed=0
-for script in kiosk-session.sh:eventprint-kiosk-session mirror-displays.sh:eventprint-mirror-displays; do
+for script in kiosk-session.sh:eventprint-kiosk-session displays.sh:eventprint-displays; do
   src="${ROOT_DIR}/deploy/kiosk/${script%%:*}"
   dst="/usr/local/bin/${script##*:}"
   [[ -f "${src}" ]] || continue
@@ -90,6 +122,21 @@ for script in kiosk-session.sh:eventprint-kiosk-session mirror-displays.sh:event
   fi
 done
 
+kiosk_home="$(getent passwd "${KIOSK_USER}" 2>/dev/null | cut -d: -f6 || true)"
+if [[ -n "${kiosk_home}" && -d "${kiosk_home}" ]]; then
+  install -d -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0755 "${kiosk_home}/.config" "${kiosk_home}/.config/labwc"
+  for f in rc.xml environment autostart; do
+    src="${ROOT_DIR}/deploy/kiosk/labwc/${f}"
+    dst="${kiosk_home}/.config/labwc/${f}"
+    if ! cmp -s "${src}" "${dst}"; then
+      log "labwc: ${f} angleichen"
+      install -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0644 "${src}" "${dst}"
+      session_changed=1
+      changed=1
+    fi
+  done
+fi
+
 # Die automatische Anmeldung muss in die Kiosk-Sitzung fuehren. Raspberry Pi
 # OS schreibt sie zurueck, sobald jemand in raspi-config die Anzeigeschicht
 # umstellt: Danach meldete sich der Kiosk-Nutzer in den normalen Desktop an
@@ -97,17 +144,18 @@ done
 # bekam keinen Zugriff auf den Bildschirm. Eine Woche lang startete sie alle
 # drei Sekunden neu, und auf dem Touchscreen stand ein ungedrehter Desktop.
 #
-# Angeglichen werden nur die Schluessel, die install.sh setzt, und nur, wenn
-# es den Kiosk-Nutzer gibt. Die Hauptdatei gewinnt gegen conf.d, siehe
-# configure_autologin in install.sh.
-KIOSK_USER="${KIOSK_USER:-fotobox}"
+# Die Sitzung ist labwc und nicht mehr Openbox unter X11, siehe
+# deploy/kiosk/displays.sh. Umgestellt wird nur, wenn labwc und seine
+# Werkzeuge da sind; sonst bliebe der Bildschirm schwarz. Die Hauptdatei
+# gewinnt gegen conf.d, siehe configure_autologin in install.sh.
 lightdm_conf=/etc/lightdm/lightdm.conf
-if [[ -f "${lightdm_conf}" ]] && id -u "${KIOSK_USER}" >/dev/null 2>&1; then
+if [[ -f "${lightdm_conf}" ]] && id -u "${KIOSK_USER}" >/dev/null 2>&1 &&
+   command -v labwc >/dev/null 2>&1 && command -v wlr-randr >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   for pair in \
     "autologin-user=${KIOSK_USER}" \
     "autologin-user-timeout=0" \
-    "autologin-session=openbox" \
-    "user-session=openbox"
+    "autologin-session=labwc" \
+    "user-session=labwc"
   do
     key="${pair%%=*}"
     if grep -qxF "${pair}" "${lightdm_conf}"; then
@@ -123,6 +171,14 @@ if [[ -f "${lightdm_conf}" ]] && id -u "${KIOSK_USER}" >/dev/null 2>&1; then
     session_changed=1
     changed=1
   done
+
+  # Die Datei in conf.d gilt nur, wo die Hauptdatei schweigt. Sie soll aber
+  # nicht das Gegenteil behaupten.
+  dropin=/etc/lightdm/lightdm.conf.d/90-eventprint.conf
+  if [[ -f "${dropin}" ]] && grep -q '=openbox' "${dropin}"; then
+    sed -i 's/=openbox$/=labwc/' "${dropin}"
+    changed=1
+  fi
 fi
 
 # Die Sitzung laeuft zu diesem Zeitpunkt womoeglich schon - mit dem ALTEN
@@ -137,24 +193,28 @@ if [[ ${session_changed} -eq 1 ]] && systemctl is-active --quiet display-manager
   systemctl --no-block restart display-manager.service
 fi
 
-# udisks2 haengt USB-Sticks ein, auf die die Fotos einer Feier kopiert werden.
-# Aeltere Installationen haben es nicht. Ohne Netz gelingt die Nachinstallation
-# nicht; dann eben beim naechsten Start – die Box startet trotzdem.
+# ------------------------------------------------------------------- Touch ---
+# Der Touch-Controller des Touch Display 2 (Goodix) hat keine Interrupt-
+# Leitung und wird per Timer abgefragt, ab Werk alle 17 ms. Der Kernel zaehlt
+# in 4-ms-Schritten, real kamen die Meldungen alle 24 bis 28 ms – rund 40 Hz
+# bei 60 Bildern pro Sekunde. Beim Ziehen sprang der Inhalt dadurch
+# abwechselnd um einen und um zwei Schritte. Mit 4 ms meldet er meist alle
+# 8 ms; die Abfrage kostet kaum Rechenzeit.
+touch_rule=/etc/udev/rules.d/72-eventprint-touch-poll.rules
+touch_want=$(cat <<'RULE'
+# Von eventprint verwaltet. Siehe scripts/provision.sh.
 #
-# Dasselbe gilt fuer libheif, ohne die HEIC-Fotos von iPhones abgelehnt werden,
-# und fuer xinput, das den Touch auf gedrehte Panels legt.
-missing=()
-command -v udisksctl >/dev/null 2>&1 || missing+=(udisks2)
-ldconfig -p 2>/dev/null | grep -q 'libheif\.so\.1' || missing+=(libheif1)
-ldconfig -p 2>/dev/null | grep -q 'libturbojpeg\.so\.0' || missing+=(libturbojpeg0)
-command -v xinput >/dev/null 2>&1 || missing+=(xinput)
-if [[ ${#missing[@]} -gt 0 ]]; then
-  log "nachinstallieren: ${missing[*]}"
-  if timeout 300 env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}" >/dev/null 2>&1; then
-    changed=1
-  else
-    log "${missing[*]} liess sich nicht installieren; USB-Export bzw. HEIC bleiben bis dahin gesperrt"
-  fi
+# Fragt abgefragte Goodix-Touchscreens alle 4 statt 17 ms ab. Ein Geraet mit
+# Interrupt hat kein poll-Attribut und bleibt unberuehrt.
+SUBSYSTEM=="input", KERNEL=="input[0-9]*", ATTR{name}=="*Goodix*", TEST=="poll", ATTR{poll}="4"
+RULE
+)
+if [[ "$(cat "${touch_rule}" 2>/dev/null)" != "${touch_want}" ]]; then
+  log "Touch-Abfrage auf 4 ms"
+  printf '%s\n' "${touch_want}" >"${touch_rule}"
+  udevadm control --reload-rules
+  udevadm trigger --subsystem-match=input --action=change
+  changed=1
 fi
 
 # ------------------------------------------------------------------ Journal ---

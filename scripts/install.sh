@@ -85,12 +85,11 @@ PACKAGES=(
   libturbojpeg0                   # schnelles JPEG, zur Laufzeit geladen (gift/asset/turbojpeg)
 
   # Kioskbetrieb auf dem Touchscreen
-  xserver-xorg xinit              # X11; Wayland kann den Fernseher nicht spiegeln
-  openbox                         # Fenstersteuerung ohne Menue und ohne Leiste
+  labwc                           # Wayland ohne Menue und ohne Leiste; reisst nicht wie X11 auf dem Pi 5
+  xwayland                        # die Fotobox ist ein X11-Programm
+  wlr-randr jq                    # Touchscreen drehen, Fernseher spiegeln
   lightdm                         # automatische Anmeldung
-  x11-xserver-utils               # xrandr, xset, xhost und xrdb
-  xinput                          # Touch auf den Touchscreen legen, auch gedreht
-  unclutter                       # versteckt den Mauszeiger
+  x11-xserver-utils               # xhost, xrdb und xrandr (Panelgroesse in mm)
   libgl1 libegl1 libgl1-mesa-dri  # OpenGL fuer gift; geladen wird es zur Laufzeit
   libx11-6 libxrandr2 libxcursor1 libxi6 libxinerama1 libxxf86vm1
 )
@@ -433,7 +432,7 @@ setup_kiosk() {
   # nichts zu sehen.
   #
   # Der Schutz haengt nicht an der Shell, sondern an dreierlei: Das Passwort ist
-  # gesperrt, das Konto hat kein sudo, und openbox kennt keine Tastenbindung,
+  # gesperrt, das Konto hat kein sudo, und labwc kennt keine Tastenbindung,
   # ueber die man ein Terminal oeffnen koennte.
   if id -u "${KIOSK_USER}" >/dev/null 2>&1; then
     log "Kiosk-Nutzer ${KIOSK_USER} existiert bereits"
@@ -462,7 +461,7 @@ setup_kiosk() {
   home="$(getent passwd "${KIOSK_USER}" 2>/dev/null | cut -d: -f6 || true)"
   home="${home:-/home/${KIOSK_USER}}"
 
-  run install -m 0755 "${PREFIX}/deploy/kiosk/mirror-displays.sh" /usr/local/bin/eventprint-mirror-displays
+  run install -m 0755 "${PREFIX}/deploy/kiosk/displays.sh" /usr/local/bin/eventprint-displays
   run install -m 0755 "${PREFIX}/deploy/kiosk/kiosk-session.sh" /usr/local/bin/eventprint-kiosk-session
 
   # Jede Ebene einzeln anlegen.
@@ -473,23 +472,18 @@ setup_kiosk() {
   # Es starb daraufhin mit "--database is required", der Bildschirm blieb
   # schwarz, und zu sehen war nur der Mauszeiger auf dem openbox-Hintergrund.
   run install -d -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0755 "${home}/.config"
-  run install -d -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0755 "${home}/.config/openbox"
+  run install -d -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0755 "${home}/.config/labwc"
 
   # Sicherheitsnetz fuer Bestandsinstallationen, die den Fehler schon haben.
   run chown -R "${KIOSK_USER}:${KIOSK_USER}" "${home}/.config"
-  run install -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0644 \
-      "${PREFIX}/deploy/kiosk/openbox-rc.xml" "${home}/.config/openbox/rc.xml"
 
-  if [[ ${DRY_RUN} -eq 1 ]]; then
-    printf '   \033[2m[dry-run]\033[0m %s\n' "schreibe ${home}/.config/openbox/autostart"
-  else
-    cat >"${home}/.config/openbox/autostart" <<EOF
-# Von install.sh angelegt. Startet die Fotobox-Sitzung.
-/usr/local/bin/eventprint-kiosk-session &
-EOF
-    chown "${KIOSK_USER}:${KIOSK_USER}" "${home}/.config/openbox/autostart"
-    chmod 0644 "${home}/.config/openbox/autostart"
-  fi
+  # rc.xml ohne Tastenbindung, die Umgebung fuer Xwayland und der Autostart
+  # der Kiosk-Sitzung. Beim Kiosk-Nutzer ersetzen sie die des Systems samt
+  # Leiste und Dateimanager. provision.sh gleicht sie bei jedem Start an.
+  for f in rc.xml environment autostart; do
+    run install -o "${KIOSK_USER}" -g "${KIOSK_USER}" -m 0644 \
+        "${PREFIX}/deploy/kiosk/labwc/${f}" "${home}/.config/labwc/${f}"
+  done
 
   configure_autologin
   disable_console_autologin
@@ -537,9 +531,9 @@ disable_console_autologin() {
 # Die Reihenfolge laesst sich jederzeit nachsehen mit:
 #   sudo lightdm --show-config
 #
-# X11 und nicht Wayland ist dabei keine Geschmacksfrage: labwc und wlroots
-# kennen keinen Clone-Modus. Ein Fernseher als zweiter Bildschirm zeigt dort
-# zwangslaeufig einen anderen Ausschnitt. xrandr --same-as spiegelt.
+# labwc und nicht Openbox unter X11: Auf dem Raspberry Pi 5 kopiert X11 jedes
+# Bild in den laufenden Bildschirm, und beim Scrollen riss es sichtbar. Siehe
+# deploy/kiosk/displays.sh, auch dazu, wie trotzdem gespiegelt wird.
 configure_autologin() {
   local conf=/etc/lightdm/lightdm.conf
   local backup="${conf}.vor-eventprint"
@@ -560,8 +554,8 @@ configure_autologin() {
 [Seat:*]
 autologin-user=${KIOSK_USER}
 autologin-user-timeout=0
-autologin-session=openbox
-user-session=openbox
+autologin-session=labwc
+user-session=labwc
 EOF
 
   [[ -f "${conf}" ]] || return 0
@@ -576,8 +570,8 @@ EOF
   for pair in \
     "autologin-user=${KIOSK_USER}" \
     "autologin-user-timeout=0" \
-    "autologin-session=openbox" \
-    "user-session=openbox"
+    "autologin-session=labwc" \
+    "user-session=labwc"
   do
     key="${pair%%=*}"
     value="${pair#*=}"
@@ -591,7 +585,7 @@ EOF
     fi
   done
 
-  log "automatische Anmeldung: ${KIOSK_USER} in eine openbox-Sitzung"
+  log "automatische Anmeldung: ${KIOSK_USER} in eine labwc-Sitzung"
 }
 
 setup_kiosk

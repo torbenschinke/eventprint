@@ -1,0 +1,2 @@
+# Von eventprint verwaltet, siehe scripts/provision.sh.
+/usr/local/bin/eventprint-kiosk-session &

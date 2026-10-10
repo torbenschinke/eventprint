@@ -23,10 +23,10 @@ WorkingDirectory=/opt/eventprint
 EnvironmentFile=-/etc/default/eventprint
 ExecStart=/opt/eventprint/dist/gift-app
 
-# Die Oberfläche zeichnet in die X-Sitzung des Kiosk-Nutzers. Der Dienst
-# läuft trotzdem hier und nicht in der Sitzung: Hier hat er seine Daten,
-# seine polkit-Freigaben und einen Aufpasser, der ihn nach einem Absturz neu
-# startet. Die Sitzung erlaubt ihm den Zugriff mit xhost, siehe
+# Die Oberfläche zeichnet in das Xwayland der labwc-Sitzung des
+# Kiosk-Nutzers. Der Dienst läuft trotzdem hier und nicht in der Sitzung:
+# Hier hat er seine Daten, seine polkit-Freigaben und einen Aufpasser, der
+# ihn nach einem Absturz neu startet. Die Sitzung erlaubt ihm den Zugriff mit xhost, siehe
 # deploy/kiosk/kiosk-session.sh. Solange die Sitzung noch nicht steht,
 # scheitert der Start und systemd versucht es einfach wieder.
 Environment=DISPLAY=:0

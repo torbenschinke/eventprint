@@ -1,0 +1,10 @@
+# Umgebung der Kiosk-Sitzung unter labwc. Von eventprint verwaltet, siehe
+# scripts/provision.sh.
+
+# Xwayland mit einer Xauthority-Datei. Ohne sie nimmt xhost keine Freigabe
+# fuer den Dienstnutzer an. Der Starter stammt aus Raspberry Pi OS.
+WLR_XWAYLAND=/usr/bin/xwayland-xauth
+XAUTHORITY=~/.Xauthority
+
+XKB_DEFAULT_MODEL=pc105
+XKB_DEFAULT_LAYOUT=de

@@ -304,16 +304,16 @@ ist sie mit 800 × 480, 1024 × 600, 1280 × 720 und Full-HD.
   schmalere Spalten, knappere Texte, und die Einstellungen sind Liste und
   Detail wie am iPhone. Dialoge scrollen, wenn sie nicht passen; ihre Knöpfe
   bleiben stehen.
-* **Dichte:** Auf dichten Panels ab etwa 180 ppi, etwa dem Touch Display 2,
-  setzt die Anzeigesitzung `Xft.dpi` auf 192. Damit wachsen auch die
-  Bausteine von gift mit festen Maßen mit, allen voran die
-  Bildschirmtastatur.
-* **Drehung:** Das Raspberry Pi Touch Display 2 (5 und 7 Zoll) ist hochkant
-  gebaut. Die Sitzung dreht es ins Querformat und legt die Berührung mit
-  `xinput map-to-output` passend darauf. Steht das Bild auf dem Kopf, hilft
-  `EVENTPRINT_ROTATE=right`.
-* **Erscheinungsbild:** Hell, dunkel oder automatisch (dunkel von 20 bis
-  7 Uhr), unter **Einstellungen → Anzeige**. Der Kiosk ist immer dunkel.
+* **Dichte:** Die Oberfläche arbeitet mit einfacher Dichte; auf dem Touch
+  Display 2 mit 1280 × 720 passt das. Wer die Bausteine von gift mit festen
+  Maßen, allen voran die Bildschirmtastatur, verdoppeln will, setzt in
+  `/etc/default/eventprint` `EVENTPRINT_UI_DENSITY=2`; die Anzeigesitzung
+  setzt dann `Xft.dpi` auf 192.
+* **Drehung:** Ein hochkant gebautes Panel wie das Touch Display 2 dreht die
+  Anzeigesitzung ins Querformat, der Touch zieht mit. Steht das Bild auf dem
+  Kopf, weil das Panel andersherum eingebaut ist, setzt man in
+  `/etc/default/eventprint` `EVENTPRINT_ROTATE=left` (sonst `right`,
+  `normal`, `inverted`) und startet neu.
 
 Zum Ausprobieren am Schreibtisch:
 
@@ -604,13 +604,22 @@ sudo cupsenable CZ01               # angehaltenen Drucker freigeben
 
 `install.sh` richtet ein eigenes, eingeschränktes Konto `fotobox` ein:
 gesperrtes Passwort, kein sudo. Es meldet sich automatisch in einer
-Openbox-Sitzung an, die nur den Bildschirm bereitstellt, die Anzeige spiegelt
-und `eventprint` per `xhost +SI:localuser:eventprint` zeichnen lässt.
+labwc-Sitzung an, die nur den Bildschirm bereitstellt, das Panel dreht, einen
+Fernseher spiegelt und `eventprint` per `xhost +SI:localuser:eventprint` in
+Xwayland zeichnen lässt. `provision.sh` stellt die Anmeldung bei jedem Start
+wieder darauf ein, falls raspi-config sie verstellt hat.
 
-**X11 statt Wayland, und das ist keine Geschmacksfrage.** labwc und wlroots
-kennen keinen Clone-Modus; der Fernseher als gespiegelter zweiter Bildschirm
-verlangt `xrandr --same-as`. Openbox läuft mit einer `rc.xml` **ohne jede
-Tastenbindung** – der Raspberry Pi 400 ist selbst eine Tastatur.
+**Wayland statt X11, wegen des Pi 5.** Dort rendert die GPU, das DSI-Panel
+hängt aber am RP1. X11 kopiert jedes Bild in den laufenden Bildschirm, und
+beim Scrollen reißt es sichtbar; labwc schaltet zum Bildwechsel um. wlroots
+kennt keinen Clone-Modus wie `xrandr --same-as`; gespiegelt wird, indem der
+Fernseher auf derselben Position wie das Panel liegt und so skaliert ist, dass
+er dieselbe Fläche zeigt. labwc läuft mit einer `rc.xml` **ohne Tastenbindung,
+die etwas tut** – der Raspberry Pi 400 ist selbst eine Tastatur.
+
+**Touch-Abfrage.** Der Touch-Controller des Touch Display 2 wird per Timer
+abgefragt, ab Werk mit rund 40 Hz, und das Ziehen ruckelte. Eine udev-Regel
+stellt die Abfrage auf 4 ms.
 
 ### Wenn der Bildschirm schwarz bleibt
 
