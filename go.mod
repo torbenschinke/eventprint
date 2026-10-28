@@ -24,7 +24,7 @@ require (
 	github.com/ebitengine/gomobile v0.0.0-20260820040257-d11f821a26a6 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
 	github.com/geoffgarside/ber v1.1.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.3 // indirect
+	github.com/go-chi/chi/v5 v5.4.0 // indirect
 	github.com/go-chi/cors v1.2.2 // indirect
 	github.com/go-text/typesetting v0.3.5 // indirect
 	github.com/google/btree v1.1.3 // indirect
